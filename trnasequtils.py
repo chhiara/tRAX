@@ -390,7 +390,48 @@ def getfragtype(currfeat, currread, maxoffset = 10):
             return "Threeprime"
         else:
             return "Fiveprime"
+def readfeatures(filename, orgdb="genome", seqfile= None):
+    if filename.endswith(".bed") or filename.endswith(".bed.gz"):
+        return readbed(filename, orgdb, seqfile)
+    elif filename.endswith(".gtf") or filename.endswith(".gtf.gz") or filename.endswith(".gff") or filename.endswith(".gff.gz"):
         
+        return readgtf(filename, orgdb, seqfile)
+    else:
+        print >>sys.stderr, filename+" not valid feature file"
+        sys.exit()
+
+
+def readgtf(filename, orgdb="genome", seqfile= None):
+    bedfile = None
+    #print >>sys.stderr, "****"
+    if filename == "stdin":
+        bedfile = sys.stdin
+    elif filename.endswith(".gz"):
+        bedfile = gzip.open(filename, 'rb')
+    else:
+        bedfile = open(filename, "r")
+    
+    for currline in bedfile:
+        #print currline
+        if currline.startswith('track') or currline.startswith('#'):
+            continue
+        fields = currline.rstrip().split("\t")
+        if len(fields) > 2:
+            featname = None
+            #print >>sys.stderr, len(fields)
+            if fields[2] != "transcript":
+                continue
+                
+                
+            for currattr in fields[8].rstrip(";").split(";"):
+                #print >>sys.stderr,  currattr
+                currname = currattr.strip().split()[0]
+                currvalue = currattr.strip().split()[1]
+                if currname == "name" or currname == "gene_id":
+                    featname = currvalue.strip('"')
+            #print >>sys.stderr,  GenomeRange( orgdb, fields[0],fields[3],fields[4],fields[6], name = featname, fastafile = seqfile).bedstring()                    
+            yield GenomeRange( orgdb, fields[0],fields[3],fields[4],fields[6], name = featname, fastafile = seqfile)
+            
 def readbed(filename, orgdb="genome", seqfile= None):
     bedfile = None
     if filename == "stdin":

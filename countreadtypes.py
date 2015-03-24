@@ -82,7 +82,7 @@ try:
     trnaloci = dict()
     trnalist = dict()
     for currfile in args.bedfile:
-        featurelist[currfile] = RangeBin(readbed(currfile))
+        featurelist[currfile] = RangeBin(readfeatures(currfile))
     
     for currfile in args.trnaloci:
         trnaloci[currfile] = RangeBin(readbed(currfile))

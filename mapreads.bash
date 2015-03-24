@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 
 #$1 is experiment name
 #$2 is database name
@@ -16,13 +16,15 @@ function print_usage() {
 
 
 
-SCRIPTDIR=$( cd "$( dirname "$0" )" && pwd )
-
+REALNAME=$(readlink -f $0)
+SCRIPTDIR=$( cd "$( dirname "$REALNAME" )" && pwd )
 
 
 
 "$SCRIPTDIR/mapreads.py" --samplefile=$3 --trnafile=$2-trnatable.txt --bowtiedb=${2}-tRNAgenome 
 "$SCRIPTDIR/countreads.py" --samplefile=$3 --bedfile=$4 --maturetrnas=$2-maturetRNAs.bed --trnaloci=${2}-trnaloci.bed >$1-counts.txt
+#exit
+
 Rscript "$SCRIPTDIR/analyzecounts.R" $1 $1-counts.txt $3 
 
 

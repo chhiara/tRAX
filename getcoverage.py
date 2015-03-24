@@ -213,7 +213,7 @@ for currsample in samples:
 print "Feature"+"\t"+"Sample"+"\t"+"\t".join(positionnums)
 for currfeat in trnalist:
     totalreads = sum(allcoverages[currsample][currfeat.name].totalreads for currsample in samples)
-    if totalreads < 30:
+    if totalreads < 100 * len(samples):
         continue
     if args.combinereps:
 

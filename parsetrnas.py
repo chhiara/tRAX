@@ -16,13 +16,13 @@ import string
 import gzip
 import os.path
 from collections import defaultdict
-from sequtils import *
-from rnautils import *
+from trnasequtils import *
+
 
 
 
 class tRNAlocus:
-    def __init__(self, loc, seq, score, amino, anticodon, intronseq):
+    def __init__(self, loc, seq, score, amino, anticodon, intronseq, rawseq = None):
         self.name = loc.name
         self.loc = loc
         self.seq = seq
@@ -30,9 +30,10 @@ class tRNAlocus:
         self.amino = amino
         self.anticodon = anticodon
         self.intronseq = intronseq
+        self.rawseq = rawseq
 
 class tRNAtranscript:
-    def __init__(self, seq, score, amino, anticodon, loci, intronseq, name = None):
+    def __init__(self, seq, score, amino, anticodon, loci, intronseq, name = None, rawseq = None):
         self.seq = seq
         self.score = score
         self.amino = amino
@@ -40,6 +41,17 @@ class tRNAtranscript:
         self.loci = tuple(loci)
         self.intronseqs = intronseq
         self.name = name
+
+        self.rawseq = rawseq
+    def getmatureseq(self):
+        prefix = ""
+        #print >>sys.stderr, self.amino
+        if self.amino == "His":
+            prefix = "G"
+        end = "CCA"
+        return prefix + self.seq + end 
+    
+            
 
 def getuniquetRNAs(trnalist):
     sequencedict = defaultdict(list)
@@ -62,13 +74,21 @@ def getuniquetRNAs(trnalist):
             #print >>sys.stderr, "Multiple scores"
             pass
         if len(anticodon) > 1:
-            print >>sys.stderr, "Multiple ACs"
-            break
+            print >>sys.stderr, "tRNA file contains identical tRNAs with seperate anticodons, cannot continue"
+            sys.exit()
         yield tRNAtranscript(currtrans, scores,list(amino)[0],list(anticodon)[0],loci, introns)
         
         
 
-def readrnacentral(scanfile, mode = 'locus'):
+def readrnacentral(scanfile,chromnames, mode = 'locus'):
+    reftochrom = dict()
+    convertfile = open(chromnames)
+    
+    for line in convertfile:
+        if line.startswith("#"):
+            continue
+        fields = line.split()
+        reftochrom[fields[1]] = fields[0]
     orgname = "genome"
    
     #print reftochrom
@@ -90,7 +110,11 @@ def readrnacentral(scanfile, mode = 'locus'):
             #print >>sys.stderr, score
             #print name+":"+amino+":"+anticodon
             #print sequence
-            chrom = re.sub(r'\.\d+$', '', fields[7])
+            gbchrom = re.sub(r'\.\d+$', '', fields[7])
+            if gbchrom not in reftochrom:
+                continue
+            chrom = reftochrom[gbchrom]
+            #print >>sys.stderr, chrom
             start = int(fields[8].split('-')[0]) - 1
             end = fields[8].split('-')[1]
             transcriptname = re.sub(r'-\d+$', '', fields[2])
@@ -100,6 +124,7 @@ def readrnacentral(scanfile, mode = 'locus'):
             elif fields[9] == "no":
                 strand = "+"
             currtRNA = GenomeRange(orgname, chrom,start,end, name = name,strand = strand,orderstrand = True)
+            #print >>sys.stderr, chrom
             intronnums = set()
             intronseqs = ""
             for currintron in fields[14:16]:
@@ -117,11 +142,8 @@ def readrnacentral(scanfile, mode = 'locus'):
                 else:
                     newseq += sequence[i]
                     
-            finalseq = newseq.replace('-','') + "CCA"
-            if amino == "His":
-                finalseq = "G" +finalseq 
-                #print >>sys.stderr, "****"
-            currlocus = tRNAlocus(currtRNA,finalseq, score,amino,anticodon,intronseqs)
+            rawseq = newseq.replace('-','')
+            currlocus = tRNAlocus(currtRNA,rawseq, score,amino,anticodon,intronseqs)
             transcriptinfo[transcriptname].append(currlocus)
             if mode == 'locus':
                 yield currlocus
@@ -159,30 +181,28 @@ def readtRNAscan(scanfile, genomefile, mode = None):
         fields = currline.split()
         
         if mode == "gtRNAdb":
-            #print >>sys.stderr, fields[6:8]
+            print >>sys.stderr, fields[6:8]
             del fields[6:8]
-        if  (fields[4] == "Pseudo"):
-            #fields[4] = "Pseudo"
-            if fields[5] == "???":
-                fields[5] = 'Xxx'
-            else:
-                continue
-        if fields[0] == 'chrM' and not includemito:
-            continue
-        if fields[2] > fields[3]:
-            fields[3] = int(fields[3]) - 1
-            
-        else:
-            fields[3] = int(fields[3])
-            fields[2] = int(fields[2]) - 1
         curramino = fields[4]
         currac = fields[5]
         
-        currtRNA = GenomeRange(orgname, fields[0],fields[2],fields[3], name = fields[0]+"."+"tRNA"+fields[1]+"-"+fields[4]+fields[5],strand = "+",orderstrand = True)
+        if currac == "???":
+            currac = 'Xxx'
+        if fields[2] > fields[3]:
+            end = int(fields[3]) - 1
+            start = int(fields[2])
+            
+        else:
+            end = int(fields[3])
+            start = int(fields[2]) - 1
+        currchrom = fields[0]
+        trnanum = fields[1]
+        currtRNA = GenomeRange(orgname, currchrom,start,end, name = currchrom+"."+"tRNA"+trnanum+"-"+curramino+currac,strand = "+",orderstrand = True)
         currtrans = currtRNA
 
-        trnaamino[currtrans.name] = fields[4]
-        trnaanticodon[currtrans.name] = fields[5]
+        trnaamino[currtrans.name] = curramino
+        trnaanticodon[currtrans.name] = currac
+        #print >>sys.stderr, "**".join(fields)#currline
         trnascore[currtrans.name] =  float(fields[8])
         trnas[currtrans.name] =  currtrans
     
@@ -206,11 +226,6 @@ def readtRNAscan(scanfile, genomefile, mode = None):
             end = tRNAintron[curr][1]
             intronseq[curr] = trnaseqs[curr][start:end]
             trnaseqs[curr] = trnaseqs[curr][:start] + trnaseqs[curr][end:]
-        trnaseqs[curr] += "CCA"
-        #print >>sys.stderr,trnaamino[currtrans.name]
-        if trnaamino[curr] == "His":
-            trnaseqs[curr] = "G"+trnaseqs[curr]
-            #print >>sys.stderr, "***"
         
         yield tRNAlocus(trnas[curr], trnaseqs[curr], trnascore[curr],trnaamino[curr],trnaanticodon[curr],intronseq[curr])
 

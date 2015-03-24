@@ -14,6 +14,8 @@ dbname = 'sacCer3'
 
 Rscript ~/pythonsource/trnaseq/analyzecounts.R YeastAging featurecounts.txt agingshort.txt dmStat_Amino:dmAll_Amino dmStat_Amino:dmMet_Amino dmStat_Amino:dmLeu_Amino
 
+
+This currently swaps when given huge bed files for features
 '''
 
 def getdupes(namelist):
@@ -73,7 +75,7 @@ try:
     featurelist = list()
     trnaloci = list()
     for currfile in args.bedfile:
-        featurelist.extend(list(readbed(currfile)))
+        featurelist.extend(list(readfeatures(currfile)))
     trnalist = list()
     for currfile in args.trnaloci:
         trnaloci.extend(list(readbed(currfile)))
@@ -100,9 +102,9 @@ if len(set(curr.name for curr in allfeats)) < len(list(curr.name for curr in all
     #print >>sys.stderr, list(curr.name for curr in featurelist )
     #print >>sys.stderr, len(set(curr.name for curr in featurelist))
     print >>sys.stderr, "Duplicate names in feature list:"
-    print >>sys.stderr, ",".join(getdupes(curr.name for curr in allfeats))
+    #print >>sys.stderr, ",".join(getdupes(curr.name for curr in allfeats))
     #currname
-    sys.exit(1)
+    #sys.exit(1)
 
 
 #featurelist = list(curr for curr in featurelist if curr.name == 'unknown20')
@@ -136,9 +138,12 @@ for currsample in samples:
     
     
     for currfeat in featurelist:
-        for currread in getbamrange(bamfile, currfeat):
-            if currfeat.coverage(currread) > 10:
-                counts[currsample][currfeat.name] += 1
+        try:
+            for currread in getbamrange(bamfile, currfeat):
+                if currfeat.coverage(currread) > 10:
+                    counts[currsample][currfeat.name] += 1
+        except ValueError:
+            pass
     for currfeat in trnaloci:
         for currread in getbamrange(bamfile, currfeat):
             if currfeat.coverage(currread) > 10:
@@ -154,10 +159,10 @@ for currsample in samples:
                 continue
             if not currfeat.coverage(currread) > 10:
                 continue
-                print >>sys.stderr, currsample
-                print >>sys.stderr, currread.bedstring()
-                print >>sys.stderr, currfeat.bedstring()
-                print >>sys.stderr, "********"
+                #print >>sys.stderr, currsample
+                #print >>sys.stderr, currread.bedstring()
+                #print >>sys.stderr, currfeat.bedstring()
+                #print >>sys.stderr, "********"
                 
             trnacounts[currsample][currfeat.name] += 1
                 
@@ -178,7 +183,9 @@ for currsample in samples:
 
 print "\t".join(samples)
 
+trnanames = set()
 for currfeat in trnalist:
+
     print currfeat.name+"\t"+"\t".join(str(trnacounts[currsample][currfeat.name]) for currsample in samples)
     print currfeat.name+"_wholecounts\t"+"\t".join(str(trnawholecounts[currsample][currfeat.name]) for currsample in samples)
     print currfeat.name+"_fiveprime\t"+"\t".join(str(trnafivecounts[currsample][currfeat.name]) for currsample in samples)
@@ -191,6 +198,9 @@ for currfeat in trnaloci:
     print currfeat.name+"\t"+"\t".join(str(trnalocuscounts[currsample][currfeat.name]) for currsample in samples)
     
 for currfeat in featurelist:
+    if currfeat.name in trnanames:
+        continue
+    trnanames.add(currfeat.name)
     print currfeat.name+"\t"+"\t".join(str(counts[currsample][currfeat.name]) for currsample in samples)
 
 

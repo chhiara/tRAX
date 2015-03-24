@@ -14,9 +14,7 @@ Dependencies
  
  
  
- 
- 
-Quick how to do it:
+A sample run is in TestRun.bash.  That downloads reads from SRA and does the tRNA analysis run 
 
  
  

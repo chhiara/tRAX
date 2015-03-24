@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 
 #Download and remove adapters from small RNA sequencing studies
 ~/.aspera/connect/bin/ascp -QT -i ~/.aspera/connect/etc/asperaweb_id_dsa.putty anonftp@ftp-private.ncbi.nlm.nih.gov:/sra/sra-instant/reads/ByRun/sra/SRR/SRR029/SRR029131/SRR029131.sra ./
@@ -24,9 +25,13 @@ wget -q -O - ftp://ftp.ensembl.org/pub/release-75/gtf/homo_sapiens/Homo_sapiens.
 #scan for nuclear tRNAs
 tRNAscan-SE hg19.fa | grep -v chrM >hg19-tRNAs.txt
 
+
+REALNAME=$(readlink -f $0)
+SCRIPTDIR=$( cd "$( dirname "$REALNAME" )" && pwd )
+
 #Create the tRNA database
-maketrnadb.bash hg19 hg19-tRNAs.txt hg19.fa
+"$SCRIPTDIR/maketrnadb.bash" hg19 hg19-tRNAs.txt hg19.fa
 
 
 #Map the tRNAreads
-mapreads.bash TestTrnas hg19 TrnaSamples.txt hg19-genes.gtf
+"$SCRIPTDIR/mapreads.bash" TestTrnas hg19 TrnaSamples.txt hg19-genes.gtf

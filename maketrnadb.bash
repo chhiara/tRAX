@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 
 #$1 is database name
 #$2 is trnascan file
@@ -17,9 +17,16 @@ function print_usage() {
 #exit 1
 
 #`dirname $0`
-SCRIPTDIR=$( cd "$( dirname "$0" )" && pwd )
 
+REALNAME=$(readlink -f $0)
+SCRIPTDIR=$( cd "$( dirname "$REALNAME" )" && pwd )
+
+#echo $SCRIPTDIR
+#echo ${3} 
+	
 samtools faidx ${3}
+#echo "samtools faidx ${3}"
+#exit
 "$SCRIPTDIR/getmaturetrnas.py" --trnascan $2  --genome $3  --bedfile=${1}-maturetRNAs.bed --maturetrnatable=${1}-trnatable.txt --trnaalignment=${1}-trnaalign.stk >${1}-maturetRNAs.fa
 "$SCRIPTDIR/gettrnabed.py" --trnascan $2  --genome $3  >${1}-trnaloci.bed
 
