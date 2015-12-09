@@ -16,6 +16,8 @@ parser.add_argument('--genomefile',
                    help='fasta file of genome')
 parser.add_argument('--stkfile',
                    help='stockholm output file')
+parser.add_argument('--mitomode', action="store_true", default=False,
+                   help='Use mitochondrial models')
 
 
 '''
@@ -27,10 +29,14 @@ args = parser.parse_args()
 
 stkfile = args.stkfile
 genomefile = args.genomefile
+mitomode = args.mitomode
 
+scriptdir = os.path.dirname(os.path.realpath(sys.argv[0]))+"/"        
 
-scriptdir = os.path.dirname(os.path.realpath(sys.argv[0]))+"/"            
-trnacmfile = scriptdir+'TRNAinf-euk.cm'
+if mitomode:
+    trnacmfile = scriptdir+'TRNAinf.cm'
+else:
+    trnacmfile = scriptdir+'TRNAinf-euk.cm'
 
 trnaloci = list(readbed(args.trnaloci, orgdb = "genome", seqfile=genomefile))
 lociseqs = getseqdict(trnaloci, faifiles = {"genome":genomefile+".fai"})

@@ -44,22 +44,41 @@ sampleinfo = as.character(sampledata[colnames(readcounts) == gsub("-", ".", samp
 #gsub("-", ".", sampledata[,1]) 
 #sampledata[,2]
 #colnames(readcounts)
-sampledata[,1]
+#sampledata[,1]
+
+
+#combn(unique(sampleinfo),2,simplify = FALSE)
+#read.table(args[4], stringsAsFactors = FALSE)
+#length(args)
+#args[4]
+
+
+
+
+
+#list(read.table(args[4], stringsAsFactors = FALSE))
 if (length(args) > 3){
-comparisons = strsplit(args[4:length(args)], ":", fixed = TRUE)
+#comparisons = strsplit(args[4:length(args)], ":", fixed = TRUE)
+#comparisons <- read.table(args[4], stringsAsFactors = FALSE)
+#comparisons <- list(read.table(args[4], stringsAsFactors = FALSE))
+
+comparisons <- apply(read.table(args[4], stringsAsFactors = FALSE), 1, list)
+comparisons <- lapply(comparisons,unlist)
+
 
 }else{
 comparisons = combn(unique(sampleinfo),2,simplify = FALSE)
 }
 
 
-#coldata
-#condition
+#sampleinfo
+#readcounts["tRNA-Asn-GTT-1",]
 
 
 coldata = data.frame(condition=factor(sampleinfo))
+#coldata
 
-coldata
+#coldata
 cds = DESeqDataSetFromMatrix(countData = readcounts,coldata  ,design = ~ condition)
 cds = DESeq(cds,betaPrior=TRUE)
 
@@ -67,12 +86,22 @@ cds = DESeq(cds,betaPrior=TRUE)
 
 
 
+#results( cds, contrast=c("condition","dmSCDd12" ,"dmH2Od12"),cooksCutoff  =TRUE)["tRNA-Asn-GTT-1",]
+#results( cds, contrast=c("condition","dmSCDd12" ,"dmH2Od12"),cooksCutoff  =TRUE)["tRNA-Ala-TGC-1",]
+#results( cds, contrast=c("condition","dmSCDd12","dmH2Od12"),cooksCutoff  =TRUE)["tRNA-Ala-TGC-1",]
 
 
 
 names = lapply(comparisons, function(currcompare){ })
 
 compareresults = lapply(comparisons, function(currcompare){ list(paste(currcompare[[1]],currcompare[[2]] ,sep= ":"),results( cds, contrast=c("condition", currcompare[[1]] ,currcompare[[2]]),cooksCutoff  =TRUE))})
+#comparisons
+
+#compareresults[[2]][[2]]["tRNA-Asn-GTT-1",]
+
+#compareresults[[6]][[2]]["tRNA-Asn-GTT-1",]
+
+#compareresults[[8]][[2]]["tRNA-Asn-GTT-1",]
 
 reslist = lapply(compareresults, function(currresult){colrename(currresult[[2]],currresult[[1]])})
 
@@ -87,17 +116,17 @@ dds = cds
 
 #print adjusted p-values
 allprobs = Reduce(function(x,y) cbind(x,y), reslist)
-write.table(allprobs,paste(experimentname,"-padjs.txt", sep = ""),sep="	")
+write.table(allprobs,paste(experimentname,"/",experimentname,"-padjs.txt", sep = ""),sep="	")
                                                                    
 #Print log values
 alllogvals = Reduce(function(x,y) cbind(x,y), resloglist)
-write.table(alllogvals,paste(experimentname,"-logvals.txt", sep = ""),sep="	")
+write.table(alllogvals,paste(experimentname,"/",experimentname,"-logvals.txt", sep = ""),sep="	")
 
 #Print out the size factors
-write.table(rbind(colnames(readcounts),dds$sizeFactor),file=paste(experimentname,"-SizeFactors.txt", sep = ""), row.names=FALSE,col.names=FALSE)
+write.table(rbind(colnames(readcounts),dds$sizeFactor),file=paste(experimentname,"/",experimentname,"-SizeFactors.txt", sep = ""), row.names=FALSE,col.names=FALSE)
 
 #get deseq normalized  raw counts
 normalizedrnas = sweep(readcounts,2,dds$sizeFactor, "/" )
-write.table(normalizedrnas,paste(experimentname,"-normalized.txt", sep = ""), sep = "\t")
+write.table(normalizedrnas,paste(experimentname,"/",experimentname,"-normalized.txt", sep = ""), sep = "\t")
 
 

@@ -1,8 +1,9 @@
 library(ggplot2)
 library(reshape2)
 library(scales)
+library(getopt)
 
-args <- commandArgs(trailingOnly = TRUE)
+#args <- commandArgs(trailingOnly = TRUE)
 
 #args <- c("aging-coverage.txt","sacCer3-trnatable.txt", "YeastAging.txt", "aging-coverage.pdf")
 #args <- c("ExosomeData-coverage.txt","/soe/holmes/pythonsource/trnatest/hgtrnadb/hg19-trnatable.txt","exosomesamples.txt","ExosomeData-SizeFactors.txt","ExosomeData-coverage.pdf")
@@ -10,12 +11,28 @@ args <- commandArgs(trailingOnly = TRUE)
 
 #hcvm.i <- melt(hcvm.i, id.vars=c(grep("^readC", names(hcvm.i), value=TRUE, invert=TRUE)), variable.name="Feature.basePosition", value.name="read.density")
 
-coverages <- read.table(args[1], header = TRUE)
-trnatable <- read.table(args[2])
-sampletable <- read.table(args[3])
-normalizationtable <- read.table(args[4], header = TRUE)
-outputfile <- args[5]
-combinedfile = "alllocicoverage.eps"
+spec <- matrix(c(
+        'cov'     , 'c', 1, "character", "coverage file from getcoverage.py (required)",
+        'trna'     , 't', 1, "character", "trna file (required)",
+        'samples'    , 's', 1, "character", "sample file (required)",
+        'allcov'    , 'a', 1, "character", "output coverages for all tRNAs (optional)",
+        'multicov'    , 'm', 1, "character", "output coverages for all tRNAs on multiple pages(optional)",
+        
+        'combinecov'    , 'o', 1, "character", "output coverages for tRNAs combined",
+        'help'   , 'h', 0, "logical",   "this help"
+),ncol=5,byrow=T)
+
+opt = getopt(spec);
+
+
+coverages <- read.table(opt$cov, header = TRUE)
+trnatable <- read.table(opt$trna)
+sampletable <- read.table(opt$samples)
+
+outputfile <- opt$allcov
+combinedfile <- opt$combinecov
+multipage <- opt$multicov
+#colnames(coverages)
 
 expand.delimited <- function(x, col1=1, col2=2, sep=",") {
   rnum <- 1
@@ -49,7 +66,15 @@ myBreaks <- function(x){
 #trnatable[coveragemelt[,1],c(3,4)]
 
 #remove columns with too many NAs
+
+#length(colSums(is.na(coverages)) < nrow(coverages)/8)
+#colSums(is.na(coverages)) < nrow(coverages)/8
+#length(!grepl("gap",colnames(coverages), fixed = TRUE))
+#colnames(coverages)
+#coverages <- coverages[ , colSums(is.na(coverages)) < nrow(coverages)/8 | !grepl("gap",colnames(coverages), fixed = TRUE) | !grepl("intron",colnames(coverages), fixed = TRUE)]
 coverages <- coverages[ , colSums(is.na(coverages)) < nrow(coverages)/8]
+
+
 
 #aggregate(coverages, by=list(trnatable[,3]), FUN=sum)[2]
 
@@ -108,13 +133,17 @@ acceptorType = locustable[match(coveragemelt$Feature, locustable[,2]),1]
 #coveragemelt[1,]
 
 
+covsummary <- ggplot(coveragemelt,aes(x=variable,y=value, fill = acceptorType, order = as.numeric(acceptorType))) + facet_grid( ~ Sample, scales="free") +xlab("Position")+ geom_bar(stat="identity")+theme(axis.text.y=element_text(colour="black",size=8), strip.text.y = element_text(angle=0,size=4),strip.text.x = element_text(angle=0,size=8),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8))+ ylab("Read Share") +   scale_y_continuous(breaks=myBreaks, labels = c("0","1")) +scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon","tail")) +scale_fill_discrete(drop=FALSE, name="Acceptor\ntype", breaks = levels(acceptorType))
+ggsave(filename=combinedfile,covsummary)
 
-ggplot(coveragemelt,aes(x=variable,y=value)) + facet_grid( ~ Sample, scales="free") + geom_bar(aes(fill = factor(acceptorType)),stat="identity")+theme(axis.title.x=element_blank(), axis.text.y=element_text(colour="black",size=8),axis.text.x=element_text(colour="black"), strip.text.y = element_text(angle=0,size=4),strip.text.x = element_text(angle=0,size=5))+ ylab("Normalized read count") +   scale_y_continuous(breaks=myBreaks) +scale_fill_discrete(drop=FALSE, name="Acceptor\ntype") +scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("start", "half", "end"))#+scale_x_discrete("Position") 
-ggsave(filename=combinedfile)
+
+#ggplot(coveragemelt,aes(x=variable,y=value)) + facet_grid( ~ Sample, scales="free") + geom_bar(aes(fill = factor(acceptorType)),stat="identity")+theme(axis.title.x=element_blank(), axis.text.y=element_text(colour="black",size=8),axis.text.x=element_text(colour="black"), strip.text.y = element_text(angle=0,size=4),strip.text.x = element_text(angle=0,size=5))+ ylab("Normalized read count") +   scale_y_continuous(breaks=myBreaks) +scale_fill_discrete(drop=FALSE, name="Acceptor\ntype") +scale_x_discrete(breaks=c("X1","X37","X38","X73","tail3"), labels=c("start", "intronstart","intronend" ,"end","tail"))#+scale_x_discrete("Position") 
+#ggsave(filename=combinedfile,width=1.5*length(unique(coveragemelt$Sample)), limitsize=FALSE)
 #exit()
 
 
-#ggplot(coveragemelt,aes(x=variable,y=value)) + facet_grid(Feature ~ Sample, scales="free") + geom_bar(stat="identity")+theme(axis.title.x=element_blank(), axis.text.y=element_text(colour="black",size=8),axis.text.x=element_blank(), strip.text.y = element_text(angle=0,size=2),strip.text.x = element_text(angle=0,size=8))+ ylab("read count") +   scale_y_continuous(breaks=myBreaks) #+scale_x_discrete("Position") 
+ggplot(coveragemelt,aes(x=variable,y=value)) + facet_grid(Feature ~ Sample, scales="free") + geom_bar(stat="identity")+theme(axis.title.x=element_blank(), axis.text.y=element_text(colour="black",size=4),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8), strip.text.y = element_text(angle=0,size=6),strip.text.x = element_text(angle=0,size=8))+ ylab("read count") +scale_x_discrete(breaks=c("X1","X9","X26","X37","X44","X58","X65","X73"), labels=c("Start","m1g","m22g","anticodon","varloop","m1a","65","tail"))  #+scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon", "tail"))#+   scale_y_continuous(breaks=myBreaks)+scale_x_discrete(breaks=c("X1","X37","X38","X73","tail3"), labels=c("start", "intronstart", "intronend","end","tail"))
+ggsave(filename=outputfile,height=.5*length(unique(coveragemelt$Feature)),width=2*length(unique(coveragemelt$Sample)), limitsize=FALSE)
 #ggsave(filename=outputfile)
 
 

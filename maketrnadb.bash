@@ -27,10 +27,13 @@ SCRIPTDIR=$( cd "$( dirname "$REALNAME" )" && pwd )
 samtools faidx ${3}
 #echo "samtools faidx ${3}"
 #exit
-"$SCRIPTDIR/getmaturetrnas.py" --trnascan $2  --genome $3  --bedfile=${1}-maturetRNAs.bed --maturetrnatable=${1}-trnatable.txt --trnaalignment=${1}-trnaalign.stk >${1}-maturetRNAs.fa
-"$SCRIPTDIR/gettrnabed.py" --trnascan $2  --genome $3  >${1}-trnaloci.bed
+"$SCRIPTDIR/getmaturetrnas.py" --trnascan $2  --genome $3  --bedfile=${1}-maturetRNAs.bed --maturetrnatable=${1}-trnatable.txt --trnaalignment=${1}-trnaalign.stk --mitomode >${1}-maturetRNAs.fa
+"$SCRIPTDIR/gettrnabed.py" --trnascan $2 --genome $3  >${1}-trnaloci.bed
 
-"$SCRIPTDIR/aligntrnalocus.py" --genomefile $2 --stkfile=${1}-trnaloci.stk  --trnaloci=${1}-trnaloci.bed
+#"$SCRIPTDIR/getmaturetrnas.py" --rnacentral $2  --genome $3  --bedfile=${1}-maturetRNAs.bed --maturetrnatable=${1}-trnatable.txt --chromtranslate NameConversion.txt --trnaalignment=${1}-trnaalign.stk >${1}-maturetRNAs.fa
+#"$SCRIPTDIR/gettrnabed.py" --rnacentral $2  --chromtranslate NameConversion.txt --genome $3  >${1}-trnaloci.bed
+
+"$SCRIPTDIR/aligntrnalocus.py" --genomefile $3 --stkfile=${1}-trnaloci.stk  --trnaloci=${1}-trnaloci.bed --mitomode
 
 cat ${1}-maturetRNAs.fa $3 >${1}-tRNAgenome.fa
 samtools faidx ${1}-tRNAgenome.fa

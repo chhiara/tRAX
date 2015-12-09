@@ -8,7 +8,6 @@ import subprocess
 import tempfile
 import sys
 import itertools
-import configfile
 from collections import defaultdict
 import argparse
 from parsetrnas import *

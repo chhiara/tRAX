@@ -3,6 +3,7 @@
 import pysam
 import sys
 import tempfile
+import gzip
 from collections import defaultdict
 
 def tempmultifasta(allseqs):
@@ -253,19 +254,26 @@ class transcriptfile:
         trnafile = open(trnafilename)
         locustranscript = dict()
         trnatranscripts = list()
+        amino = dict()
         for i, line in enumerate(trnafile):
             fields = line.split()
             if len(fields) < 2:
                 continue
             trnatranscripts.append(fields[0])
+            amino[fields[0]] = fields[2]
             for currlocus in fields[1].split(','):
                 locustranscript[currlocus] = fields[0]
 
         
         self.locustranscript = locustranscript
         self.transcripts = trnatranscripts
+        self.amino = amino
     def gettranscripts(self):
         return set(self.transcripts)
+    def getlocustranscript(self, locus):
+        return  self.locustranscript[locus]
+    def getamino(self, trna):
+        return  self.amino[trna]
         
 
 
@@ -324,7 +332,9 @@ def getsizefactors( sizefactorfile):
         sizefactors[bamheaders[i]] = sizes[i]
         #print >>sys.stderr, bamheaders[i]+":"+ str(sizes[i])
     return sizefactors
-    
+
+#special class that uses the read indentifier for hashing in sets
+
 class GenomeRange:
     __slots__ = "dbname", "chrom", "strand","name", "fastafile"
     def __eq__(self, other):
@@ -372,8 +382,35 @@ class GenomeRange:
         if name is None:
             newname = self.name
         return GenomeRange(self.dbname, self.chrom, self.start - dist,self.end + dist,self.strand, name = newname, fastafile = self.fastafile)
+    def getupstream(self, dist = 50, name = None):
+        newname = name
+        if name is None:
+            newname = self.name
+        return GenomeRange(self.dbname, self.chrom, self.start - dist,self.start,self.strand, name = newname, fastafile = self.fastafile)
+    def getdownstream(self, dist = 50, name = None):
+        newname = name
+        if name is None:
+            newname = self.name
+        return GenomeRange(self.dbname, self.chrom, self.end,self.end + dist,self.strand, name = newname, fastafile = self.fastafile)
+    def antisense(self):
+        if self.strand == "+":
+            newstrand = "-"
+        else:
+            newstrand = "+"
+        return GenomeRange(self.dbname, self.chrom, self.start,self.end,newstrand, name = self.name, fastafile = self.fastafile)
+    def bamseq(self):
+        if self.strand == "+":
+            return self.data["seq"]
+        else:
+            return revcom(self.data["seq"])
 
-
+class GenomeRead(GenomeRange):
+    def __eq__(self, other):
+        return self.name == other.name
+    def __hash__(self):
+        return  hash(self.name)
+    def __init__(*args, **nargs):
+        GenomeRange.__init__(*args, **nargs)
 '''
 Still need to add trailer fragment code, both here and elsewhere
 '''
@@ -390,18 +427,20 @@ def getfragtype(currfeat, currread, maxoffset = 10):
             return "Threeprime"
         else:
             return "Fiveprime"
-def readfeatures(filename, orgdb="genome", seqfile= None):
+            
+smallrnatypes = set([])            
+def readfeatures(filename, orgdb="genome", seqfile= None, removepseudo = False):
     if filename.endswith(".bed") or filename.endswith(".bed.gz"):
         return readbed(filename, orgdb, seqfile)
     elif filename.endswith(".gtf") or filename.endswith(".gtf.gz") or filename.endswith(".gff") or filename.endswith(".gff.gz"):
-        
-        return readgtf(filename, orgdb, seqfile)
+        #print >>sys.stderr, removepseudo
+        return (curr for curr in readgtf(filename, orgdb, seqfile, filterpsuedo = removepseudo, filtertypes =set(['retained_intron','antisense','lincRNA']) ))
     else:
         print >>sys.stderr, filename+" not valid feature file"
         sys.exit()
 
 
-def readgtf(filename, orgdb="genome", seqfile= None):
+def readgtf(filename, orgdb="genome", seqfile= None, filterpsuedo = False, filtertypes = set(['retained_intron','antisense','lincRNA'])):
     bedfile = None
     #print >>sys.stderr, "****"
     if filename == "stdin":
@@ -417,20 +456,41 @@ def readgtf(filename, orgdb="genome", seqfile= None):
             continue
         fields = currline.rstrip().split("\t")
         if len(fields) > 2:
+            biotype = None
             featname = None
+            genename = None
             #print >>sys.stderr, len(fields)
-            if fields[2] != "transcript":
+            genesource = fields[1]  
+            #retained introns are often other things as well, so I skip em
+            if fields[2] != "transcript" or genesource in filtertypes:
                 continue
-                
-                
+
+              
             for currattr in fields[8].rstrip(";").split(";"):
                 #print >>sys.stderr,  currattr
                 currname = currattr.strip().split()[0]
                 currvalue = currattr.strip().split()[1]
-                if currname == "name" or currname == "gene_id":
+                if currname == "transcript_name":
                     featname = currvalue.strip('"')
+                elif currname == "name" or currname == "gene_id" and featname is None:
+                    featname = currvalue.strip('"')
+
+                elif currname == "gene_biotype":
+                    biotype = currvalue.strip('"')
+                elif currname == "gene_name":
+                    genename = currvalue.strip('"')
+                #print >>sys.stderr, "***||"
+            
+            if filterpsuedo and biotype == "pseudogene":
+                #print >>sys.stderr, "*******"
+                continue
+                
+            if genesource == 'ensembl':
+                #print >>sys.stderr, biotype
+                genesource = biotype
+                    
             #print >>sys.stderr,  GenomeRange( orgdb, fields[0],fields[3],fields[4],fields[6], name = featname, fastafile = seqfile).bedstring()                    
-            yield GenomeRange( orgdb, fields[0],fields[3],fields[4],fields[6], name = featname, fastafile = seqfile)
+            yield GenomeRange( orgdb, fields[0],fields[3],fields[4],fields[6], name = featname, fastafile = seqfile, data = {"biotype":biotype, "source":genesource, "genename":genename})
             
 def readbed(filename, orgdb="genome", seqfile= None):
     bedfile = None
@@ -464,7 +524,9 @@ def ifelse(arg, trueres,falseres):
         
 def isprimarymapping(mapping):
     return not (mapping.flag & 0x0100 > 0)        
-def getbamrange(bamfile, chromrange = None, primaryonly = False):
+def issinglemapped(mapping):
+    return not (mapping.mapq >= 2)    
+def getbamrange(bamfile, chromrange = None, primaryonly = False, singleonly = False):
     bamiter = None
     if chromrange is not None:
         bamiter = bamfile.fetch(chromrange.chrom, chromrange.start, chromrange.end)
@@ -478,13 +540,16 @@ def getbamrange(bamfile, chromrange = None, primaryonly = False):
         #len(currline.pos)
         strand = "+"
         strand = ifelse(currline.is_reverse, '-','+')
-        seq = None
+        #not giving the reverse complement for now
+        seq = currline.seq
         #print currline.cigar
         if primaryonly and not isprimarymapping(currline):
             continue
+        if singleonly and not issinglemapped(currline):
+            continue
         if strand == "-":
             pass
-        yield GenomeRange( "genome",rname,currline.pos,currline.aend,strand, name = currline.qname , data = {"score":currline.mapq, "CIGAR":currline.cigar, "seq":seq, "flags": currline.flag, "qual":currline.qual})
+        yield GenomeRead( "genome",rname,currline.pos,currline.aend,strand, name = currline.qname , data = {"score":currline.mapq, "CIGAR":currline.cigar,"CIGARstring":currline.cigarstring, "seq":seq, "flags": currline.flag, "qual":currline.qual,"bamline":currline})
 
 
 def getpileuprange(bamfile, chromrange = None):
@@ -703,4 +768,8 @@ class RangeBin:
                 for currrange in self.bins[i]:
                     yield currrange
       
-            
+def revcom(sequence):
+    seq = list(sequence)
+    seq.reverse()
+    comp = {"A":"T","T":"A", "C":"G","G":"C","N":"N","R":"Y","Y":"R","S":"W","W":"S", "K":"M", "M":"K","-":"-",".":"."}
+    return ''.join(comp[base] for base in seq)            

@@ -7,6 +7,7 @@ import itertools
 import pysam
 import subprocess
 
+
 from trnasequtils import *
 
 
@@ -17,7 +18,9 @@ Here is where I need to use the tRNA ontology between mature tRNAs and chromosom
 
 
 '''
+minnontrnasize = 20
 
+maxmaps = 50
 def isprimarymapping(mapping):
     return not (mapping.flag & 0x0100 > 0)
 
@@ -35,6 +38,7 @@ def getbesttrnamappings(trnafile, bamout = True, logfile = sys.stderr):
     totalclips = 0
     totalreads = 0
     multimaps = 0
+    duperemove = 0
     shortened = 0
     mapsremoved = 0
     totalmaps = 0
@@ -67,6 +71,7 @@ def getbesttrnamappings(trnafile, bamout = True, logfile = sys.stderr):
         currscore = None
         newset = set()
         readlength = None
+        #print >>sys.stderr, "**||"
         
         #iterate through all mappings of the current read
         #print >>sys.stderr, "**"+str(len(list(allmaps)))
@@ -85,15 +90,23 @@ def getbesttrnamappings(trnafile, bamout = True, logfile = sys.stderr):
             readlength = len(currmap.seq)
             mappings += 1
             #if this is the best mapping of this read, discard any previous mappings
+            
+            
+            #print >>sys.stderr, tagdict["AS"]
+            #if the current score is worse than the new one
             if currscore is None or currscore < tagdict["AS"]:
+                #print >>sys.stderr, str(currscore) +"<"+str( tagdict["AS"])
                 newset = set()
                 newset.add(currmap)
                 currscore = tagdict["AS"]
+
             #if this mappings is the same as the previous best mapping, add it to the list
             elif currscore == tagdict["AS"]:
                 newset.add(currmap)
+                
             else:
                 pass
+            #print >>sys.stderr, currscore
         #here is where I count a bunch of thing so I can report them at the end
         if mappings > 1:
             multimaps += 1
@@ -126,10 +139,22 @@ def getbesttrnamappings(trnafile, bamout = True, logfile = sys.stderr):
                     #print curr.data["bamline"].rstrip()
                     pass
         else:
+            #for non-tRNA, remove reads that are too small
+            if readlength < minnontrnasize:
+                continue
+            #for non-tRNA, remove sets if mapped too many times
+            
+
             for curr in newset:
                 pass
                 finalset.append(curr)
-                
+            #print >>sys.stderr, "len: "+str(len(finalset))    
+            if len(finalset) > maxmaps:
+                duperemove += 1
+                #print >>sys.stderr, "**"
+                continue
+            
+
         #print >>sys.stderr,  sum(isprimarymapping(curr) for curr in finalset)
         #This bit is for ensuring that, if I remove the old primary mapping, a new one is chosen
         #Nesecarry for calculating read proportions

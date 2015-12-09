@@ -30,12 +30,23 @@ countsmelt = within(countsmelt, seq <- factor(seq,
     rev(rownames(selectcounts)), 
     ordered = TRUE))
 
+#head(countsmelt)
+sampletotals = aggregate(countsmelt$value, list(countsmelt$variable), sum)
+
+#countsmelt
+
+
+#sampletotals$x[countsmelt$variable]
+#countsmelt = countsmelt[countsmelt$value > 100,]
+countsmelt = countsmelt[countsmelt$value > sampletotals$x[countsmelt$variable] / 100,]
+#countsmelt = countsmelt
+#head(countsmelt)
 ggplot(countsmelt,aes(x = variable, y = value,fill = seq, stat="identity")) +
 	geom_bar(position = "fill",stat="identity") + 
     geom_bar(position = "fill",stat="identity",color="black",show_guide=FALSE) + 
     scale_y_continuous(labels = percent_format()) +
     xlab("Sample") +
-    ylab("Percentage of Reads") + 
+    ylab("Number of Reads") + 
     theme(axis.title.x = element_text(face="bold", size=15), axis.text.x = element_text(face="bold", size=9,angle = 90, vjust = .5))
 
 ggsave(filename=args[2])

@@ -1,6 +1,9 @@
 library(ggplot2)
 library(reshape2)
 library(scales)
+library(plyr)
+library(gridExtra)
+library(getopt)
 
 args <- commandArgs(trailingOnly = TRUE)
 
@@ -10,12 +13,40 @@ args <- commandArgs(trailingOnly = TRUE)
 
 #hcvm.i <- melt(hcvm.i, id.vars=c(grep("^readC", names(hcvm.i), value=TRUE, invert=TRUE)), variable.name="tRNA.basePosition", value.name="read.density")
 
-coverages <- read.table(args[1], header = TRUE)
-trnatable <- read.table(args[2])
-sampletable <- read.table(args[3])
-normalizationtable <- read.table(args[4], header = TRUE)
-outputfile <- args[5]
-combinedfile = "allcoverage.pdf"
+
+spec <- matrix(c(
+        'cov'     , 'c', 1, "character", "coverage file from getcoverage.py (required)",
+        'trna'     , 't', 1, "character", "trna file (required)",
+        'samples'    , 's', 1, "character", "sample file (required)",
+        'directory'    , 'f', 1, "character", "directory to place amino acid files",
+        'allcov'    , 'a', 1, "character", "output coverages for all tRNAs (optional)",
+        'multicov'    , 'm', 1, "character", "output coverages for all tRNAs on multiple pages(optional)",
+        
+        'combinecov'    , 'o', 1, "character", "output coverages for tRNAs combined",
+        'modomics'    , 'd', 2, "character", "optional modomics file",
+        'help'   , 'h', 0, "logical",   "this help"
+),ncol=5,byrow=T)
+
+opt = getopt(spec);
+
+
+coverages <- read.table(opt$cov, header = TRUE)
+trnatable <- read.table(opt$trna)
+sampletable <- read.table(opt$samples)
+modomicstable <- data.frame()
+#if(!is.null(opt$modomics) && file.exists(opt$modomics) ){
+modomicstable <- read.table(opt$modomics, header = TRUE)
+#}
+print("****")
+print(opt$directory)
+
+
+
+#modomicstable <- read.table("/data/scratch/importrnaseq/agingtest/sacCer3-modomics.txt", header = TRUE)
+
+outputfile <- opt$allcov
+combinedfile <- opt$combinecov
+multipage <- opt$multicov
 #colnames(coverages)
 
 myBreaks <- function(x){
@@ -31,7 +62,8 @@ myBreaks <- function(x){
 
 #remove columns with too many NAs
 coverages <- coverages[ , colSums(is.na(coverages)) < nrow(coverages)/8]
-
+#coverages <- coverages[ , colSums(is.na(coverages)) < nrow(coverages)/8 | !grepl("gap",colnames(coverages), fixed = TRUE) | !grepl("intron",colnames(coverages), fixed = TRUE)]
+#colnames(coverages)
 #aggregate(coverages, by=list(trnatable[,3]), FUN=sum)[2]
 
 #1:(length(colnames(coverages)) - 2)
@@ -65,7 +97,7 @@ coveragemelt[is.na(coveragemelt)] <- 0
 #coveragemelt
 #out <- as.vector(coveragetest$value / as.vector( normalizationtable[1,coveragetest$Sample]), mode = "numeric")
 
-print("***")
+
 coveragemeltagg <- aggregate(coveragemelt$value, by=list(Feature = coveragemelt$Feature, Sample = sampletable[match(coveragemelt$Sample,sampletable[,1]),2], variable = coveragemelt$variable), FUN=mean)
 colnames(coveragemeltagg)[colnames(coveragemeltagg) == "x"]  <- "value"
 coveragemeltagg$Sample <- factor(coveragemeltagg$Sample,levels = unique(sampletable[,2]), ordered = TRUE)
@@ -75,7 +107,7 @@ coveragemelt <- coveragemeltagg
 #coveragemelt[coveragemelt$tRNA == "tRNA-Phe-GAA-2",]
 #"41390"	"tRNA-Leu-TAA-1"	"dmMet_Amino"	"105"	546.017749321
 
-#write.table(coveragemelt,"aggtables.txt" ,sep = "\t")
+write.table(coveragemelt,"aggtables.txt" ,sep = "\t")
 
 
 acceptorType = trnatable[match(coveragemelt$Feature, trnatable[,1]),3]
@@ -88,28 +120,81 @@ acceptorType = trnatable[match(coveragemelt$Feature, trnatable[,1]),3]
 #colnames(coveragemeltagg)
 #unique(coveragemelt$tRNA) 
 
+#acceptorType
+acceptorType <- factor(acceptorType, levels = sort(unique(acceptorType)))
+#acceptorType <- factor(acceptorType)
 
+#coveragemelt = coveragemelt[order(acceptorType),]
 
-covsummary <- ggplot(coveragemelt,aes(x=variable,y=value)) + facet_grid( ~ Sample, scales="free") + geom_bar(aes(fill = factor(acceptorType)),stat="identity")+theme(axis.title.x=element_blank(), axis.text.y=element_text(colour="black",size=8),axis.text.x=element_blank(), strip.text.y = element_text(angle=0,size=4),strip.text.x = element_text(angle=0,size=5))+ ylab("Normalized read count") +   scale_y_continuous(breaks=myBreaks) +scale_fill_discrete(drop=FALSE, name="Acceptor\ntype") #+scale_x_discrete("Position") 
+#unique(coveragemelt$variable)
+#unique(acceptorType)
+
+covsummary <- ggplot(coveragemelt,aes(x=variable,y=value, fill = acceptorType, order = as.numeric(acceptorType))) + facet_grid( ~ Sample, scales="free") +xlab("Position")+ geom_bar(stat="identity")+theme(axis.text.y=element_text(colour="black",size=8), strip.text.y = element_text(angle=0,size=4),strip.text.x = element_text(angle=0,size=8),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8))+ ylab("Read Share") +   scale_y_continuous(breaks=myBreaks, labels = c("0","1")) +scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon","tail")) +scale_fill_discrete(drop=FALSE, name="Acceptor\ntype", breaks = levels(acceptorType))
 ggsave(filename=combinedfile,covsummary)
 
 #axis.text.y=element_text is y-axis coverage labels
 #strip.text.y is trna names
 #strip.text.x is experiment names
-#ggplot(coveragemelt,aes(x=variable,y=value)) + facet_grid(Feature ~ Sample, scales="free") + geom_bar(stat="identity")+theme(axis.title.x=element_blank(), axis.text.y=element_text(colour="black",size=8),axis.text.x=element_blank(), strip.text.y = element_text(angle=0,size=2),strip.text.x = element_text(angle=0,size=8))+ ylab("read count") +   scale_y_continuous(breaks=myBreaks) #+scale_x_discrete("Position")
-allcoverages <- ggplot(coveragemelt,aes(x=variable,y=value), size = 2) + facet_grid(Feature ~ Sample, scales="free") + geom_bar(stat="identity")+theme(axis.title.x=element_blank(), axis.text.y=element_text(colour="black",size=2),axis.text.x=element_blank(), strip.text.y = element_text(angle=0),strip.text.x = element_text(angle=0))+ ylab("read count") +   scale_y_continuous(breaks=myBreaks) #+scale_x_discrete("Position") 
+
+if(TRUE){
+#allcoverages <- ggplot(coveragemelt,aes(x=variable,y=value), size = 2) + facet_grid(Feature ~ Sample, scales="free") + geom_bar(stat="identity")+theme(axis.title.x=element_blank(), axis.text.y=element_text(colour="black",size=8),axis.text.x=element_blank(), strip.text.y = element_text(angle=0),strip.text.x = element_text(angle=0, size = 4))+ ylab("read count") +   scale_y_continuous(breaks=myBreaks) #+scale_x_discrete("Position")
+allcoverages <- ggplot(coveragemelt,aes(x=variable,y=value), size = 2) + facet_grid(Feature ~ Sample, scales="free") + geom_bar(stat="identity")+theme(axis.text.y=element_text(colour="black",size=4),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8), strip.text.y = element_text(angle=0),strip.text.x = element_text(angle=0))+ ylab("Read Share") +   scale_y_continuous(breaks=myBreaks) +scale_x_discrete(breaks=c("X1","X9","X26","X37","X44","X58","X65","X73"), labels=c("Start","m1g","m22g","anticodon","varloop","m1a","65","tail"))  #+scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon", "tail"))  
+plots = dlply(coveragemelt , "Feature", `%+%`, e1 = allcoverages)
+#ml = do.call(marrangeGrob, c(plots, list(nrow=length(unique(coveragemelt$Sample)), ncol=6)))
+ml = do.call(marrangeGrob, c(plots, list(nrow=1, ncol=1)))
+ggsave(multipage, ml)
+}
+#ggsave(filename="testwrap.pdf", allcoverages,scale=2)
+dev.off()
+#pdf(outputfile, height=1*length(unique(coveragemelt$Feature)),width=5*length(unique(coveragemelt$Sample)))
+
+#reformat <- function(x,lab="\n"){ sapply(x, function(c){ paste(unlist(strsplit(as.character(c) , split="_")),collapse=lab) }) }
+    
+#coveragemelt$Sample <- factor(coveragemelt$Sample, labels=unique(reformat(coveragemelt$Sample))
+
+modomicstable$pos <- paste("X",modomicstable$pos, sep = "")
+modomicstable <- modomicstable[as.character(modomicstable$pos) %in% unique(as.character(coveragemelt$variable)),]
+modomicstable$dist <- match(modomicstable$pos,  levels(coveragemelt$variable)) #factor(modomicstable$pos, levels = levels(coveragemelt$variable))
+modomicstable$Feature <- factor(modomicstable$trna,levels = levels(coveragemelt$Feature) )
+
+stopmods = c("m1A","m2,2G","m1G","m1I","m3C")
+modomicstable <- modomicstable[modomicstable$mod %in% stopmods,]
+
+#modomicstable$dist <- modomicstable$pos
+#head(coveragemelt)
+#unique(as.character(coveragemelt$variable))
+#
+#geom_bar(aes(fill = factor(baseMod, levels=c("m1A", "m1G", "m3C", "other bases", "not documented"))), stat="identity")
+#modomicstable <- data.frame(Feature = factor(c("nmt-tRNA-Leu-TAA-1"),levels(coveragemelt$Feature)), pos =10)
+allcoverages <- ggplot(coveragemelt,aes(x=variable,y=value), size = 2) + facet_grid(Feature ~ Sample, scales="free") + geom_bar(stat="identity") +  geom_vline(aes(xintercept = dist, col = mod),data = modomicstable,show_guide=TRUE)+theme(axis.text.y=element_text(colour="black",size=6),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8), strip.text.y = element_text(angle=0),strip.text.x = element_text(size = ,angle=0))+ ylab("Read Share") +   scale_y_continuous(breaks=myBreaks) +scale_x_discrete(breaks=c("X1","X9","X26","X37","X44","X58","X65","X73"), labels=c("Start","m1g","m22g","anticodon","varloop","m1a","65","tail"))   #+scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon", "tail"))  
 #ggsave(filename=outputfile, width = 30, height = 30)
-ggsave(filename=outputfile, allcoverages,scale=2)
+#3*length(unique(coveragemelt$Feature))
+#5*length(unique(coveragemelt$Sample))
+#dev.off()
+scalefactor = .5
+
+ggsave(filename=outputfile, allcoverages,height=scalefactor*1*length(unique(coveragemelt$Feature)),width=scalefactor*5*length(unique(coveragemelt$Sample)), limitsize=FALSE, dpi = 600)
+#ggsave(filename=outputfile, allcoverages,dpi = 1000, limitsize=FALSE)
 #set dpi
 
+#unique(acceptorType)
+if(!is.null(opt$directory)){
+for (curramino in unique(acceptorType)){
+#print("***")
+
+aminodata = coveragemelt[acceptorType == curramino,]
+aminomodomicstable = modomicstable[modomicstable$Feature %in% unique(aminodata$Feature),]
+aminocoverage <- ggplot(aminodata,aes(x=variable,y=value), size = 2) + facet_grid(Feature ~ Sample, scales="free") + geom_bar(stat="identity") +  geom_vline(aes(xintercept = dist, col = mod),data = aminomodomicstable,show_guide=TRUE)+theme(axis.text.y=element_text(colour="black",size=6),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8), strip.text.y = element_text(angle=0),strip.text.x = element_text(size = ,angle=0))+ ylab("Read Share") +   scale_y_continuous(breaks=myBreaks) +scale_x_discrete(breaks=c("X1","X9","X26","X37","X44","X58","X65","X73"), labels=c("Start","m1g","m22g","anticodon","varloop","m1a","65","tail"))   #+scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon", "tail"))
+
+aminoname = paste(opt$directory,"/",curramino,"-coverage.pdf", sep = "")
+#print(aminoname)
+ggsave(filename=aminoname, aminocoverage,height=scalefactor*1.5*length(unique(aminodata$Feature)),width=scalefactor*5*length(unique(aminodata$Sample)), limitsize=FALSE, dpi = 600)
+
+}
+}
 
 
-
-#ggplot(coveragemelt,aes(x=variable,y=value)) + facet_grid(Feature ~ Sample, scales="free") + geom_bar(stat="identity")+theme(axis.title.x=element_blank(), axis.text.x=element_text(colour="black",size=2), strip.text.y = element_text(angle=0))+ ylab("Normalized read count")+scale_x_discrete("Position")
-
- #scale_x_discrete()
 
 
 #theme(axis.title.x=element_blank(), axis.text.x=element_text(colour="black"), strip.text.y = element_text(angle=0))
-#+ scale_x_discrete()
-#ggplot(scv.i, aes(x=paste(V1,V2,sep = "_" ), y=value)) + geom_bar(aes(fill = factor(baseMod, levels=c("m1A", "m1G", "m3C", "other bases", "not documented"))), stat="identity") + facet_grid(Feature ~ treatment, scales="free", labeller=sig_labeller_WT) + ylab("read count") + scale_x_discrete(breaks=grep("other_9|AntiC.loop_34|AntiC.loop_35|AntiC.loop_36|T.loop_58", unique(scv.i$tRNA.basePosition), value=TRUE), labels=c("res.9", "", "anti\ncodon", "","A58")) + theme(axis.title.x=element_blank(), axis.text.x=element_text(colour="black"), strip.text.y = element_text(angle=0)) + scale_fill_manual(limits=c("m1A", "m1G", "m3C", "other bases", "not documented"), values=profilePlotColors, name="Modomics\nbase\nmodifications")
+

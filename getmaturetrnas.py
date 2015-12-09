@@ -31,6 +31,8 @@ parser.add_argument('--maturetrnatable',
                    help='Output table of mature tRNAs')
 parser.add_argument('--trnaalignment',
                    help='Output stockholm format alignment of mature tRNAs')
+parser.add_argument('--mitomode', action="store_true", default=False,
+                   help='Use mitochondrial models for alignment')
 
 
 args = parser.parse_args()
@@ -59,7 +61,7 @@ for currfile in args.rnacentral:
     trnacentraltrnas.extend(readrnacentral(currfile,args.chromtranslate,mode = 'transcript'))
     
 alltrnas = list(getuniquetRNAs(trnascantrnas)) + trnacentraltrnas
-
+mitomode = args.mitomode
 trnabed = None
 if args.bedfile:
     trnabed = open(args.bedfile, "w")
@@ -92,8 +94,13 @@ for currtrans in alltrnas:
         anticodoncount[currtrans.anticodon] += 1
         
         
-scriptdir = os.path.dirname(os.path.realpath(sys.argv[0]))+"/"            
-trnacmfile = scriptdir+'trnamature-euk.cm'
+scriptdir = os.path.dirname(os.path.realpath(sys.argv[0]))+"/"
+
+#cp /projects/lowelab/users/pchan/data/tRNA/stdModels/infernal-1.1/TRNAinf.cm ./
+if mitomode:
+    trnacmfile = scriptdir+'TRNAMatureMitoinf.cm'
+else:
+    trnacmfile = scriptdir+'trnamature-euk.cm'
 stkfile = args.trnaalignment
 if args.trnaalignment:
     devnull = open(os.devnull, 'w')

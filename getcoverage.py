@@ -6,6 +6,7 @@ import argparse
 import string
 import itertools
 from collections import defaultdict
+import os.path
 from trnasequtils import *
 
 dbname = 'sacCer3'
@@ -53,12 +54,20 @@ class readcoverage:
 
 count = 0
 
-positions = list([0,1,2,3,4,5,6,7,8,9,0,11,12,13,14,15,16,17,'-',18,19,20,'-','-',21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,'e','e','e','e','e','e','e','e','e','e','e','e','e','e','e','e','e','e','e',46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86])
+positions = list([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,'-',18,19,20,'-','-',21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,'e','e','e','e','e','e','e','e','e','e','e','e','e','e','e','e','e','e','e',46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76])
+#99 long
+#positions = list([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,'-',18,19,20,'-','-',21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,'e','e','e','e','e','e','e','e','e','e','e','e','e','e','e','e','e','e','e',46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,71,72,73])
+print >>sys.stderr, len(positions)
 def gettnanums(trnaalign, margin = 0):
     trnanum = list()
     currcount = 0
     enum = 1
     gapnum = 1
+    intronnum = 1
+    #print >>sys.stderr, len(list(curr for curr in trnaalign.consensus if curr != "."))
+    #print >>sys.stderr, "".join(list(curr for curr in trnaalign.consensus if curr != "."))
+    #print >>sys.stderr, "".join(list(curr for curr in trnaalign.consensus if curr != "."))
+
     for i in range(margin):
         trnanum.append('head'+str(margin - i))
     for i, struct in enumerate(trnaalign.consensus):
@@ -67,7 +76,7 @@ def gettnanums(trnaalign, margin = 0):
             if currcount == 0 and struct == '=':
                 currcount = 1
             if positions[currcount] == 'e':
-                trnanum.append('e'+str(gapnum))
+                trnanum.append('e'+str(enum))
                 enum += 1
                 currcount += 1
             elif positions[currcount] == '-':
@@ -78,8 +87,14 @@ def gettnanums(trnaalign, margin = 0):
                 trnanum.append(str(positions[currcount]))
                 currcount += 1
         else:
-            trnanum.append('gap'+str(gapnum))
-            gapnum += 1
+            #if intron
+            if positions[currcount] == 38:
+                trnanum.append('intron'+str(gapnum))
+                intronnum += 1
+            else:
+                
+                trnanum.append('gap'+str(gapnum))
+                gapnum += 1
     for i in range(margin):
         trnanum.append('tail'+str(i+1))
     return trnanum
@@ -97,14 +112,21 @@ parser.add_argument('--combinereps', action="store_true", default=False,
                    help='Sum samples that are replicates')
 parser.add_argument('--edgemargin', type=int, default=0,
                    help='margin to add to feature coordinates')
+
+parser.add_argument('--mincoverage', type=int, default=10,
+                   help='Reads with less then this are filtered out (default 10)')
 '''
 parser.add_argument('--trnapositions', action="store_true", default=False,
                    help='Use tRNA positions')
 '''
 
+
+'''
+Perform check on sizefactor file to ensure it has all samples
+'''
 args = parser.parse_args()
 edgemargin = int(args.edgemargin)
-
+mincoverage = args.mincoverage
 sampledata = samplefile(args.samplefile)
 samples = sampledata.getsamples()
 
@@ -189,7 +211,8 @@ for currsample in samples:
     allcoverages[currsample] = dict()
     try:
         #print >>sys.stderr, currbam
-        pysam.index(""+currbam)
+        if not os.path.isfile(currbam+".bai"):
+            pysam.index(""+currbam)
         bamfile = pysam.Samfile(""+currbam, "rb" )  
     except IOError as ( strerror):
         print >>sys.stderr, strerror
@@ -211,9 +234,10 @@ for currsample in samples:
 
 
 print "Feature"+"\t"+"Sample"+"\t"+"\t".join(positionnums)
+
 for currfeat in trnalist:
     totalreads = sum(allcoverages[currsample][currfeat.name].totalreads for currsample in samples)
-    if totalreads < 100 * len(samples):
+    if totalreads < mincoverage:
         continue
     if args.combinereps:
 

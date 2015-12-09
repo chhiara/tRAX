@@ -18,10 +18,22 @@ cat <(samtools view -H HBV10_1.bam) <(samtools view HBV10_1.bam | grep UNC11-SN6
 
 '''
 
+numcores = 4
+
+'''
+I think the quals are irrelevant, and N should be scored as only slightly better than a mismatch
+this does both
+ignoring quals forces the mismatches to have a single score, which is necessary for precise N weighting
+Very sensitive is necessary due to mismatch caused by modified base misread
+ --ignore-quals --np 5
+'''
 def wrapbowtie2(bowtiedb, unpaired, outfile, maxmaps = MAXMAPS,program = 'bowtie2', logfile = None):
-    bowtiecommand = program+' -x '+bowtiedb+' -k '+str(maxmaps)+' -U '+unpaired
-    print >>sys.stderr, bowtiecommand
     
+    bowtiecommand = program+' -x '+bowtiedb+' -k '+str(maxmaps)+' --very-sensitive --ignore-quals --np 5 --reorder -p '+str(numcores)+' -U '+unpaired
+    if logfile:
+        print >>logfile,  bowtiecommand
+    #print >>sys.stderr, bowtiecommand
+    logfile.flush()
     bowtiecommand = bowtiecommand + ' | '+scriptdir+'choosemappings.py '+trnafile+' | samtools sort - '+outfile
     bowtierun = None
     if logfile is not None:
@@ -61,6 +73,8 @@ parser.add_argument('--logfile',
                    help='optional log file for error messages and mapping stats')
 parser.add_argument('--bowtiedb',
                    help='Location of Bowtie 2 database')
+parser.add_argument('--force', action="store_true", default=False,
+                   help='Force remapping even if mapping results exist')
 
 args = parser.parse_args()
 
@@ -80,7 +94,7 @@ trnafile = args.trnafile
 
 
 
-    
+forcecreate = args.force    
     
     
 if args.logfile:
@@ -88,16 +102,20 @@ if args.logfile:
 else:
     logfile = sys.stderr
 for samplename in samples:
-    print >>logfile, "Mapping "+samplename
+    
     #put stuff in this so that it returns the err if bowtie2 fails instead of logging it
     
     #print >>sys.stderr, sampledata.getfastq(samplename)
+    
     bamfile = workingdir+samplename
     #print >>sys.stderr, bamfile
     #sys.exit()
-    
-    
-    wrapbowtie2(bowtiedb, sampledata.getfastq(samplename),bamfile, logfile=logfile)
+    #print >>sys.stderr, os.path.isfile(bamfile+".bam")
+    if forcecreate or not os.path.isfile(bamfile+".bam"):
+        print >>logfile, "Mapping "+samplename
+        print >>sys.stderr, "Mapping "+samplename
+        logfile.flush()
+        wrapbowtie2(bowtiedb, sampledata.getfastq(samplename),bamfile, logfile=logfile)
     
 
     
