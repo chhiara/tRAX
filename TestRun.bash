@@ -35,5 +35,5 @@ SCRIPTDIR=$( cd "$( dirname "$REALNAME" )" && pwd )
 
 
 #Map the tRNAreads
-"$SCRIPTDIR/processsamples.py" --experimentname=TestTrnas --databasename=hg19 --samplefile=${SCRIPTDIR}/TestSamples.txt.txt --ensemblgtf=hg19-genes.gtf
+"$SCRIPTDIR/processsamples.py" --experimentname=TestTrnas --databasename=hg19 --samplefile=${SCRIPTDIR}/TestSamples.txt --ensemblgtf=hg19-genes.gtf
 
