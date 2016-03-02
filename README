@@ -5,7 +5,7 @@ TFAnalyze
 Dependencies
  - Python 2.7 or higher
  - bowtie2
- - pysam Python library
+ - pysam Python library (Older versions have a memory leak, make sure you have an updated version)
  - samtools
  - R
  - Deseq2 R library
