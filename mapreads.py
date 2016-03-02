@@ -20,15 +20,18 @@ cat <(samtools view -H HBV10_1.bam) <(samtools view HBV10_1.bam | grep UNC11-SN6
 
 numcores = 4
 
-'''
-I think the quals are irrelevant, and N should be scored as only slightly better than a mismatch
-this does both
-ignoring quals forces the mismatches to have a single score, which is necessary for precise N weighting
-Very sensitive is necessary due to mismatch caused by modified base misread
- --ignore-quals --np 5
-'''
-def wrapbowtie2(bowtiedb, unpaired, outfile, maxmaps = MAXMAPS,program = 'bowtie2', logfile = None):
+
+
+def wrapbowtie2(bowtiedb, unpaired, outfile, scriptdir, trnafile, maxmaps = MAXMAPS,program = 'bowtie2', logfile = None):
+    '''
+    I think the quals are irrelevant, and N should be scored as only slightly better than a mismatch
+    this does both
+    ignoring quals forces the mismatches to have a single score, which is necessary for precise N weighting
     
+     --ignore-quals --np 5
+     Very sensitive is necessary due to mismatch caused by modified base misreads
+    '''
+
     bowtiecommand = program+' -x '+bowtiedb+' -k '+str(maxmaps)+' --very-sensitive --ignore-quals --np 5 --reorder -p '+str(numcores)+' -U '+unpaired
     if logfile:
         print >>logfile,  bowtiecommand
@@ -63,67 +66,73 @@ nohup ../trnaseq/mapreads.py --samplefile=SaraShortSamples.txt --bowtiedb=/scrat
 nohup ../trnaseq/mapreads.py --samplefile=SaraSamples.txt --bowtiedb=/projects/lowelab/users/holmes/pythonsource/seqqa/combinedb/hg19-pad
 '''
 
-parser = argparse.ArgumentParser(description='Map reads with bowtie2 and process mappings')
-
-parser.add_argument('--samplefile',
-                   help='Sample file in format')
-parser.add_argument('--trnafile',
-                   help='tRNA file in format')
-parser.add_argument('--logfile',
-                   help='optional log file for error messages and mapping stats')
-parser.add_argument('--bowtiedb',
-                   help='Location of Bowtie 2 database')
-parser.add_argument('--force', action="store_true", default=False,
-                   help='Force remapping even if mapping results exist')
-
-args = parser.parse_args()
-
 #print >>sys.stderr, os.path.dirname(os.path.realpath(sys.argv[0]))
 #print >>sys.stderr, os.path.abspath(__file__)
-scriptdir = os.path.dirname(os.path.realpath(sys.argv[0]))+"/"
-#sys.exit()
-
-workingdir = './'
-#samplefile = open(args.samplefile)
-bowtiedb = args.bowtiedb
-sampledata = samplefile(args.samplefile)
-samples = sampledata.getsamples()
-
-#scriptdir = '/projects/lowelab/users/holmes/pythonsource/trnaseq/'
-trnafile = args.trnafile
-
-
-
-forcecreate = args.force    
-    
-    
-if args.logfile:
-    logfile = open(args.logfile,'w')
-else:
-    logfile = sys.stderr
-for samplename in samples:
-    
-    #put stuff in this so that it returns the err if bowtie2 fails instead of logging it
-    
-    #print >>sys.stderr, sampledata.getfastq(samplename)
-    
-    bamfile = workingdir+samplename
-    #print >>sys.stderr, bamfile
+def main(**argdict):
+    argdict = defaultdict(lambda: None, argdict)
+    scriptdir = os.path.dirname(os.path.realpath(sys.argv[0]))+"/"
+    sampledata = samplefile(argdict["samplefile"])
+    trnafile = argdict["trnafile"]
+    logfile = argdict["logfile"]
+    bowtiedb = argdict["bowtiedb"]
+    forcecreate = argdict["force"]
     #sys.exit()
-    #print >>sys.stderr, os.path.isfile(bamfile+".bam")
-    if forcecreate or not os.path.isfile(bamfile+".bam"):
-        print >>logfile, "Mapping "+samplename
-        print >>sys.stderr, "Mapping "+samplename
-        logfile.flush()
-        wrapbowtie2(bowtiedb, sampledata.getfastq(samplename),bamfile, logfile=logfile)
     
-
+    workingdir = './'
+    #samplefile = open(args.samplefile)
     
+    samples = sampledata.getsamples()
     
-    #print >>logfile, "Processing "+samplename +" mappings"
-
+    #scriptdir = '/projects/lowelab/users/holmes/pythonsource/trnaseq/'
+    trnafile = trnafile
     
     
-    #result = subprocess.call(scriptdir+'choosemappings.py '+trnafile+' <'+bamfile +' | samtools view -F 4 -b - | samtools sort - '+workingdir+samplename+'_sort', shell = True)
+        
+        
+        
+    if logfile:
+        logfile = open(logfile,'w')
+    else:
+        logfile = sys.stderr
+    for samplename in samples:
+        
+        #put stuff in this so that it returns the err if bowtie2 fails instead of logging it
+        
+        #print >>sys.stderr, sampledata.getfastq(samplename)
+        
+        bamfile = workingdir+samplename
+        #print >>sys.stderr, bamfile
+        #sys.exit()
+        #print >>sys.stderr, os.path.isfile(bamfile+".bam")
+        if forcecreate or not os.path.isfile(bamfile+".bam"):
+            print >>logfile, "Mapping "+samplename
+            print >>sys.stderr, "Mapping "+samplename
+            logfile.flush()
+            wrapbowtie2(bowtiedb, sampledata.getfastq(samplename),bamfile,scriptdir, trnafile,  logfile=logfile)
+        
+    
+        
+        
+        #print >>logfile, "Processing "+samplename +" mappings"
+    
+        
+        
+        #result = subprocess.call(scriptdir+'choosemappings.py '+trnafile+' <'+bamfile +' | samtools view -F 4 -b - | samtools sort - '+workingdir+samplename+'_sort', shell = True)
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Map reads with bowtie2 and process mappings')
+    
+    parser.add_argument('--samplefile',
+                       help='Sample file in format')
+    parser.add_argument('--trnafile',
+                       help='tRNA file in format')
+    parser.add_argument('--logfile',
+                       help='optional log file for error messages and mapping stats')
+    parser.add_argument('--bowtiedb',
+                       help='Location of Bowtie 2 database')
+    parser.add_argument('--force', action="store_true", default=False,
+                       help='Force remapping even if mapping results exist')
+    
+    args = parser.parse_args()
+    main(samplefile = args.samplefile, trnafile= args.trnafile, logfile = args.logfile, bowtiedb = args.bowtiedb, force = args.force)
 
 

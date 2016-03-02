@@ -25,7 +25,7 @@ mkdir -p $1
 
 #exit
 
-"$SCRIPTDIR/countreads.py" --samplefile=$3 --ensemblgtf=${4} --maturetrnas=$2-maturetRNAs.bed --trnaloci=${2}-trnaloci.bed --removepseudo --nofrag --genetypefile=${1}/${1}-genetypes.txt >${1}/$1-counts.txt
+"$SCRIPTDIR/countreads.py" --samplefile=$3 --ensemblgtf=${4} --maturetrnas=$2-maturetRNAs.bed --trnaloci=${2}-trnaloci.bed --removepseudo --genetypefile=${1}/${1}-genetypes.txt >${1}/$1-counts.txt
 #exit /projects/lowelab/users/holmes/pythonsource/trnatest/tgirttest/hg19.gtf.gz
 if [ $# -eq 5 ]
 then
@@ -44,8 +44,11 @@ Rscript "$SCRIPTDIR/readlengthhistogram.R" ${1}/${1}-readlengths.txt ${1}/${1}-r
 
 
 
-"$SCRIPTDIR/getcoverage.py" --samplefile=$3  --bedfile=$2-maturetRNAs.bed --sizefactors=${1}/$1-SizeFactors.txt --stkfile=$2-trnaalign.stk >${1}/${1}-coverage.txt
-Rscript "$SCRIPTDIR/coverageplots.R" --cov=${1}/${1}-coverage.txt --trna=${2}-trnatable.txt --samples=$3 --allcov=${1}/${1}-coverage.pdf  --modomics=${2}-modomics.txt --multicov=${1}/${1}-multipagecoverage.pdf --combinecov=${1}/${1}-combinecoverage.pdf --directory=${1}
+#"$SCRIPTDIR/getcoverage.py" --samplefile=$3  --bedfile=$2-maturetRNAs.bed --sizefactors=${1}/$1-SizeFactors.txt --stkfile=$2-trnaalign.stk >${1}/${1}-coverage.txt
+#Rscript "$SCRIPTDIR/coverageplots.R" --cov=${1}/${1}-coverage.txt --trna=${2}-trnatable.txt --samples=$3 --allcov=${1}/${1}-coverage.pdf  --modomics=${2}-modomics.txt --multicov=${1}/${1}-multipagecoverage.pdf --combinecov=${1}/${1}-combinecoverage.pdf --directory=${1}
+
+"$SCRIPTDIR/getcoverage.py" --samplefile=$3  --bedfile=$2-maturetRNAs.bed --sizefactors=${1}/$1-SizeFactors.txt --stkfile=$2-trnaalign.stk --uniquename=${1}/${1} >${1}/${1}-coverage.txt
+Rscript "$SCRIPTDIR/coverageplots.R" --cov=${1}/${1}-coverage.txt --trna=${2}-trnatable.txt --samples=$3 --allcov=${1}/${1}-coverage.pdf  --uniquename=${1}/${1} --modomics=${2}-modomics.txt --multicov=${1}/${1}-multipagecoverage.pdf --combinecov=${1}/${1}-combinecoverage.pdf --directory=${1}
 
 #"YeastAging","featurecounts.txt","agingshort.txt"
 "$SCRIPTDIR/getcoverage.py" --samplefile=$3  --bedfile=$2-trnaloci.bed --sizefactors=${1}/$1-SizeFactors.txt --stkfile=$2-trnaloci.stk --edgemargin=30 >${1}/${1}-locicoverage.txt

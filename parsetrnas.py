@@ -174,14 +174,15 @@ def readtRNAscan(scanfile, genomefile, mode = None):
     trnaamino = dict()
     tRNAintron = dict()
     trnas = dict()
+    
     for currline in trnascan:
-        if not currline.startswith("chr"):
-            continue
-            pass
-        fields = currline.split()
         
+        if  currline.startswith("Sequence") or  currline.startswith("Name") or  currline.startswith("------"):
+            continue
+        fields = currline.split()
+        #print >>sys.stderr, fields[0]
         if mode == "gtRNAdb":
-            print >>sys.stderr, fields[6:8]
+            #print >>sys.stderr, fields[6:8]
             del fields[6:8]
         curramino = fields[4]
         currac = fields[5]
@@ -209,6 +210,7 @@ def readtRNAscan(scanfile, genomefile, mode = None):
     
         
         currtRNA.fastafile = genomefile
+        #print >>sys.stderr, len(currtrans.name)
         trnalist.append(currtRNA)
         if int(fields[6]) != 0:
             if currtRNA.strand ==  "-":
@@ -220,6 +222,7 @@ def readtRNAscan(scanfile, genomefile, mode = None):
             tRNAintron[currtRNA.name] = tuple([intronstart, intronend])
     trnaseqs = getseqdict(trnalist, faifiles = {orgname:genomefile+".fai"})
     intronseq = defaultdict(str)
+    
     for curr in trnaseqs.iterkeys():
         if curr in tRNAintron:
             start = tRNAintron[curr][0]
@@ -228,4 +231,88 @@ def readtRNAscan(scanfile, genomefile, mode = None):
             trnaseqs[curr] = trnaseqs[curr][:start] + trnaseqs[curr][end:]
         
         yield tRNAlocus(trnas[curr], trnaseqs[curr], trnascore[curr],trnaamino[curr],trnaanticodon[curr],intronseq[curr])
+def striplocus(trnaname):
+    return re.sub(r"\-\d+$", "",trnaname)
+#Sequence		tRNA     	Bounds   	tRNA	Anti	Intron Bounds	Inf	HMM	2'Str	Hit	      	Isotype	Isotype	Type
+#Name    	tRNA #	Begin    	End      	Type	Codon	Begin	End	Score	Score	Score	Origin	Pseudo	CM	Score	
+#--------
+def readtRNAdb(scanfile, genomefile, trnamap):
+    
+    
+    #mode = 'gtRNAdb'
+    trnalist = list()
+    orgname = "genome"
+    if  hasattr(scanfile ,'read'):
+        trnascan = scanfile
+    else:
+        trnascan = open(scanfile)
+    trnascore = dict()
+    trnaanticodon = dict()
+    trnaamino = dict()
+    tRNAintron = dict()
+    trnas = dict()
+    for currline in trnascan:
+        if  currline.startswith("Sequence") or  currline.startswith("Name") or  currline.startswith("------"):
+            continue
+        fields = currline.split()
+        
+        curramino = fields[4]
+        currac = fields[5]
+        
+        if currac == "???":
+            pass
+            #currac = 'Xxx'
+        if fields[2] > fields[3]:
+            end = int(fields[3]) - 1
+            start = int(fields[2])
+            
+        else:
+            end = int(fields[3])
+            start = int(fields[2]) - 1
+        currchrom = fields[0]
+        trnanum = fields[1]
+        
+        trnascanname = currchrom+"."+"trna"+trnanum+"-"+curramino+currac
+        #print >>sys.stderr, trnamap.keys()
+        #print >>sys.stderr, trnascanname
+        currtRNA = GenomeRange(orgname, currchrom,start,end, name = trnamap[trnascanname],strand = "+",orderstrand = True)
+        currtrans = currtRNA
+
+        trnaamino[currtrans.name] = curramino
+        trnaanticodon[currtrans.name] = currac
+        #print >>sys.stderr, "**".join(fields)#currline
+        trnascore[currtrans.name] =  float(fields[8])
+        trnas[currtrans.name] =  currtrans
+    
+    
+        
+        currtRNA.fastafile = genomefile
+        trnalist.append(currtRNA)
+        if int(fields[6]) != 0:
+            if currtRNA.strand ==  "-":
+                intronstart = int(fields[2]) - int(fields[6]) 
+                intronend = int(fields[2]) - int(fields[7]) +1
+            else:
+                intronstart = int(fields[6]) - int(fields[2]) - 1
+                intronend = int(fields[7]) - int(fields[2])
+            tRNAintron[currtRNA.name] = tuple([intronstart, intronend])
+    trnaseqs = getseqdict(trnalist, faifiles = {orgname:genomefile+".fai"})
+    intronseq = defaultdict(str)
+    trnaloci = list()
+    for curr in trnaseqs.iterkeys():
+        if curr in tRNAintron:
+            start = tRNAintron[curr][0]
+            end = tRNAintron[curr][1]
+            intronseq[curr] = trnaseqs[curr][start:end]
+            trnaseqs[curr] = trnaseqs[curr][:start] + trnaseqs[curr][end:]
+        
+        trnaloci.append( tRNAlocus(trnas[curr], trnaseqs[curr], trnascore[curr],trnaamino[curr],trnaanticodon[curr],intronseq[curr]))
+        
+    trnaloci.sort(key = lambda x: striplocus(x.name))
+    for transname, currloci in itertools.groupby(trnaloci, lambda x: striplocus(x.name)):
+        currlocus = list(currloci)
+        yield tRNAtranscript( currlocus[0].seq, set(curr.score for curr in currlocus), currlocus[0].amino,currlocus[0].anticodon, set(currlocus), currlocus[0].intronseq, name = transname)
+
+        
+    
 

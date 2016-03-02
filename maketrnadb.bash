@@ -7,8 +7,9 @@
 function print_usage() {
   echo "USAGE: $0 databasename tRNAscan.txt genome.fa" >&2
   echo "    databasename: Name of database that will be given to output files " >&2
-  echo "    tRNAscan.txt: tRNAscan-SE file containing tRNAs to be used " >&2
+  echo "    XX-tRNAs.out.filtered-noPseudo: tRNAscan-SE file containing tRNAs to be used " >&2
   echo "    genome.fa:  Fasta file that contains genome of organism" >&2
+  echo "    XX-tRNAs.fa:  Fasta file that of tRNA sequences from gtRNAdb" >&2
  
 }
 
@@ -27,8 +28,8 @@ SCRIPTDIR=$( cd "$( dirname "$REALNAME" )" && pwd )
 samtools faidx ${3}
 #echo "samtools faidx ${3}"
 #exit
-"$SCRIPTDIR/getmaturetrnas.py" --trnascan $2  --genome $3  --bedfile=${1}-maturetRNAs.bed --maturetrnatable=${1}-trnatable.txt --trnaalignment=${1}-trnaalign.stk --mitomode >${1}-maturetRNAs.fa
-"$SCRIPTDIR/gettrnabed.py" --trnascan $2 --genome $3  >${1}-trnaloci.bed
+"$SCRIPTDIR/getmaturetrnas.py" --trnascan $2  --genome $3  --gtrnafa=$4 --bedfile=${1}-maturetRNAs.bed --maturetrnatable=${1}-trnatable.txt --trnaalignment=${1}-trnaalign.stk --locibed=${1}-trnaloci.bed >${1}-maturetRNAs.fa
+#"$SCRIPTDIR/gettrnabed.py" --trnascan $2 --genome $3  >${1}-trnaloci.bed
 
 #"$SCRIPTDIR/getmaturetrnas.py" --rnacentral $2  --genome $3  --bedfile=${1}-maturetRNAs.bed --maturetrnatable=${1}-trnatable.txt --chromtranslate NameConversion.txt --trnaalignment=${1}-trnaalign.stk >${1}-maturetRNAs.fa
 #"$SCRIPTDIR/gettrnabed.py" --rnacentral $2  --chromtranslate NameConversion.txt --genome $3  >${1}-trnaloci.bed

@@ -53,6 +53,12 @@ def getbesttrnamappings(trnafile, bamout = True, logfile = sys.stderr):
     bamfile = pysam.Samfile("-", "r" )
     sort = True
     sortjob = None
+    ambanticodon = 0
+    ambamino = 0
+    ambtrna = 0
+    acsets = defaultdict(int)
+    aminosets = defaultdict(int)
+    
     if bamout:
         outfile = pysam.Samfile( "-", "wb", template = bamfile )
     else:
@@ -128,13 +134,36 @@ def getbesttrnamappings(trnafile, bamout = True, logfile = sys.stderr):
             
             trnareads += 1
             diff = len(newset) - sum(bamfile.getrname(curr.tid) in trnatranscripts for curr in newset)
+            anticodons = frozenset(trnadata.getanticodon(bamfile.getrname(curr.tid)) for curr in newset if bamfile.getrname(curr.tid) in trnatranscripts)
+            aminos = frozenset(trnadata.getamino(bamfile.getrname(curr.tid)) for curr in newset if bamfile.getrname(curr.tid) in trnatranscripts)
+            trnamappings = list(curr for curr in newset if bamfile.getrname(curr.tid) in trnatranscripts)
+            
+            readanticodon = "NNN"
+            readamino = "Xxx"
+            if len(anticodons - frozenset(['NNN'])) > 1:
+                ambanticodon += 1
+                acsets[anticodons] += 1
+            
+            if len(aminos - frozenset(['Und'])) > 1:
+                ambamino += 1
+                aminosets[aminos] += 1
+                
             if diff > 0:
                 diffreads += 1
+            #finalset = trnareads
+            if len(trnamappings) > 1:
+                ambtrna += 1
+            tags = [("YA",len(anticodons))] + [("YM",len(aminos))]  + [("YT",len(trnamappings))]
+            for currtrnamap in trnamappings:
+                currtrnamap.tags = currtrnamap.tags + [("YA",len(anticodons))] + [("YM",len(aminos))]  + [("YR",len(trnamappings))]
+            finalset = trnamappings
             for curr in newset:
                 if bamfile.getrname(curr.tid) in trnatranscripts:
                     pass
                     #outfile.write(curr)
-                    finalset.append(curr)
+                    #curr.tags = curr.tags + readanticodon
+                    #finalset.append(curr)
+                    pass
                 else:
                     #print curr.data["bamline"].rstrip()
                     pass
@@ -175,16 +204,25 @@ def getbesttrnamappings(trnafile, bamout = True, logfile = sys.stderr):
             #print >>sys.stderr, "**"
             for curr in finalset:
                 outfile.write(curr)
-    outfile.close()        
+           
+    for curr in acsets.iterkeys():
+        if ((1.*acsets[curr])/ambanticodon) > .1:
+            print >>logfile, ",".join(curr) + ":"+str(acsets[curr])
+    for curr in aminosets.iterkeys():
+        if ((1.*aminosets[curr])/ambamino) > .1:
+            print >>logfile, ",".join(curr) + ":"+str(aminosets[curr])
         
 
     #print >>logfile, str(diffreads)+"/"+str(trnareads)
+    print >>logfile, "tRNA Reads with multiple transcripts:"+str(ambtrna)+"/"+str(trnareads)
+    print >>logfile, "tRNA Reads with multiple anticodons:"+str(ambanticodon)+"/"+str(trnareads)
+    print >>logfile, "tRNA Reads with multiple aminos:"+str(ambamino)+"/"+str(trnareads)
     #print >>logfile, str(trnareads)+"/"+str(totalreads)
     #print >>logfile, str(maxreads)+"/"+str(totalreads)
     #print >>logfile, str(multimaps)+"/"+str(totalreads)
     #print >>logfile, str(shortened)+"/"+str(multimaps)
     print >>logfile, "Mappings Removed:"+str(mapsremoved)+"/"+str(totalmaps)
-    
+    outfile.close()
     
     
 

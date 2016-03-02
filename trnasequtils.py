@@ -255,12 +255,14 @@ class transcriptfile:
         locustranscript = dict()
         trnatranscripts = list()
         amino = dict()
+        anticodon = dict()
         for i, line in enumerate(trnafile):
             fields = line.split()
             if len(fields) < 2:
                 continue
             trnatranscripts.append(fields[0])
             amino[fields[0]] = fields[2]
+            anticodon[fields[0]] = fields[3]
             for currlocus in fields[1].split(','):
                 locustranscript[currlocus] = fields[0]
 
@@ -268,13 +270,15 @@ class transcriptfile:
         self.locustranscript = locustranscript
         self.transcripts = trnatranscripts
         self.amino = amino
+        self.anticodon = anticodon
     def gettranscripts(self):
         return set(self.transcripts)
     def getlocustranscript(self, locus):
         return  self.locustranscript[locus]
     def getamino(self, trna):
         return  self.amino[trna]
-        
+    def getanticodon(self, trna):
+        return  self.anticodon[trna]
 
 
 class samplefile:
@@ -525,8 +529,8 @@ def ifelse(arg, trueres,falseres):
 def isprimarymapping(mapping):
     return not (mapping.flag & 0x0100 > 0)        
 def issinglemapped(mapping):
-    return not (mapping.mapq >= 2)    
-def getbamrange(bamfile, chromrange = None, primaryonly = False, singleonly = False):
+    return (mapping.mapq >= 2)    
+def getbamrange(bamfile, chromrange = None, primaryonly = False, singleonly = False, maxmismatches = None):
     bamiter = None
     if chromrange is not None:
         bamiter = bamfile.fetch(chromrange.chrom, chromrange.start, chromrange.end)
@@ -543,15 +547,43 @@ def getbamrange(bamfile, chromrange = None, primaryonly = False, singleonly = Fa
         #not giving the reverse complement for now
         seq = currline.seq
         #print currline.cigar
+        #print >>sys.stderr, currline.qname
+        if 'SRR1508404.892272' ==  currline.qname:
+            pass
+            #print >>sys.stderr, "***"
+            #print >>sys.stderr, currline.mapq
+            #print >>sys.stderr, issinglemapped(currline)
         if primaryonly and not isprimarymapping(currline):
             continue
         if singleonly and not issinglemapped(currline):
             continue
         if strand == "-":
             pass
-        yield GenomeRead( "genome",rname,currline.pos,currline.aend,strand, name = currline.qname , data = {"score":currline.mapq, "CIGAR":currline.cigar,"CIGARstring":currline.cigarstring, "seq":seq, "flags": currline.flag, "qual":currline.qual,"bamline":currline})
-
-
+        #[("YA",len(anticodons))] + [("YM",len(aminos))]  + [("YR",len(trnamappings))]
+        uniqueac = True
+        uniqueamino = True
+        uniquetrna = True
+        #print >>sys.stderr, dir(currline)
+        mismatches = None
+        for currtag in currline.tags:
+            if currtag[0] == "YA" and currtag[1] > 1:
+                uniqueac = False
+            if currtag[0] == "YM" and currtag[1] > 1:
+                uniqueamino = False
+            if currtag[0] == "YR" and currtag[1] > 1:
+                uniquetrna = False   
+            if currtag[0] == "XM":
+                mismatches = currtag[1]
+        if maxmismatches is not None and currtag[1] > maxmismatches:
+            continue  
+        yield GenomeRead( "genome",rname,currline.pos,currline.aend,strand, name = currline.qname , data = {"score":currline.mapq, "CIGAR":currline.cigar,"CIGARstring":currline.cigarstring, "seq":seq, "flags": currline.flag, "qual":currline.qual,"bamline":currline,'uniqueac':uniqueac,"uniqueamino":uniqueamino,"uniquetrna":uniquetrna})
+#'uniqueac':uniqueac,"uniqueamino":uniqueamino,"uniquetrna":uniquetrna})
+def isuniquetrnamapping(read):
+    return read.data["uniquetrna"]
+def isuniqueaminomapping(read):
+    return read.data["uniqueamino"]
+def isuniqueacmapping(read):
+    return read.data["uniqueac"]    
 def getpileuprange(bamfile, chromrange = None):
     bamiter = None
     if chromrange is not None:
