@@ -22,16 +22,18 @@ tar xvf chromFa.tar.gz -O > hg19.fa
 wget -q -O - ftp://ftp.ensembl.org/pub/release-75/gtf/homo_sapiens/Homo_sapiens.GRCh37.75.gtf.gz | gzip -cd | grep -v '^#' | awk '{print "chr" $0;}' | grep -e Mt_rRNA -e miRNA -e misc_RNA -e rRNA -e snRNA -e snoRNA -e ribozyme -e sRNA -e scaRNA  >hg19-genes.gtf
 
 
-#scan for nuclear tRNAs
-tRNAscan-SE hg19.fa | grep -v chrM >hg19-tRNAs.txt
+#get tRNA information
+wget http://aero.soe.ucsc.edu/GtRNAdb2/genomes/eukaryota/Hsapi19/hg19-tRNAs.tar.gz
+tar xvf hg19-tRNAs.tar.gz
 
 
 REALNAME=$(readlink -f $0)
 SCRIPTDIR=$( cd "$( dirname "$REALNAME" )" && pwd )
 
 #Create the tRNA database
-"$SCRIPTDIR/maketrnadb.bash" hg19 hg19-tRNAs.txt hg19.fa
+"$SCRIPTDIR/maketrnadb.py" --databasename=hg19 --genomefile=hg19.fa --trnascanfile=hg19-tRNAs.out.nohap --gtrnafafile=hg19-tRNAs.fa
 
 
 #Map the tRNAreads
-"$SCRIPTDIR/mapreads.bash" TestTrnas hg19 TrnaSamples.txt hg19-genes.gtf
+"$SCRIPTDIR/processsamples.py" --experimentname=TestTrnas --databasename=hg19 --samplefile=TrnaSamples.txt --ensemblgtf=hg19-genes.gtf
+
