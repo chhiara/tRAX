@@ -11,7 +11,7 @@ args <- commandArgs(trailingOnly = TRUE)
 
 
 #Rscript trailerbarplot.R hg19-trailertable.txt hg19-barplot.png
-counts <- read.table(args[1])
+counts <- read.table(args[1],check.names=FALSE)
 
 selectcounts = counts
 

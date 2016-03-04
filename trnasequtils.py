@@ -532,51 +532,59 @@ def issinglemapped(mapping):
     return (mapping.mapq >= 2)    
 def getbamrange(bamfile, chromrange = None, primaryonly = False, singleonly = False, maxmismatches = None):
     bamiter = None
-    if chromrange is not None:
-        bamiter = bamfile.fetch(chromrange.chrom, chromrange.start, chromrange.end)
-    else:
-        bamiter = bamfile.fetch()
-    
-    for currline in bamiter:
-        rname = bamfile.getrname(currline.rname)
-        #print rname
-        #need to fix this with cigar stuff
-        #len(currline.pos)
-        strand = "+"
-        strand = ifelse(currline.is_reverse, '-','+')
-        #not giving the reverse complement for now
-        seq = currline.seq
-        #print currline.cigar
-        #print >>sys.stderr, currline.qname
-        if 'SRR1508404.892272' ==  currline.qname:
+    try:
+        if chromrange is not None:
+            bamiter = bamfile.fetch(chromrange.chrom, chromrange.start, chromrange.end)
+        else:
+            bamiter = bamfile.fetch()
+   
+        for currline in bamiter:
+            rname = bamfile.getrname(currline.rname)
+            #print rname
+            #need to fix this with cigar stuff
+            #len(currline.pos)
+            strand = "+"
+            strand = ifelse(currline.is_reverse, '-','+')
+            #not giving the reverse complement for now
+            seq = currline.seq
+            #print currline.cigar
+            #print >>sys.stderr, currline.qname
+            if 'SRR1508404.892272' ==  currline.qname:
+                pass
+                #print >>sys.stderr, "***"
+                #print >>sys.stderr, currline.mapq
+                #print >>sys.stderr, issinglemapped(currline)
+            if primaryonly and not isprimarymapping(currline):
+                continue
+            if singleonly and not issinglemapped(currline):
+                continue
+            if strand == "-":
+                pass
+            #[("YA",len(anticodons))] + [("YM",len(aminos))]  + [("YR",len(trnamappings))]
+            uniqueac = True
+            uniqueamino = True
+            uniquetrna = True
+            #print >>sys.stderr, dir(currline)
+            mismatches = None
+            for currtag in currline.tags:
+                if currtag[0] == "YA" and currtag[1] > 1:
+                    uniqueac = False
+                if currtag[0] == "YM" and currtag[1] > 1:
+                    uniqueamino = False
+                if currtag[0] == "YR" and currtag[1] > 1:
+                    uniquetrna = False   
+                if currtag[0] == "XM":
+                    mismatches = currtag[1]
+            if maxmismatches is not None and currtag[1] > maxmismatches:
+                continue  
+            yield GenomeRead( "genome",rname,currline.pos,currline.aend,strand, name = currline.qname , data = {"score":currline.mapq, "CIGAR":currline.cigar,"CIGARstring":currline.cigarstring, "seq":seq, "flags": currline.flag, "qual":currline.qual,"bamline":currline,'uniqueac':uniqueac,"uniqueamino":uniqueamino,"uniquetrna":uniquetrna})
+    except ValueError as err:
+        #print>>sys.stderr, err
+        #print>>sys.stderr, bamfile.name
+        if chromrange is not None:
+            #print >>sys.stderr, chromrange.chrom+":"+ str(chromrange.start)+"-"+str(chromrange.end) +" failed"
             pass
-            #print >>sys.stderr, "***"
-            #print >>sys.stderr, currline.mapq
-            #print >>sys.stderr, issinglemapped(currline)
-        if primaryonly and not isprimarymapping(currline):
-            continue
-        if singleonly and not issinglemapped(currline):
-            continue
-        if strand == "-":
-            pass
-        #[("YA",len(anticodons))] + [("YM",len(aminos))]  + [("YR",len(trnamappings))]
-        uniqueac = True
-        uniqueamino = True
-        uniquetrna = True
-        #print >>sys.stderr, dir(currline)
-        mismatches = None
-        for currtag in currline.tags:
-            if currtag[0] == "YA" and currtag[1] > 1:
-                uniqueac = False
-            if currtag[0] == "YM" and currtag[1] > 1:
-                uniqueamino = False
-            if currtag[0] == "YR" and currtag[1] > 1:
-                uniquetrna = False   
-            if currtag[0] == "XM":
-                mismatches = currtag[1]
-        if maxmismatches is not None and currtag[1] > maxmismatches:
-            continue  
-        yield GenomeRead( "genome",rname,currline.pos,currline.aend,strand, name = currline.qname , data = {"score":currline.mapq, "CIGAR":currline.cigar,"CIGARstring":currline.cigarstring, "seq":seq, "flags": currline.flag, "qual":currline.qual,"bamline":currline,'uniqueac':uniqueac,"uniqueamino":uniqueamino,"uniquetrna":uniquetrna})
+        
 #'uniqueac':uniqueac,"uniqueamino":uniqueamino,"uniquetrna":uniquetrna})
 def isuniquetrnamapping(read):
     return read.data["uniquetrna"]

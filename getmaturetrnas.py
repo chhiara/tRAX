@@ -16,8 +16,12 @@ from trnasequtils import *
 
 def main(**args):
     args = defaultdict(lambda: None, args)
-    trnanamere = re.compile(r"^\>\S+_(tRNA\-\w+\-\w+\-\d+\-\d+)\s+\((\S+)\)")
+    trnanamere = re.compile(r"^\>\S+_(tRNA\-\w+\-[\w\?]+\-\d+\-\d+)\s+\((\S+)\)")
     #trnanamere = re.compile(r"^\>\S+_(tRNA\-\w+\-\w+\-\d+\-\d+)\s+")#\((S+)\)")
+    if "maturetrnafa" in args:
+        maturetrnafa = open(args["maturetrnafa"], "w")
+    else:
+        maturetrnafa=sys.stdout
     gtrnatrans = None
     if args["gtrnafa"]:
         gtrnafa = open(args["gtrnafa"], "r")
@@ -28,6 +32,9 @@ def main(**args):
             if trnamatch:
                 #print >>sys.stderr, trnamatch.group(1)+":"+trnamatch.group(2)
                 gtrnatrans[trnamatch.group(2)] = trnamatch.group(1)
+            elif currline.startswith(">"):
+                pass
+                #print >>sys.stderr, currline
             
             
     alltrnas = list()
@@ -114,8 +121,8 @@ def main(**args):
         #trnanames[name] = currtrans
         trnalist.append(name)
         #print >>sys.stderr, name
-        print ">"+name
-        print str("N" * margin) +currtrans.getmatureseq()+str("N" * margin)
+        print >>maturetrnafa, ">"+name
+        print >>maturetrnafa, str("N" * margin) +currtrans.getmatureseq()+str("N" * margin)
         if trnatable is not None:
             print >>trnatable, "\t".join([name,",".join(currlocus.name for currlocus in currtrans.loci),currtrans.amino,currtrans.anticodon])
         if trnabed is not None:
@@ -145,6 +152,8 @@ if __name__ == "__main__":
                        help='fasta sequence of genome')
     parser.add_argument('--chromtranslate', 
                        help='translation table of chromosome names')
+    parser.add_argument('--maturetrnafa', 
+                       help='output file for mature tRNA sequences')
     parser.add_argument('--bedfile', 
                        help='Output bedfile of coordinates for mature tRNA')
     parser.add_argument('--tag', nargs='1',
@@ -159,6 +168,7 @@ if __name__ == "__main__":
                        help='fasta sequence tRNAs from tRNAscan-SE database')
     parser.add_argument('--mitomode', action="store_true", default=False,
                        help='Use mitochondrial models for alignment')
+    maturetrnafa
     
     args = vars(parser.parse_args())
     main(args)    

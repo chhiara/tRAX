@@ -34,8 +34,8 @@ inputtable = args[2]
 samplefile = args[3]
 
 
-readcounts = read.table(inputtable)
-sampledata = read.table(samplefile)
+readcounts = read.table(inputtable,check.names=FALSE)
+sampledata = read.table(samplefile,check.names=FALSE)
 
 #sampleinfo = as.character(sampledata[colnames(readcounts) == sampledata[,1],2])
 sampleinfo = as.character(sampledata[colnames(readcounts) == gsub("-", ".", sampledata[,1]) ,2])
@@ -51,10 +51,6 @@ sampleinfo = as.character(sampledata[colnames(readcounts) == gsub("-", ".", samp
 #read.table(args[4], stringsAsFactors = FALSE)
 #length(args)
 #args[4]
-
-
-
-
 
 #list(read.table(args[4], stringsAsFactors = FALSE))
 if (length(args) > 3){

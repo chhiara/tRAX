@@ -114,7 +114,10 @@ def main(**argdict):
     if "mincoverage" not in  argdict:
         mincoverage = 10
     else:
-        mincoverage = int(argdict["mincoverage"])        
+        mincoverage = int(argdict["mincoverage"])  
+    print >>sys.stderr, mincoverage
+    print >>sys.stderr, "***"
+    
         
     sampledata = samplefile(argdict["samplefile"])
 
