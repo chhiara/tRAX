@@ -3,7 +3,6 @@
 #Download and remove adapters from small RNA sequencing studies
 fastq-dump -Z SRR029131 | cutadapt -m 15 --adapter='TCGTATGCCGTCTTCT' - |  gzip -c  >SRR029131.fastq.gz
 
-~/.aspera/connect/bin/ascp -QT -i ~/.aspera/connect/etc/asperaweb_id_dsa.putty anonftp@ftp-private.ncbi.nlm.nih.gov:/sra/sra-instant/reads/ByRun/sra/SRR/SRR029/SRR029124/SRR029124.sra ./
 fastq-dump -Z SRR029124 | cutadapt -m 15 --adapter='TCGTATGCCGTCTTCT' - |  gzip -c  >SRR029124.fastq.gz
 
 fastq-dump -Z SRR207111 | cutadapt -m 15 --adapter='CGTATGCCGTCT' - |  gzip -c  >SRR207111.fastq.gz 
