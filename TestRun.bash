@@ -1,17 +1,14 @@
 #!/usr/bin/env bash
 
 #Download and remove adapters from small RNA sequencing studies
-~/.aspera/connect/bin/ascp -QT -i ~/.aspera/connect/etc/asperaweb_id_dsa.putty anonftp@ftp-private.ncbi.nlm.nih.gov:/sra/sra-instant/reads/ByRun/sra/SRR/SRR029/SRR029131/SRR029131.sra ./
-fastq-dump -Z SRR029131.sra | ~/pythonsource/seqqa/cutadapt-1.2.1/bin/cutadapt -m 15 --adapter='TCGTATGCCGTCTTCT' - |  gzip -c  >SRR029131.fastq.gz
+fastq-dump -Z SRR029131 | cutadapt -m 15 --adapter='TCGTATGCCGTCTTCT' - |  gzip -c  >SRR029131.fastq.gz
 
 ~/.aspera/connect/bin/ascp -QT -i ~/.aspera/connect/etc/asperaweb_id_dsa.putty anonftp@ftp-private.ncbi.nlm.nih.gov:/sra/sra-instant/reads/ByRun/sra/SRR/SRR029/SRR029124/SRR029124.sra ./
-fastq-dump -Z SRR029124.sra | ~/pythonsource/seqqa/cutadapt-1.2.1/bin/cutadapt -m 15 --adapter='TCGTATGCCGTCTTCT' - |  gzip -c  >SRR029124.fastq.gz
+fastq-dump -Z SRR029124 | cutadapt -m 15 --adapter='TCGTATGCCGTCTTCT' - |  gzip -c  >SRR029124.fastq.gz
 
-~/.aspera/connect/bin/ascp -QT -i ~/.aspera/connect/etc/asperaweb_id_dsa.putty anonftp@ftp-private.ncbi.nlm.nih.gov:/sra/sra-instant/reads/ByRun/sra/SRR/SRR207/SRR207111/SRR207111.sra ./
-fastq-dump -Z SRR207111.sra | ~/pythonsource/seqqa/cutadapt-1.2.1/bin/cutadapt -m 15 --adapter='CGTATGCCGTCT' - |  gzip -c  >SRR207111.fastq.gz 
+fastq-dump -Z SRR207111 | cutadapt -m 15 --adapter='CGTATGCCGTCT' - |  gzip -c  >SRR207111.fastq.gz 
 
-~/.aspera/connect/bin/ascp -QT -i ~/.aspera/connect/etc/asperaweb_id_dsa.putty anonftp@ftp-private.ncbi.nlm.nih.gov:/sra/sra-instant/reads/ByRun/sra/SRR/SRR207/SRR207116/SRR207116.sra ./
-fastq-dump -Z SRR207116.sra | ~/pythonsource/seqqa/cutadapt-1.2.1/bin/cutadapt -m 15 --adapter='CGTATGCCGTCT' - |  gzip -c  >SRR207116.fastq.gz
+fastq-dump -Z SRR207116 | cutadapt -m 15 --adapter='CGTATGCCGTCT' - |  gzip -c  >SRR207116.fastq.gz
 
 #Download and combine hg19 chromosomes 
 wget http://hgdownload-test.cse.ucsc.edu/goldenPath/hg19/bigZips/chromFa.tar.gz
