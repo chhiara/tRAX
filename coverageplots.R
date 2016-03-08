@@ -38,7 +38,7 @@ modomicstable <- data.frame()
 
 
 
-outputformat <- ".svg"
+outputformat <- ".pdf"
 
 
 #print("****")
@@ -141,14 +141,6 @@ ggsave(filename=combinedfile,covsummary)
 #strip.text.y is trna names
 #strip.text.x is experiment names
 
-if(TRUE){
-#allcoverages <- ggplot(coveragemelt,aes(x=variable,y=value), size = 2) + facet_grid(Feature ~ Sample, scales="free") + geom_bar(stat="identity")+theme(axis.title.x=element_blank(), axis.text.y=element_text(colour="black",size=8),axis.text.x=element_blank(), strip.text.y = element_text(angle=0),strip.text.x = element_text(angle=0, size = 4))+ ylab("read count") +   scale_y_continuous(breaks=myBreaks) #+scale_x_discrete("Position")
-allcoverages <- ggplot(coveragemelt,aes(x=variable,y=value), size = 2) + facet_grid(Feature ~ Sample, scales="free") + geom_bar(stat="identity")+theme(axis.text.y=element_text(colour="black",size=4),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8), strip.text.y = element_text(angle=0),strip.text.x = element_text(angle=0))+ ylab("Read Share") +   scale_y_continuous(breaks=myBreaks) +scale_x_discrete(breaks=c("X1","X9","X26","X37","X44","X58","X65","X73"), labels=c("Start","m1g","m22g","anticodon","varloop","m1a","65","tail"))  #+scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon", "tail"))  
-plots = dlply(coveragemelt , "Feature", `%+%`, e1 = allcoverages)
-#ml = do.call(marrangeGrob, c(plots, list(nrow=length(unique(coveragemelt$Sample)), ncol=6)))
-ml = do.call(marrangeGrob, c(plots, list(nrow=1, ncol=1)))
-ggsave(multipage, ml)
-}
 #ggsave(filename="testwrap.pdf", allcoverages,scale=2)
 dev.off()
 #pdf(outputfile, height=1*length(unique(coveragemelt$Feature)),width=5*length(unique(coveragemelt$Sample)))
@@ -269,8 +261,11 @@ ggsave(filename=aminoname, aminocoverage,height=2 + scalefactor*1.5*length(uniqu
 }
 
 
+#aminocoverage <- ggplot(aminodata,aes(x=variable,y=value, fill = maptype, order=-as.numeric(maptype)), size = 2) + theme_bw()+facet_grid(Feature ~ Sample, scales="free") + geom_bar(stat="identity") +  geom_vline(aes(xintercept = dist, col = mod),data = aminomodomicstable,show_guide=TRUE)+theme(axis.text.y=element_text(colour="black",size=6),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8), strip.text.y = element_text(angle=0),strip.text.x = element_text(size = ,angle=0)) + ylab("Normalized Read Count") +   xlab("tRNA position") + scale_y_continuous(breaks=myBreaks) +scale_x_discrete(breaks=c("X1","X9","X26","X37","X44","X58","X65","X73"), labels=c("Start","m1g","m22g","anticodon","varloop","m1a","65","tail")) + labs(fill="Mappability", vline="RNA\nModification") #+ guide_legend(title="RNA modifications")   #+scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon", "tail"))
 
-uniqcoverage <- ggplot(allmultmelt,aes(x=variable,y=value)) + theme_bw()+ facet_grid(Feature ~ Sample, scales="free") + geom_bar(stat="identity") +  geom_vline(aes(xintercept = dist, col = mod),linetype = "longdash",data = modomicstable,show_guide=TRUE)+theme(axis.text.y=element_text(colour="black",size=6),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8), strip.text.y = element_text(angle=0),strip.text.x = element_text(size = ,angle=0))+ scale_fill_discrete(name="Mapping\nType")+ylab("Normalized Read Coverage") +   scale_y_continuous(breaks=myBreaks) +scale_x_discrete(breaks=c("X1","X9","X26","X37","X44","X58","X65","X73"), labels=c("Start","m1g","m22g","anticodon","varloop","m1a","65","tail"),name="RNA\nModification")   #+scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon", "tail"))
+uniqcoverage <- ggplot(allmultmelt,aes(x=variable,y=value, fill = maptype, order=-as.numeric(maptype)), size = 2) + theme_bw()+facet_grid(Feature ~ Sample, scales="free") + geom_bar(stat="identity") +  geom_vline(aes(xintercept = dist, col = mod),data = modomicstable,show_guide=TRUE)+theme(axis.text.y=element_text(colour="black",size=6),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8), strip.text.y = element_text(angle=0),strip.text.x = element_text(size = ,angle=0)) + ylab("Normalized Read Count") +   xlab("tRNA position") + scale_y_continuous(breaks=myBreaks) +scale_x_discrete(breaks=c("X1","X9","X26","X37","X44","X58","X65","X73"), labels=c("Start","m1g","m22g","anticodon","varloop","m1a","65","tail")) + labs(fill="Mappability", vline="RNA\nModification") #+ guide_legend(title="RNA modifications")   #+scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon", "tail"))
+
+#uniqcoverage <- ggplot(allmultmelt,aes(x=variable,y=value)) + theme_bw()+ facet_grid(Feature ~ Sample, scales="free") + geom_bar(stat="identity") +  geom_vline(aes(xintercept = dist, col = mod),linetype = "longdash",data = modomicstable,show_guide=TRUE)+theme(axis.text.y=element_text(colour="black",size=6),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8), strip.text.y = element_text(angle=0),strip.text.x = element_text(size = ,angle=0))+ scale_fill_discrete(name="Mapping\nType")+ylab("Normalized Read Coverage") +   scale_y_continuous(breaks=myBreaks) +scale_x_discrete(breaks=c("X1","X9","X26","X37","X44","X58","X65","X73"), labels=c("Start","m1g","m22g","anticodon","varloop","m1a","65","tail"),name="RNA\nModification")   #+scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon", "tail"))
 #ggsave(paste(opt$unique, "-uniquecoverages",outputformat,sep= ""), width = 15, height = 30)
 #ggsave(, uniqcoverage,height=2 + scalefactor*1.5*length(unique(allmultmelt$Feature)),width=scalefactor*5*length(unique(allmultmelt$Sample)), limitsize=FALSE, dpi = 600)
 
@@ -278,6 +273,7 @@ print(unique(allmultmelt$Sample))
 print(scalefactor*5*length(unique(allmultmelt$Sample)))
 scalefactor = .5
 ggsave(filename=paste(opt$unique, "-uniquecoverages.pdf",sep= ""), uniqcoverage,height=2 + scalefactor*1.5*length(unique(allmultmelt$Feature)),width=scalefactor*5*length(unique(allmultmelt$Sample)), limitsize=FALSE, dpi = 600)
+
 
 ggsave(filename=paste(opt$unique, "-uniquecoverages.svg",sep= ""), uniqcoverage,height=2 + scalefactor*1.5*length(unique(allmultmelt$Feature)),width=scalefactor*5*length(unique(allmultmelt$Sample)), limitsize=FALSE, dpi = 600)
 

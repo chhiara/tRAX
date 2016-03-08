@@ -9,6 +9,7 @@ Dependencies
  - samtools
  - R
  - Deseq2 R library
+ - getopt R library
  - ggplot2 R library
  - Infernal 1.1 or higher
  - The TestRun.bash script requires the SRA toolkit(fastq-dump) and cutadapt to function  
