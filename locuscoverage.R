@@ -132,7 +132,6 @@ acceptorType = locustable[match(coveragemelt$Feature, locustable[,2]),1]
 #colnames(coveragemeltagg)
 #coveragemelt[1,]
 
-
 covsummary <- ggplot(coveragemelt,aes(x=variable,y=value, fill = acceptorType, order = as.numeric(acceptorType))) + facet_grid( ~ Sample, scales="free") +xlab("Position")+ geom_bar(stat="identity")+theme(axis.text.y=element_text(colour="black",size=8), strip.text.y = element_text(angle=0,size=4),strip.text.x = element_text(angle=0,size=8),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8))+ ylab("Read Share") +   scale_y_continuous(breaks=myBreaks, labels = c("0","1")) +scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon","tail")) +scale_fill_discrete(drop=FALSE, name="Acceptor\ntype", breaks = levels(acceptorType))
 ggsave(filename=combinedfile,covsummary)
 
@@ -142,8 +141,11 @@ ggsave(filename=combinedfile,covsummary)
 #exit()
 
 
-ggplot(coveragemelt,aes(x=variable,y=value)) + facet_grid(Feature ~ Sample, scales="free") + geom_bar(stat="identity")+theme(axis.title.x=element_blank(), axis.text.y=element_text(colour="black",size=4),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8), strip.text.y = element_text(angle=0,size=6),strip.text.x = element_text(angle=0,size=8))+ ylab("read count") +scale_x_discrete(breaks=c("X1","X9","X26","X37","X44","X58","X65","X73"), labels=c("Start","m1g","m22g","anticodon","varloop","m1a","65","tail"))  #+scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon", "tail"))#+   scale_y_continuous(breaks=myBreaks)+scale_x_discrete(breaks=c("X1","X37","X38","X73","tail3"), labels=c("start", "intronstart", "intronend","end","tail"))
-ggsave(filename=outputfile,height=.5*length(unique(coveragemelt$Feature)),width=2*length(unique(coveragemelt$Sample)), limitsize=FALSE)
+#sessionInfo()
+
+
+locusplot <- ggplot(coveragemelt,aes(x=variable,y=value)) + facet_grid(Feature ~ Sample, scales="free") + geom_bar(stat="identity")+theme(axis.title.x=element_blank(), axis.text.y=element_text(colour="black",size=4),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8), strip.text.y = element_text(angle=0,size=6),strip.text.x = element_text(angle=0,size=8))+ ylab("read count") +scale_x_discrete(breaks=c("X1","X9","X26","X37","X44","X58","X65","X73"), labels=c("Start","m1g","m22g","anticodon","varloop","m1a","65","tail"))  
+ggsave(locusplot, filename=outputfile,height=.5*length(unique(coveragemelt$Feature)),width=2*length(unique(coveragemelt$Sample)), limitsize=FALSE)
 #ggsave(filename=outputfile)
 
 
@@ -155,4 +157,4 @@ ggsave(filename=outputfile,height=.5*length(unique(coveragemelt$Feature)),width=
 
 #theme(axis.title.x=element_blank(), axis.text.x=element_text(colour="black"), strip.text.y = element_text(angle=0))
 #+ scale_x_discrete()
-#ggplot(scv.i, aes(x=paste(V1,V2,sep = "_" ), y=value)) + geom_bar(aes(fill = factor(baseMod, levels=c("m1A", "m1G", "m3C", "other bases", "not documented"))), stat="identity") + facet_grid(Feature ~ treatment, scales="free", labeller=sig_labeller_WT) + ylab("read count") + scale_x_discrete(breaks=grep("other_9|AntiC.loop_34|AntiC.loop_35|AntiC.loop_36|T.loop_58", unique(scv.i$Feature.basePosition), value=TRUE), labels=c("res.9", "", "anti\ncodon", "","A58")) + theme(axis.title.x=element_blank(), axis.text.x=element_text(colour="black"), strip.text.y = element_text(angle=0)) + scale_fill_manual(limits=c("m1A", "m1G", "m3C", "other bases", "not documented"), values=profilePlotColors, name="Modomics\nbase\nmodifications")
+
