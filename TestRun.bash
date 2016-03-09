@@ -19,7 +19,7 @@ wget -q -O - ftp://ftp.ensembl.org/pub/release-75/gtf/homo_sapiens/Homo_sapiens.
 
 
 #get tRNA information
-wget http://aero.soe.ucsc.edu/GtRNAdb2/genomes/eukaryota/Hsapi19/hg19-tRNAs.tar.gz
+wget http://gtrnadb.ucsc.edu/genomes/eukaryota/Hsapi19/hg19-tRNAs.tar.gz
 tar xvf hg19-tRNAs.tar.gz
 
 
