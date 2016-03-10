@@ -61,6 +61,8 @@ if __name__ == "__main__":
                        help='do not count multiply mapped reads')
     parser.add_argument('--maxmismatches', default=None,
                        help='Set maximum number of allowable mismatches')
+    parser.add_argument('--trnatable',
+                       help='table of tRNA features')
     
     
     args = parser.parse_args()
@@ -69,11 +71,13 @@ def main(**argdict):
     argdict = defaultdict(lambda: None, argdict)
     includebase = argdict["nofrag"]
     fullpretrnasonly = argdict["onlyfullpretrnas"]
+    trnatable = argdict["trnatable"]
 
     removepseudo = argdict["removepseudo"]
     ensemblgtf = argdict["ensemblgtf"]
     nomultimap = argdict["nomultimap"]
     maxmismatches = argdict["maxmismatches"]
+    typefile = None
     sampledata = samplefile(argdict["samplefile"])
     bedfiles = list()
     if "bedfile"  in argdict:
@@ -95,6 +99,7 @@ def main(**argdict):
         countfile = open(argdict["countfile"], "w")
     
     trnacountfilename = argdict["trnacounts"]
+    trnainfo = transcriptfile(trnatable)
     
     wholetrnas = dict()
     fivefrags = dict()
@@ -169,7 +174,8 @@ def main(**argdict):
     fulltrnalocuscounts  = defaultdict(lambda: defaultdict(int))
     
     
-    
+    aminocounts  = defaultdict(lambda: defaultdict(int))
+    anticodoncounts =  defaultdict(lambda: defaultdict(int))                                         
     genetypes = dict()
     
     
@@ -247,7 +253,8 @@ def main(**argdict):
                     #print >>sys.stderr, currread.bedstring()
                     #print >>sys.stderr, currfeat.bedstring()
                     #print >>sys.stderr, "********"
-                    
+                curramino = trnainfo.getamino(currfeat.name)
+                curranticodon = trnainfo.getanticodon(currfeat.name)
                 trnacounts[currsample][currfeat.name] += 1
                     
                 fragtype = getfragtype(currfeat, currread)
@@ -257,6 +264,14 @@ def main(**argdict):
                     trnafivecounts[currsample][currfeat.name] += 1
                 elif fragtype == "Threeprime":
                     trnathreecounts[currsample][currfeat.name] += 1
+                    
+                if not isuniqueaminomapping(currread):
+                    pass
+                elif not isuniqueacmapping(currread):
+                    aminocounts[currsample][curramino] += 1
+                else:
+                    aminocounts[currsample][curramino] += 1
+                    anticodoncounts[currsample][curranticodon] += 1
                   
                         #print >>sys.stderr, str(currread.start - currfeat.start)+"-"+str(currread.end - currfeat.start)  
                         #print >>sys.stderr, str(currfeat.start - currfeat.start)+"-"+str(currfeat.end - currfeat.start)
@@ -291,8 +306,13 @@ def main(**argdict):
             print >>countfile, currfeat.name+"_trailercounts\t"+"\t".join(str(trnalocustrailercounts[currsample][currfeat.name]) for currsample in samples)
     
         
+    if typefile:
+        for curramino in trnainfo.allaminos():
+                print >>typefile, "AminoTotal_"+curramino+"\t"+"\t".join(str(aminocounts[currsample][curramino]) for currsample in samples)
+        for currac in trnainfo.allanticodons():
+                print >>typefile, "AnticodonTotal_"+currac+"\t"+"\t".join(str(anticodoncounts[currsample][currac]) for currsample in samples)
 
-        
+
     for currfeat in featurelist :
         if currfeat.name in trnanames:
             continue
@@ -362,7 +382,8 @@ if __name__ == "__main__":
                        help='bed file with mature tRNA features')
     parser.add_argument('--onlyfullpretrnas', action="store_true", default=False,
                        help='only include full pre-trnas')
-    
+    parser.add_argument('--trnatable',
+                       help='table of tRNA features')
     parser.add_argument('--removepseudo', action="store_true", default=False,
                        help='remove psuedogenes from ensembl GTFs')
     parser.add_argument('--genetypefile',

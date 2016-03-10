@@ -62,7 +62,7 @@ if not os.path.exists(expname):
     os.makedirs(expname)
 
 mapreads.main(samplefile=samplefile, trnafile=dbname+"-trnatable.txt",bowtiedb=dbname+"-tRNAgenome",logfile=expname+"/"+expname+"-mapstats.txt", force=forceremap)
-countreads.main(samplefile=samplefile,ensemblgtf=ensgtf,maturetrnas=[dbname+"-maturetRNAs.bed"],trnaloci=[dbname+"-trnaloci.bed"],removepseudo=True,genetypefile=expname+"/"+expname+"-genetypes.txt" ,countfile=expname+"/"+expname+"-counts.txt",bedfile=bedfiles)
+countreads.main(samplefile=samplefile,ensemblgtf=ensgtf,maturetrnas=[dbname+"-maturetRNAs.bed"],trnaloci=[dbname+"-trnaloci.bed"],removepseudo=True,genetypefile=expname+"/"+expname+"-genetypes.txt" ,trnatable=dbname+"-trnatable.txt",countfile=expname+"/"+expname+"-counts.txt",bedfile=bedfiles)
 
 
 if pairfile:
@@ -76,7 +76,7 @@ else:
 
         #"$SCRIPTDIR/countreadtypes.py" --sizefactors=expname/expname-SizeFactors.txt --combinereps --samplefile=samplefile  --maturetrnas=dbname-maturetRNAs.bed --trnatable=dbname-trnatable.txt --trnaaminofile=expname/expname-aminocounts.txt --ensemblgtf $4 --trnaloci=dbname-trnaloci.bed   >expname/expname-typecounts.txt #--countfrags
 #sys.exit()
-countreadtypes.main(sizefactors=expname+"/"+expname+"-SizeFactors.txt",combinereps= True ,samplefile=samplefile,maturetrnas=[dbname+"-maturetRNAs.bed"],trnatable=dbname+"-trnatable.txt",trnaaminofile=expname+"/"+expname+"-aminocounts.txt",ensemblgtf=ensgtf,trnaloci=[dbname+"-trnaloci.bed"],countfile=expname+"/"+expname+"-typecounts.txt",bedfiles= bedfiles)
+countreadtypes.main(sizefactors=expname+"/"+expname+"-SizeFactors.txt",combinereps= True ,samplefile=samplefile,maturetrnas=[dbname+"-maturetRNAs.bed"],trnatable=dbname+"-trnatable.txt",trnaaminofile=expname+"/"+expname+"-aminocounts.txt",ensemblgtf=ensgtf,trnaloci=[dbname+"-trnaloci.bed"],countfile=expname+"/"+expname+"-typecounts.txt",bedfile= bedfiles)
 subprocess.call("Rscript "+scriptdir+"/featuretypes.R "+expname+"/"+expname+"-typecounts.txt "+expname+"/"+expname+"-typecounts.pdf", shell=True)
 subprocess.call("Rscript "+scriptdir+"/featuretypes.R "+expname+"/"+expname+"-aminocounts.txt "+expname+"/"+expname+"-aminocounts.pdf",shell=True)
 

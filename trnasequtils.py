@@ -279,6 +279,12 @@ class transcriptfile:
         return  self.amino[trna]
     def getanticodon(self, trna):
         return  self.anticodon[trna]
+        
+    def allaminos(self):
+        return  set(self.amino.values())
+    def allanticodons(self):
+        return  set(self.anticodon.values())
+        
 
 
 class samplefile:
