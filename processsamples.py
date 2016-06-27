@@ -25,11 +25,11 @@ import countreadtypes
 
 
 parser = argparse.ArgumentParser(description='Generate fasta file containing mature tRNA sequences.')
-parser.add_argument('--experimentname',
+parser.add_argument('--experimentname',required=True,
                    help='experiment name to be used')
-parser.add_argument('--databasename',
+parser.add_argument('--databasename',required=True,
                    help='name of the tRNA database')
-parser.add_argument('--samplefile',
+parser.add_argument('--samplefile',required=True,
                    help='sample file')
 parser.add_argument('--ensemblgtf',
                    help='The ensembl gene list for that species')
@@ -37,62 +37,141 @@ parser.add_argument('--exppairs',
                    help='List of sample pairs to compare')
 parser.add_argument('--bedfile',  nargs='+', default=list(),
                    help='Additional bed files for feature list')
-parser.add_argument('--forceremap', action="store_true", default=False,
-                   help='Force a remap of the reads, even if they are already mapped')
+parser.add_argument('--lazyremap', action="store_true", default=False,
+                   help='Skip mapping reads if bam files exit')
+parser.add_argument('--nofrag', action="store_true", default=False,
+                   help='Omit fragment determination (Used for TGIRT mapping)')
+parser.add_argument('--maxmismatch', action="store_true", default=False,
+                   help='Omit fragment determination (Used for TGIRT mapping)')
+rlogname = "Rlog.txt"
+rlogfile = open(rlogname, "w")
 
+def runrscript(*script):
+    retcode = subprocess.call("Rscript "+" ".join(script), shell=True, stdout = rlogfile, stderr = subprocess.STDOUT)
+    if retcode > 0:
+        print >>sys.stderr, "R script "+script[0]+" failed"
+        print >>sys.stderr, "Check "+rlogname+" for details"
+        
+        #sys.exit()
+    return retcode
+    
 
+class trnadatabase:
+    def __init__(self, dbname):
+        self.trnatable = dbname+"-trnatable.txt"
+        self.bowtiedb = dbname+"-tRNAgenome"
+        self.locifile = dbname+"-trnaloci.bed"
+        self.maturetrnas=dbname+"-maturetRNAs.bed"
+        self.trnaalign = dbname+"-trnaalign.stk"
+        self.locialign = dbname+"-trnaloci.stk"
+        self.modomics = dbname+"-modomics.txt"
+        
+class expdatabase:
+    def __init__(self, expname):
+        self.mapinfo = expname+"/"+expname+"-mapinfo.txt"
+        self.mapplot = expname+"/"+expname+"-mapinfo.pdf"
+        
+        self.maplog = expname+"/"+expname+"-mapstats.txt"
+        self.genetypes = expname+"/"+expname+"-genetypes.txt"
+        self.genecounts = expname+"/"+expname+"-counts.txt"
+        self.normalizedcounts = expname+"/"+expname+"-normalized.txt"
+        self.sizefactors = expname+"/"+expname+"-SizeFactors.txt"
 
+        self.genetypecounts=expname+"/"+expname+"-typecounts.txt"
+        self.genetypeplot=expname+"/"+expname+"-typecounts.pdf"
+        
+        self.trnaaminofile=expname+"/"+expname+"-aminocounts.txt"
+        self.trnaaminoplot=expname+"/"+expname+"-aminocounts.pdf"
+        
+        self.trnacoveragefile=expname+"/"+expname+"-coverage.txt"
+        self.trnacoverageplot=expname+"/"+expname+"-coverage.pdf"
+        self.trnacombinecoverageplot=expname+"/"+expname+"-combinecoverage.pdf"
 
+        self.locicoveragefile=expname+"/"+expname+"-locicoverage.txt"
+        self.locicoverageplot=expname+"/"+expname+"-locicoverage.pdf"
+        self.locicombinecoverageplot=expname+"/"+expname+"-locicombinecoverage.pdf"
+        
 
+def mapsamples(samplefile, trnainfo,expinfo, lazyremap):
+    mapreads.main(samplefile=samplefile, trnafile=trnainfo.trnatable,bowtiedb=trnainfo.bowtiedb,logfile=expinfo.maplog,mapfile=expinfo.mapinfo, lazy=lazyremap)
+def countfeatures(samplefile, trnainfo,expinfo, ensgtf, bedfiles):
+    countreads.main(samplefile=samplefile,ensemblgtf=ensgtf,maturetrnas=[trnainfo.maturetrnas],trnaloci=[trnainfo.locifile],removepseudo=True,genetypefile=expinfo.genetypes,trnatable=trnainfo.trnatable,countfile=expinfo.genecounts,bedfile=bedfiles, nofrag=nofrag)
+def counttypes(samplefile, trnainfo,expinfo, ensgtf, bedfiles):
+    countreadtypes.main(sizefactors=expinfo.sizefactors,combinereps= True ,samplefile=samplefile,maturetrnas=[trnainfo.maturetrnas],trnatable=trnainfo.trnatable,trnaaminofile=expinfo.trnaaminofile,ensemblgtf=ensgtf,trnaloci=[trnainfo.locifile],countfile=expinfo.genetypecounts,bedfile= bedfiles)
+    #Plot reads by gene type and tRNAs by amino acid
+    runrscript(scriptdir+"/featuretypes.R",expinfo.genetypecounts,expinfo.genetypeplot)
+    runrscript(scriptdir+"/featuretypes.R",expinfo.trnaaminofile,expinfo.trnaaminoplot)
+
+def gettrnacoverage(samplefile, trnainfo,expinfo):
+    getcoverage.main(samplefile=samplefile,bedfile=[trnainfo.maturetrnas],sizefactors=expinfo.sizefactors,stkfile=trnainfo.trnaalign,uniquename=expname+"/"+expname, allcoverage=expinfo.trnacoveragefile)
+    runrscript(scriptdir+"/coverageplots.R","--cov="+expinfo.trnacoveragefile,"--trna="+trnainfo.trnatable,"--samples="+samplefile,"--allcov="+expinfo.trnacoverageplot,"--uniquename="+expname+"/"+expname,"--modomics="+trnainfo.modomics,"--combinecov="+expinfo.trnacombinecoverageplot,"--directory="+expname)
+
+def getlocuscoverage(samplefile, trnainfo,expinfo):
+    getcoverage.main(samplefile=samplefile ,bedfile=[trnainfo.locifile],sizefactors=expinfo.sizefactors,stkfile=trnainfo.locialign,edgemargin=30, uniquegenome=expname+"/"+expname+"loci",allcoverage=expinfo.locicoveragefile,minextend = 5)
+    runrscript(scriptdir+"/locuscoverage.R", "--cov="+expinfo.locicoveragefile,"--trna="+trnainfo.trnatable,"--samples="+samplefile,"--allcov="+expinfo.locicoverageplot,"--combinecov="+expinfo.locicombinecoverageplot) 
+def getlengths(samplefile, trnainfo,expinfo):
+    #need to rejigger this
+    #countfragsize.main(combinereps=True, samplefile=samplefile,maturetrnas=dbname+"-maturetRNAs.bed",countfrags=True,trnaloci=dbname+"-trnaloci.bed",ensemblgtf=  --trnanormfile=expname-tRNANormFactors.txt --allreadsnormfile=expname-AllreadNormFactors.txt >expname/expname-readlengths.txt
+    #subprocess.call("Rscript "+scriptdir+"/readlengthhistogram.R "+expname+"/"+expname+"-readlengths.txt "+expname+"/"+expname+"-readlengths.pdf", shell=True)
+    pass
+	
 args = parser.parse_args()
 dbname = args.databasename
 expname = args.experimentname
 pairfile =  args.exppairs
 ensgtf = args.ensemblgtf
 samplefile = args.samplefile
-forceremap = args.forceremap
+lazyremap = args.lazyremap
 bedfiles= args.bedfile
+nofrag= args.nofrag
 scriptdir = os.path.dirname(os.path.realpath(sys.argv[0]))+"/"
-
-
 
 
 #mkdir -p expname
 if not os.path.exists(expname):
     os.makedirs(expname)
 
-mapreads.main(samplefile=samplefile, trnafile=dbname+"-trnatable.txt",bowtiedb=dbname+"-tRNAgenome",logfile=expname+"/"+expname+"-mapstats.txt", force=forceremap)
-countreads.main(samplefile=samplefile,ensemblgtf=ensgtf,maturetrnas=[dbname+"-maturetRNAs.bed"],trnaloci=[dbname+"-trnaloci.bed"],removepseudo=True,genetypefile=expname+"/"+expname+"-genetypes.txt" ,trnatable=dbname+"-trnatable.txt",countfile=expname+"/"+expname+"-counts.txt",bedfile=bedfiles)
+    
+    
+dbname = os.path.expanduser(dbname)
+if ensgtf is not None:
+    ensgtf = os.path.expanduser(ensgtf)
+bedfiles = list(os.path.expanduser(curr) for curr in bedfiles)
+trnainfo = trnadatabase(dbname)
+expinfo = expdatabase(expname)
 
+#Map the reads
+print >>sys.stderr, "Mapping Reads"
+mapsamples(samplefile, trnainfo,expinfo, lazyremap)
+#Count the reads for DEseq2 and scatter plots
+print >>sys.stderr, "Counting Reads"
+countfeatures(samplefile, trnainfo,expinfo, ensgtf, bedfiles)
+#Create a plot of mapped reads
+print >>sys.stderr, "Analyzing counts"
+runrscript(scriptdir+"/featuretypes.R",expinfo.mapinfo,expinfo.mapplot)
 
+#Analyze counts and create scatter plots if pair file is provided
 if pairfile:
-
-	subprocess.call("Rscript "+scriptdir+"/analyzecounts.R "+expname +" "+expname+"/"+expname+"-counts.txt "+samplefile+" "+ pairfile, shell=True)
-	subprocess.call("Rscript "+scriptdir+"/makescatter.R "+expname +" "+expname+"/"+expname+"-normalized.txt "+ dbname+"-trnatable.txt "+expname+"/"+expname+"-genetypes.txt "+samplefile+" "+pairfile, shell=True)
+	deseqret = runrscript(scriptdir+"/analyzecounts.R",expname,expinfo.genecounts,samplefile, pairfile)
+	if deseqret != 0:
+	    print >>sys.stderr, "Deseq analysis failed, cannot continue"
+	    sys.exit(1)
+	runrscript(scriptdir+"/makescatter.R",expname,expinfo.normalizedcounts,trnainfo.trnatable,expinfo.genetypes,samplefile,pairfile)
 else:
 	
-	subprocess.call("Rscript "+scriptdir+"/analyzecounts.R "+expname +" "+expname+"/"+expname+"-counts.txt "+samplefile, shell=True)
-	pass
-
-        #"$SCRIPTDIR/countreadtypes.py" --sizefactors=expname/expname-SizeFactors.txt --combinereps --samplefile=samplefile  --maturetrnas=dbname-maturetRNAs.bed --trnatable=dbname-trnatable.txt --trnaaminofile=expname/expname-aminocounts.txt --ensemblgtf $4 --trnaloci=dbname-trnaloci.bed   >expname/expname-typecounts.txt #--countfrags
-#sys.exit()
-countreadtypes.main(sizefactors=expname+"/"+expname+"-SizeFactors.txt",combinereps= True ,samplefile=samplefile,maturetrnas=[dbname+"-maturetRNAs.bed"],trnatable=dbname+"-trnatable.txt",trnaaminofile=expname+"/"+expname+"-aminocounts.txt",ensemblgtf=ensgtf,trnaloci=[dbname+"-trnaloci.bed"],countfile=expname+"/"+expname+"-typecounts.txt",bedfile= bedfiles)
-subprocess.call("Rscript "+scriptdir+"/featuretypes.R "+expname+"/"+expname+"-typecounts.txt "+expname+"/"+expname+"-typecounts.pdf", shell=True)
-subprocess.call("Rscript "+scriptdir+"/featuretypes.R "+expname+"/"+expname+"-aminocounts.txt "+expname+"/"+expname+"-aminocounts.pdf",shell=True)
-
+	deseqret = runrscript(scriptdir+"/analyzecounts.R",expname,expinfo.genecounts,samplefile)
+	if deseqret != 0:
+	    print >>sys.stderr, "Deseq analysis failed, cannot continue"
+	    sys.exit(1)
+#Count the reads by gene type
+print >>sys.stderr, "Counting Read Types"
+counttypes(samplefile, trnainfo,expinfo, ensgtf, bedfiles)
 
 
+#coverage plot of tRNAs
+print >>sys.stderr, "Generating Read Coverage plots"      
+gettrnacoverage(samplefile, trnainfo,expinfo)
 
-#sys.exit()
-#countfragsize.main(combinereps=True, samplefile=samplefile,maturetrnas=dbname+"-maturetRNAs.bed",countfrags=True,trnaloci=dbname+"-trnaloci.bed",ensemblgtf=  --trnanormfile=expname-tRNANormFactors.txt --allreadsnormfile=expname-AllreadNormFactors.txt >expname/expname-readlengths.txt
-#subprocess.call("Rscript "+scriptdir+"/readlengthhistogram.R "+expname+"/"+expname+"-readlengths.txt "+expname+"/"+expname+"-readlengths.pdf", shell=True)
-	
-#Rscript "$SCRIPTDIR/coverageplots.R" --cov=expname/expname-coverage.txt --trna=dbname-trnatable.txt --samples=samplefile --allcov=expname/expname-coverage.pdf  --uniquename=expname/expname --modomics=dbname-modomics.txt --multicov=expname/expname-multipagecoverage.pdf --combinecov=expname/expname-combinecoverage.pdf --directory=expname
+#coverage plot of pre-tRNAs
+getlocuscoverage(samplefile, trnainfo,expinfo)
 
-
-getcoverage.main(samplefile=samplefile,bedfile=[dbname+"-maturetRNAs.bed"],sizefactors=expname+"/"+expname+"-SizeFactors.txt",stkfile=dbname+"-trnaalign.stk",uniquename=expname+"/"+expname, allcoverage=expname+"/"+expname+"-coverage.txt")
-
-
-subprocess.call("Rscript "+scriptdir+"/coverageplots.R --cov="+expname+"/"+expname+"-coverage.txt --trna="+dbname+"-trnatable.txt --samples="+samplefile+" --allcov="+expname+"/"+expname+"-coverage.pdf  --uniquename="+expname+"/"+expname+" --modomics="+dbname+"-modomics.txt --multicov="+expname+"/"+expname+"-multipagecoverage.pdf --combinecov="+expname+"/"+expname+"-combinecoverage.pdf --directory="+expname, shell=True)
-getcoverage.main(samplefile=samplefile ,bedfile=[dbname+"-trnaloci.bed"], sizefactors=expname+"/"+expname+"-SizeFactors.txt",stkfile=dbname+"-trnaloci.stk",edgemargin=30, outfile = expname+"/"+expname+"-locicoverage.txt", allcoverage=expname+"/"+expname+"-locicoverage.txt")
-subprocess.call("Rscript "+scriptdir+"/locuscoverage.R --cov="+expname+"/"+expname+"-locicoverage.txt --trna="+dbname+"-trnatable.txt --samples="+samplefile+" --allcov="+expname+"/"+expname+"-locicoverage.pdf --multicov="+expname+"/"+expname+"-locimultipagecoverage.pdf --combinecov="+expname+"/"+expname+"-locicombinecoverage.pdf", shell=True) 

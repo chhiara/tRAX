@@ -28,7 +28,6 @@ return(newtable)
 
 args = commandArgs(trailingOnly = TRUE)
 
-#args =c("YeastAging","featurecounts.txt","agingshort.txt", "dmStat_Amino:dmAll_Amino","dmStat_Amino:dmMet_Amino","dmStat_Amino:dmLeu_Amino")
 experimentname = args[1]
 inputtable = args[2]
 samplefile = args[3]
@@ -46,20 +45,19 @@ sampleinfo = as.character(sampledata[colnames(readcounts) == gsub("-", ".", samp
 #colnames(readcounts)
 #sampledata[,1]
 
-
+samplenames = unique(sampleinfo)
 #combn(unique(sampleinfo),2,simplify = FALSE)
 #read.table(args[4], stringsAsFactors = FALSE)
 #length(args)
 #args[4]
 
-#list(read.table(args[4], stringsAsFactors = FALSE))
 if (length(args) > 3){
-#comparisons = strsplit(args[4:length(args)], ":", fixed = TRUE)
-#comparisons <- read.table(args[4], stringsAsFactors = FALSE)
-#comparisons <- list(read.table(args[4], stringsAsFactors = FALSE))
 
-comparisons <- apply(read.table(args[4], stringsAsFactors = FALSE), 1, list)
+pairtable = read.table(args[4], stringsAsFactors = FALSE)
+pairreduce = pairtable[pairtable[,1] %in% samplenames & pairtable[,2] %in% samplenames,]
+comparisons <- apply(pairreduce, 1, list)
 comparisons <- lapply(comparisons,unlist)
+print(comparisons)
 
 
 }else{
@@ -67,14 +65,8 @@ comparisons = combn(unique(sampleinfo),2,simplify = FALSE)
 }
 
 
-#sampleinfo
-#readcounts["tRNA-Asn-GTT-1",]
-
-
 coldata = data.frame(condition=factor(sampleinfo))
-#coldata
 
-#coldata
 cds = DESeqDataSetFromMatrix(countData = readcounts,coldata  ,design = ~ condition)
 cds = DESeq(cds,betaPrior=TRUE)
 
@@ -82,22 +74,10 @@ cds = DESeq(cds,betaPrior=TRUE)
 
 
 
-#results( cds, contrast=c("condition","dmSCDd12" ,"dmH2Od12"),cooksCutoff  =TRUE)["tRNA-Asn-GTT-1",]
-#results( cds, contrast=c("condition","dmSCDd12" ,"dmH2Od12"),cooksCutoff  =TRUE)["tRNA-Ala-TGC-1",]
-#results( cds, contrast=c("condition","dmSCDd12","dmH2Od12"),cooksCutoff  =TRUE)["tRNA-Ala-TGC-1",]
-
-
-
 names = lapply(comparisons, function(currcompare){ })
 
 compareresults = lapply(comparisons, function(currcompare){ list(paste(currcompare[[1]],currcompare[[2]] ,sep= ":"),results( cds, contrast=c("condition", currcompare[[1]] ,currcompare[[2]]),cooksCutoff  =TRUE))})
-#comparisons
 
-#compareresults[[2]][[2]]["tRNA-Asn-GTT-1",]
-
-#compareresults[[6]][[2]]["tRNA-Asn-GTT-1",]
-
-#compareresults[[8]][[2]]["tRNA-Asn-GTT-1",]
 
 reslist = lapply(compareresults, function(currresult){colrename(currresult[[2]],currresult[[1]])})
 

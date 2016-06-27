@@ -5,6 +5,8 @@ import subprocess
 import argparse
 from tempfile import NamedTemporaryFile
 import os
+import os.path
+import re
 from trnasequtils import *
 
 MAXMAPS = 100
@@ -22,7 +24,7 @@ numcores = 4
 
 
 
-def wrapbowtie2(bowtiedb, unpaired, outfile, scriptdir, trnafile, maxmaps = MAXMAPS,program = 'bowtie2', logfile = None):
+def wrapbowtie2(bowtiedb, unpaired, outfile, scriptdir, trnafile, maxmaps = MAXMAPS,program = 'bowtie2', logfile = None, mapfile = None):
     '''
     I think the quals are irrelevant, and N should be scored as only slightly better than a mismatch
     this does both
@@ -39,23 +41,38 @@ def wrapbowtie2(bowtiedb, unpaired, outfile, scriptdir, trnafile, maxmaps = MAXM
     logfile.flush()
     bowtiecommand = bowtiecommand + ' | '+scriptdir+'choosemappings.py '+trnafile+' | samtools sort - '+outfile
     bowtierun = None
-    if logfile is not None:
         #print >>sys.stderr, "***LOG"
-        bowtierun = subprocess.Popen(bowtiecommand, shell = True, stderr = logfile)
-    else:                                                       
-        bowtierun = subprocess.Popen(bowtiecommand, shell = True)
-        
+    bowtierun = subprocess.Popen(bowtiecommand, shell = True, stderr = subprocess.PIPE)
+
     #bowtierun = subprocess.popen(bowtiecommand, shell = True, stderr = subprocess.PIPE)
     #errorcode = bowtierun.wait()
     #bowtierun.stdout.close()
-    errorcode = bowtierun.wait()
-    
-    
-    if errorcode:
+    output = bowtierun.communicate()
+    errinfo = output[1]
+    if logfile is not None:
+        print >>logfile, errinfo 
+    logfile.flush()
+    if bowtierun.returncode:
         print >>sys.stderr, "Failure to Bowtie2 map"
-
-            
+       
         sys.exit(1)
+
+    rereadtotal = re.search(r'(\d+).*reads',errinfo )
+    rereadunmap = re.search(r'\s*(\d+).*0 times',errinfo )
+    rereadsingle = re.search(r'\s*(\d+).*exactly 1 time',errinfo )
+    rereadmult = re.search(r'\s*(\d+).*>1 times',errinfo )
+    if rereadtotal and rereadunmap and rereadsingle and rereadmult:
+        totalreads = rereadtotal.group(1)
+        unmappedreads = rereadunmap.group(1)
+        singlemaps = rereadsingle.group(1)
+        multmaps = rereadmult.group(1)
+        return [unmappedreads,singlemaps,multmaps,totalreads]
+        
+    else:
+        print >>sys.stderr, "Could not extract mapping information for "+unpaired
+        print >>sys.stderr, "Exiting..."
+        sys.exit(1)
+        return None
     
 '''
 ./trnaseq/mapreads.py --samplefile=HumanTrnas.txt --bowtiedb=/scratch/encodeshortrna/hg19
@@ -74,8 +91,9 @@ def main(**argdict):
     sampledata = samplefile(argdict["samplefile"])
     trnafile = argdict["trnafile"]
     logfile = argdict["logfile"]
+    mapfile = argdict["mapfile"]
     bowtiedb = argdict["bowtiedb"]
-    forcecreate = argdict["force"]
+    lazycreate = argdict["lazy"]
     #sys.exit()
     
     workingdir = './'
@@ -85,35 +103,54 @@ def main(**argdict):
     
     #scriptdir = '/projects/lowelab/users/holmes/pythonsource/trnaseq/'
     trnafile = trnafile
-    
-    
-        
-        
         
     if logfile:
-        logfile = open(logfile,'w')
+        logfile = open(logfile,'a')
     else:
         logfile = sys.stderr
+
+    unmaps = defaultdict(int)
+    singlemaps = defaultdict(int)
+    multimaps = defaultdict(int)
+    totalreads = defaultdict(int)
+    
+    if not os.path.isfile(bowtiedb+".fa"):
+        #print >>sys.stderr, "No bowtie2 database "+bowtiedb
+        print >>sys.stderr, "No bowtie2 database "+bowtiedb
+        sys.exit(1)
     for samplename in samples:
-        
-        #put stuff in this so that it returns the err if bowtie2 fails instead of logging it
-        
-        #print >>sys.stderr, sampledata.getfastq(samplename)
-        
         bamfile = workingdir+samplename
-        #print >>sys.stderr, bamfile
-        #sys.exit()
-        #print >>sys.stderr, os.path.isfile(bamfile+".bam")
-        if forcecreate or not os.path.isfile(bamfile+".bam"):
+        if lazycreate and os.path.isfile(bamfile+".bam"):
+            print >>sys.stderr, "Skipping "+samplename
+        else:
             print >>logfile, "Mapping "+samplename
             print >>sys.stderr, "Mapping "+samplename
             logfile.flush()
-            wrapbowtie2(bowtiedb, sampledata.getfastq(samplename),bamfile,scriptdir, trnafile,  logfile=logfile)
-        
+            mapresults = wrapbowtie2(bowtiedb, sampledata.getfastq(samplename),bamfile,scriptdir, trnafile,  logfile=logfile)
+
+            
+            if mapresults is not None:
+                unmaps[samplename] = mapresults[0]
+                singlemaps[samplename] = mapresults[1]
+                multimaps[samplename] = mapresults[2]
+                totalreads[samplename] = mapresults[3]
+    
+    if lazycreate:
+        #here is where I might add stuff to read old files in lazy mode
+        pass
+    if mapfile is not None and not lazycreate:
+        mapinfo = open(mapfile,'w')                
+        print >>mapinfo, "\t".join(samples)
+        print >>mapinfo, "unmap\t"+"\t".join(unmaps[currsample] for currsample in samples)
+        print >>mapinfo, "single\t"+"\t".join(singlemaps[currsample] for currsample in samples)
+        print >>mapinfo, "multi\t"+"\t".join(multimaps[currsample] for currsample in samples)
+        #print >>mapinfo, "total\t"+"\t".join(totalreads[currsample] for currsample in samples)
+        mapinfo.close()
     
         
         
         #print >>logfile, "Processing "+samplename +" mappings"
+    logfile.close()
     
         
         
@@ -126,13 +163,15 @@ if __name__ == "__main__":
     parser.add_argument('--trnafile',
                        help='tRNA file in format')
     parser.add_argument('--logfile',
-                       help='optional log file for error messages and mapping stats')
+                       help='log file for error messages and mapping stats')
+    parser.add_argument('--mapfile',
+                       help='output table with mapping stats')
     parser.add_argument('--bowtiedb',
                        help='Location of Bowtie 2 database')
-    parser.add_argument('--force', action="store_true", default=False,
-                       help='Force remapping even if mapping results exist')
+    parser.add_argument('--lazy', action="store_true", default=False,
+                       help='do not remap if mapping results exist')
     
     args = parser.parse_args()
-    main(samplefile = args.samplefile, trnafile= args.trnafile, logfile = args.logfile, bowtiedb = args.bowtiedb, force = args.force)
+    main(samplefile = args.samplefile, trnafile= args.trnafile, logfile = args.logfile, bowtiedb = args.bowtiedb, lazy = args.lazy, mapfile = args.mapfile)
 
 

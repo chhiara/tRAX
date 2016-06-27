@@ -45,8 +45,10 @@ ggplot(countsmelt,aes(x = variable, y = value,fill = seq, stat="identity")) +
 	geom_bar(position = "fill",stat="identity") + 
     geom_bar(position = "fill",stat="identity",color="black",show_guide=FALSE) + 
     scale_y_continuous(labels = percent_format()) +
+    theme(axis.text.x = element_text(size=5))+
     xlab("Sample") +
-    ylab("Number of Reads") + 
+    ylab("Percentage of Total Reads") + 
+    labs(fill="Read\nType")+
     theme(axis.title.x = element_text(face="bold", size=15), axis.text.x = element_text(face="bold", size=9,angle = 90, vjust = .5))
 
 ggsave(filename=args[2])

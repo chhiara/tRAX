@@ -3,9 +3,40 @@
 import pysam
 import sys
 import tempfile
+import re
 import gzip
 from collections import defaultdict
 
+def readmultifasta(fafile):
+    #print chrom+":"+ chromstart+"-"+ chromend
+    if fafile == "stdin":
+        fafile = sys.stdin
+    else:
+        fafile = open(fafile, "r")
+    currloc = 0
+    currseq = None
+    sequence = ""
+    reheader = re.compile(r"\>([^\s\,]+)")
+    for line in fafile:
+        line = line.rstrip("\n")
+        currheader = reheader.match(line)
+        if currheader and sequence != "" and currseq is not None:
+            yield currseq, sequence
+            currseq = currheader.groups(1)[0]
+            sequence = ""
+        elif currheader:
+            currseq = currheader.groups(1)[0]
+        else:
+            sequence += line
+    if currseq is not None:
+        yield currseq, sequence
+            
+def fastadict(fafile):
+    seqdict = dict()
+    for name, seq in readmultifasta(fafile):
+        seqdict[name] = seq
+    return seqdict
+        
 def tempmultifasta(allseqs):
     fafile = tempfile.NamedTemporaryFile(suffix=".fa")
 
@@ -289,30 +320,35 @@ class transcriptfile:
 
 class samplefile:
     def __init__(self, samplefilename):
-        samplefile = open(samplefilename)
-        samplelist = list()
-        samplefiles = dict()
-        replicatename = dict()
-        
-        replicatelist = list()
-        for i, line in enumerate(samplefile):
-            fields = line.split()
-            if len(fields) < 2:
-                continue
-            samplefiles[fields[0]] = fields[2]
-            replicatename[fields[0]] = fields[1]
+        try:
+            samplefile = open(samplefilename)
+            samplelist = list()
+            samplefiles = dict()
+            replicatename = dict()
             
-            samplelist.append(fields[0])
-            if fields[1] not in set(replicatelist):
-                replicatelist.append(fields[1])
-        
-        #bamlist = list(curr + "_sort.bam" for curr in samplefiles.iterkeys())
-        samplenames = list(curr  for curr in samplefiles.iterkeys())
-        self.samplelist = samplelist
-        self.samplefiles = samplefiles
-        self.replicatename = replicatename
-        self.replicatelist = replicatelist
-        #self.bamlist = list(curr+ "_sort.bam" for curr in samplelist)
+            replicatelist = list()
+            for i, line in enumerate(samplefile):
+                fields = line.split()
+                if len(fields) < 2:
+                    continue
+                samplefiles[fields[0]] = fields[2]
+                replicatename[fields[0]] = fields[1]
+                
+                samplelist.append(fields[0])
+                if fields[1] not in set(replicatelist):
+                    replicatelist.append(fields[1])
+            
+            #bamlist = list(curr + "_sort.bam" for curr in samplefiles.iterkeys())
+            samplenames = list(curr  for curr in samplefiles.iterkeys())
+            self.samplelist = samplelist
+            self.samplefiles = samplefiles
+            self.replicatename = replicatename
+            self.replicatelist = replicatelist
+            #self.bamlist = list(curr+ "_sort.bam" for curr in samplelist)
+        except IOError:
+            print >>sys.stderr, "Cannot read sample file "+samplefilename
+            print >>sys.stderr, "exiting..."
+            sys.exit(1)
     def getsamples(self):
         return self.samplelist
     def getbamlist(self):
@@ -402,6 +438,30 @@ class GenomeRange:
         if name is None:
             newname = self.name
         return GenomeRange(self.dbname, self.chrom, self.end,self.end + dist,self.strand, name = newname, fastafile = self.fastafile)
+    def getfirst(self, dist = 50, name = None):
+        newname = name
+        if name is None:
+            newname = self.name
+        if self.strand == "-":
+            return GenomeRange(self.dbname, self.chrom, self.end - dist,self.end ,self.strand, name = newname, fastafile = self.fastafile)
+        else:
+            return GenomeRange(self.dbname, self.chrom, self.start,self.start + dist,self.strand, name = newname, fastafile = self.fastafile)
+    def getlast(self, dist = 50, name = None):
+        newname = name
+        if name is None:
+            newname = self.name
+        if self.strand == "-":
+            return GenomeRange(self.dbname, self.chrom, self.start,self.start + dist,self.strand, name = newname, fastafile = self.fastafile)
+        else:
+            return GenomeRange(self.dbname, self.chrom, self.end - dist,self.end ,self.strand, name = newname, fastafile = self.fastafile)
+    def getbase(self, basenum, name = None):
+        newname = name
+        if name is None:
+            newname = self.name
+        if self.strand == "-":
+            return GenomeRange(self.dbname, self.chrom, self.end - basenum - 1 ,self.end -basenum,self.strand, name = newname, fastafile = self.fastafile)
+        else:
+            return GenomeRange(self.dbname, self.chrom, self.start +basenum ,self.start + basenum + 1,self.strand, name = newname, fastafile = self.fastafile)
     def antisense(self):
         if self.strand == "+":
             newstrand = "-"
@@ -498,9 +558,15 @@ def readgtf(filename, orgdb="genome", seqfile= None, filterpsuedo = False, filte
             if genesource == 'ensembl':
                 #print >>sys.stderr, biotype
                 genesource = biotype
-                    
-            #print >>sys.stderr,  GenomeRange( orgdb, fields[0],fields[3],fields[4],fields[6], name = featname, fastafile = seqfile).bedstring()                    
-            yield GenomeRange( orgdb, fields[0],fields[3],fields[4],fields[6], name = featname, fastafile = seqfile, data = {"biotype":biotype, "source":genesource, "genename":genename})
+            if not (fields[6] == "+" or fields[6] == "-"):
+                print >>sys.stderr, "strand error in "+filename
+                skippedlines += 1
+            elif not (fields[3].isdigit() and fields[4].isdigit()):
+                print >>sys.stderr, "non-number coordinates in "+filename
+                skippedlines += 1
+            else:
+                                    
+                yield GenomeRange( orgdb, fields[0],fields[3],fields[4],fields[6], name = featname, fastafile = seqfile, data = {"biotype":biotype, "source":genesource, "genename":genename})
             
 def readbed(filename, orgdb="genome", seqfile= None):
     bedfile = None
@@ -510,21 +576,28 @@ def readbed(filename, orgdb="genome", seqfile= None):
         bedfile = gzip.open(filename, 'rb')
     else:
         bedfile = open(filename, "r")
+    skippedlines = 0
     for currline in bedfile:
         #print currline
         if currline.startswith('track') or currline.startswith('#'):
             continue
         fields = currline.rstrip().split()
         if len(fields) > 2:
-            #print >>sys.stderr, len(fields)
             if len(fields) < 5:
                 strand = "+"
             else:
-                #print >>sys.stderr, len(fields)
                 strand = fields[5]
-                
-            yield GenomeRange( orgdb, fields[0],fields[1],fields[2],strand, name = fields[3], fastafile = seqfile)
-
+            if not (strand == "+" or strand == "-"):
+                print >>sys.stderr, "strand error in "+filename
+                skippedlines += 1
+            elif not (fields[1].isdigit() and fields[2].isdigit()):
+                print >>sys.stderr, "non-number coordinates in "+filename
+                skippedlines += 1
+            else:
+                yield GenomeRange( orgdb, fields[0],fields[1],fields[2],strand, name = fields[3], fastafile = seqfile)
+    
+    if skippedlines > 0:
+        print >>sys.stderr, "skipped "+str(skippedlines)+" in "+filename
 def ifelse(arg, trueres,falseres):
     if arg:
         return trueres
@@ -534,9 +607,10 @@ def ifelse(arg, trueres,falseres):
         
 def isprimarymapping(mapping):
     return not (mapping.flag & 0x0100 > 0)        
-def issinglemapped(mapping):
-    return (mapping.mapq >= 2)    
-def getbamrange(bamfile, chromrange = None, primaryonly = False, singleonly = False, maxmismatches = None):
+def issinglemapping(mapping):
+    return mapping.mapq > 2        
+
+def getbamrange(bamfile, chromrange = None, primaryonly = False, singleonly = False, maxmismatches = None, allowindels=True):
     bamiter = None
     try:
         if chromrange is not None:
@@ -562,7 +636,7 @@ def getbamrange(bamfile, chromrange = None, primaryonly = False, singleonly = Fa
                 #print >>sys.stderr, issinglemapped(currline)
             if primaryonly and not isprimarymapping(currline):
                 continue
-            if singleonly and not issinglemapped(currline):
+            if singleonly and not issinglemapping(currline):
                 continue
             if strand == "-":
                 pass
@@ -572,6 +646,9 @@ def getbamrange(bamfile, chromrange = None, primaryonly = False, singleonly = Fa
             uniquetrna = True
             #print >>sys.stderr, dir(currline)
             mismatches = None
+            alignscore = None
+            secondbestscore = None
+            uniquemapping = False
             for currtag in currline.tags:
                 if currtag[0] == "YA" and currtag[1] > 1:
                     uniqueac = False
@@ -581,9 +658,17 @@ def getbamrange(bamfile, chromrange = None, primaryonly = False, singleonly = Fa
                     uniquetrna = False   
                 if currtag[0] == "XM":
                     mismatches = currtag[1]
+                if currtag[0] == "XS":
+                    secondbestscore = float(currtag[1])
+                if currtag[0] == "AS":
+                    alignscore = float(currtag[1])
+            if  secondbestscore is None or alignscore > secondbestscore:
+                uniquemapping = True
             if maxmismatches is not None and currtag[1] > maxmismatches:
                 continue  
-            yield GenomeRead( "genome",rname,currline.pos,currline.aend,strand, name = currline.qname , data = {"score":currline.mapq, "CIGAR":currline.cigar,"CIGARstring":currline.cigarstring, "seq":seq, "flags": currline.flag, "qual":currline.qual,"bamline":currline,'uniqueac':uniqueac,"uniqueamino":uniqueamino,"uniquetrna":uniquetrna})
+            if not allowindels and len(currline.cigar) > 1:
+                continue
+            yield GenomeRead( "genome",rname,currline.pos,currline.aend,strand, name = currline.qname , data = {"score":currline.mapq, "CIGAR":currline.cigar,"CIGARstring":currline.cigarstring, "seq":seq, "flags": currline.flag, "qual":currline.qual,"bamline":currline,'uniqueac':uniqueac,"uniqueamino":uniqueamino,"uniquetrna":uniquetrna,"uniquemapping":uniquemapping})
     except ValueError as err:
         #print>>sys.stderr, err
         #print>>sys.stderr, bamfile.name
@@ -597,7 +682,9 @@ def isuniquetrnamapping(read):
 def isuniqueaminomapping(read):
     return read.data["uniqueamino"]
 def isuniqueacmapping(read):
-    return read.data["uniqueac"]    
+    return read.data["uniqueac"]
+def issinglemapped(read):
+    return (read.data["score"] >= 2)        
 def getpileuprange(bamfile, chromrange = None):
     bamiter = None
     if chromrange is not None:

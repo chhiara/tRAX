@@ -7,9 +7,7 @@ library(getopt)
 
 args <- commandArgs(trailingOnly = TRUE)
 
-#args <- c("aging-coverage.txt","sacCer3-trnatable.txt", "YeastAging.txt", "aging-coverage.pdf")
-#args <- c("ExosomeData-coverage.txt","/soe/holmes/pythonsource/trnatest/hgtrnadb/hg19-trnatable.txt","exosomesamples.txt","ExosomeData-SizeFactors.txt","ExosomeData-coverage.pdf")
-#args
+
 
 #hcvm.i <- melt(hcvm.i, id.vars=c(grep("^readC", names(hcvm.i), value=TRUE, invert=TRUE)), variable.name="tRNA.basePosition", value.name="read.density")
 
@@ -41,8 +39,6 @@ modomicstable <- data.frame()
 outputformat <- ".pdf"
 
 
-#print("****")
-print(opt$directory)
 
 
 
@@ -58,6 +54,44 @@ myBreaks <- function(x){
     names(breaks) <- attr(breaks,"labels")
     breaks
 }
+configurecov <- function(covplot){
+covplot<- covplot+ theme_bw()
+covplot<- covplot+theme(text = element_text(size = 4))
+covplot<- covplot+theme(rect = element_rect(size=.01))
+              
+covplot<- covplot+theme(legend.key.size =  unit(.5, "cm")) # Change key size in the legend
+covplot<- covplot+theme(legend.key.height =  unit(.5, "cm")) # Change key size in the legend
+              
+covplot<- covplot+theme(legend.text = element_text(size=6)) # Change the size labels in the legend
+covplot<- covplot+theme(legend.title = element_text(size=6))             
+              
+covplot<- covplot+theme(axis.ticks = element_line(size = .1)) 
+#smallcovall< covplot+theme(axis.ticks.y=element_blank())
+              
+covplot<- covplot+theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=3))
+
+              
+covplot<- covplot+theme(axis.line = element_line(size = .1))
+covplot<- covplot+theme(panel.grid  = element_line(size = .1))
+              
+              
+covplot<- covplot+theme(axis.line = element_line(size = .1))
+covplot<- covplot+theme(panel.grid  = element_line(size = .15))
+              
+covplot<- covplot+theme(strip.switch.pad.grid = unit(.1, "cm"))
+covplot<- covplot+theme(panel.margin = unit(.15, "lines"))
+#This needs to be different from the combined version for some reason
+covplot<- covplot+theme(axis.text.y=element_text(size=6))
+            
+covplot<- covplot+theme(strip.text.y = element_text(angle=0,size=10))
+#as does this  
+covplot<- covplot+theme(strip.text.x = element_text(angle=0,size=10))
+covplot<- covplot+theme(axis.text=element_text(size=8))
+covplot<- covplot+theme(axis.title=element_text(size=8))
+
+covplot
+}
+
 
 
 #colnames(coverages) <- c("Feature", "Sample",1:(length(colnames(coverages)) - 2))
@@ -139,8 +173,45 @@ sortcovmelt <- coveragemelt[order(coveragemelt$variable, coveragemelt$Sample,as.
 sortacceptor <- acceptorType[order(coveragemelt$variable, coveragemelt$Sample,as.numeric(acceptorType),coveragemelt$Feature)]
 
 
-covsummary <- ggplot(coveragemelt,aes(x=variable,y=value, fill = sortacceptor, order = as.numeric(sortacceptor))) + facet_grid( ~ Sample, scales="free") +xlab("Position")+ geom_bar(stat="identity")+theme(axis.text.y=element_text(colour="black",size=8), strip.text.y = element_text(angle=0,size=4),strip.text.x = element_text(angle=0,size=8),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8))+ ylab("Read Share") +   scale_y_continuous(breaks=myBreaks, labels = c("0","1")) +scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon","tail")) +scale_fill_discrete(drop=FALSE, name="Acceptor\ntype", breaks = levels(sortacceptor))
+covsummary <- ggplot(coveragemelt,aes(x=variable,y=value, fill = sortacceptor, order = as.numeric(sortacceptor))) + facet_grid( ~ Sample, scales="free") +xlab("Position")+ geom_bar(stat="identity")+theme(axis.text.y=element_text(colour="black",size=8), strip.text.y = element_text(angle=0,size=4),strip.text.x = element_text(angle=0,size=8),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8))+ ylab("Normalized Read Count") +   scale_y_continuous(breaks=myBreaks) +scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon","tail")) +scale_fill_discrete(drop=FALSE, name="Acceptor\ntype", breaks = levels(sortacceptor))
 ggsave(filename=combinedfile,covsummary)
+
+
+smallcovsummary <- ggplot(coveragemelt,aes(x=variable,y=value, fill = sortacceptor, order = as.numeric(sortacceptor)),width = 2, size = 2	) + facet_grid( ~ Sample, scales="free") +xlab("Position")+ geom_bar(stat="identity")+ ylab("Normalized Read Count") +   scale_y_continuous(breaks=myBreaks) +scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon","tail"),expand = c(0.05, .01)) +scale_fill_discrete(drop=FALSE, name="Acceptor\ntype", breaks = levels(sortacceptor))
+																																#																																	#, expand = c(0.05, 0)
+smallcovsummary<-smallcovsummary+ theme_bw()
+smallcovsummary<-smallcovsummary+theme(text = element_text(size = 4))
+smallcovsummary<-smallcovsummary+theme(rect = element_rect(size=.01))
+
+smallcovsummary<-smallcovsummary+theme(legend.key.size =  unit(0.01, "in")) # Change key size in the legend
+smallcovsummary<-smallcovsummary+theme(legend.key.height =  unit(0.01, "in")) # Change key size in the legend
+ 
+smallcovsummary<-smallcovsummary+theme(legend.text = element_text(size=4)) # Change the size labels in the legend
+smallcovsummary<-smallcovsummary+theme(legend.title= element_text(size=4)) # Change key title size in the legend
+
+smallcovsummary<-smallcovsummary+theme(axis.text.y=element_text(size=3))
+
+
+smallcovsummary<-smallcovsummary+theme(axis.ticks = element_line(size = .1)) 
+#smallcovsummary<-smallcovsummary+theme(axis.ticks.y=element_blank())
+
+smallcovsummary<-smallcovsummary+theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=3))
+
+smallcovsummary<-smallcovsummary+theme(strip.text.y = element_text(angle=0,size=8))
+smallcovsummary<-smallcovsummary+theme(strip.text.x = element_text(angle=0,size=8))
+
+smallcovsummary<-smallcovsummary+theme(axis.line = element_line(size = .1))
+smallcovsummary<-smallcovsummary+theme(panel.grid  = element_line(size = .1))
+
+#smallcovsummary<-smallcovsummary+theme(strip.switch.pad.grid = unit(.1, "cm"))
+
+
+#smallcovsummary<-smallcovsummary+theme(strip.background  = element_rect(size=.01))
+scalefactor = .5
+ggsave(filename=paste(opt$unique, "-smallcombineduniquecoverages.pdf",sep= ""), smallcovsummary, width =scalefactor*(.5+.75*length(unique(coveragemelt$Sample))), height = scalefactor*1)
+ggsave(filename=paste(opt$unique, "-smallcombineduniquecoverages.png",sep= ""), smallcovsummary, width =.5+.75*length(unique(coveragemelt$Sample)), height = 1)
+ggsave(filename=paste(opt$unique, "-smallcombineduniquecoverages.eps",sep= ""), smallcovsummary, width =.5+.75*length(unique(coveragemelt$Sample)), height = 1)
+
 
 #axis.text.y=element_text is y-axis coverage labels
 #strip.text.y is trna names
@@ -164,7 +235,6 @@ if(!is.null(opt$modomics) && file.exists(opt$modomics) ){
 }
 
 
-print("**")
 
 modomicstable <- modomicstable[as.character(modomicstable$pos) %in% unique(as.character(coveragemelt$variable)),]
 modomicstable$dist <- match(modomicstable$pos,  levels(coveragemelt$variable)) #factor(modomicstable$pos, levels = levels(coveragemelt$variable))
@@ -172,6 +242,10 @@ modomicstable$Feature <- factor(modomicstable$trna,levels = levels(coveragemelt$
 
 stopmods = c("m1A","m2,2G","m1G","m1I","m3C")
 modomicstable <- modomicstable[modomicstable$mod %in% stopmods,]
+
+colnames(modomicstable)[colnames(modomicstable) == 'mod'] <- 'Modification'
+
+
     
     
 #modomicstable$dist <- modomicstable$pos
@@ -180,25 +254,25 @@ modomicstable <- modomicstable[modomicstable$mod %in% stopmods,]
 #
 #geom_bar(aes(fill = factor(baseMod, levels=c("m1A", "m1G", "m3C", "other bases", "not documented"))), stat="identity")
 #modomicstable <- data.frame(Feature = factor(c("nmt-tRNA-Leu-TAA-1"),levels(coveragemelt$Feature)), pos =10)
-allcoverages <- ggplot(coveragemelt,aes(x=variable,y=value), size = 2) + theme_bw()+ facet_grid(Feature ~ Sample, scales="free") + geom_bar(stat="identity") +  geom_vline(aes(xintercept = dist, col = mod),data = modomicstable,show.legend=TRUE)+theme(axis.text.y=element_text(colour="black",size=6),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8), strip.text.y = element_text(angle=0),strip.text.x = element_text(size = ,angle=0))+ ylab("Normalized Read Count") +   scale_y_continuous(breaks=myBreaks) +scale_x_discrete(breaks=c("X1","X9","X26","X37","X44","X58","X65","X73"), labels=c("Start","m1g","m22g","anticodon","varloop","m1a","65","tail"))   #+scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon", "tail"))  
+allcoverages <- ggplot(coveragemelt,aes(x=variable,y=value), size = 2) + theme_bw()+ facet_grid(Feature ~ Sample, scales="free") + geom_bar(stat="identity") +  geom_vline(aes(xintercept = dist, col = Modification),data = modomicstable,show.legend=TRUE)+theme(axis.text.y=element_text(colour="black",size=6),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8), strip.text.y = element_text(angle=0),strip.text.x = element_text(size = ,angle=0))+ ylab("Normalized Read Count") + xlab("tRNA position") +   scale_y_continuous(breaks=myBreaks) +scale_x_discrete(breaks=c("X1","X9","X26","X37","X44","X58","X65","X73"), labels=c("Start","m1g","m22g","anticodon","varloop","m1a","65","tail"))   #+scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon", "tail"))  
 #ggsave(filename=outputfile, width = 30, height = 30)
 #3*length(unique(coveragemelt$Feature))
 #5*length(unique(coveragemelt$Sample))
 #dev.off()
 scalefactor = .5
 
-ggsave(filename=outputfile, allcoverages,height=scalefactor*1*length(unique(coveragemelt$Feature)),width=scalefactor*5*length(unique(coveragemelt$Sample)), limitsize=FALSE, dpi = 600)
+ggsave(filename=outputfile, allcoverages,height=scalefactor*1*length(unique(coveragemelt$Feature)),width=2+scalefactor*5*length(unique(coveragemelt$Sample)), limitsize=FALSE, dpi = 600)
 #ggsave(filename=outputfile, allcoverages,dpi = 1000, limitsize=FALSE)
 #set dpi
 
 #unique(acceptorType)
 if(!is.null(opt$directory) && FALSE){
 for (curramino in unique(acceptorType)){
-#print("***")
+#
 
 aminodata = coveragemelt[acceptorType == curramino,]
 aminomodomicstable = modomicstable[modomicstable$Feature %in% unique(aminodata$Feature),]
-aminocoverage <- ggplot(aminodata,aes(x=variable,y=value), size = 2) + theme_bw()+facet_grid(Feature ~ Sample, scales="free") + geom_bar(stat="identity") +  geom_vline(aes(xintercept = dist, col = mod),data = aminomodomicstable,show_guide=TRUE)+theme(axis.text.y=element_text(colour="black",size=6),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8), strip.text.y = element_text(angle=0),strip.text.x = element_text(size = ,angle=0))+ ylab("Normalized Read Count") +   scale_y_continuous(breaks=myBreaks) +scale_x_discrete(breaks=c("X1","X9","X26","X37","X44","X58","X65","X73"), labels=c("Start","m1g","m22g","anticodon","varloop","m1a","65","tail")) + guide_legend(title="RNA modifications")   #+scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon", "tail"))
+aminocoverage <- ggplot(aminodata,aes(x=variable,y=value), size = 2) + theme_bw()+facet_grid(Feature ~ Sample, scales="free") + geom_bar(stat="identity") +  geom_vline(aes(xintercept = dist, col = Modification),data = aminomodomicstable,show.legend=TRUE)+theme(axis.text.y=element_text(colour="black",size=6),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8), strip.text.y = element_text(angle=0),strip.text.x = element_text(size = ,angle=0))+ ylab("Normalized Read Count") + xlab("tRNA position") + scale_y_continuous(breaks=myBreaks) +scale_x_discrete(breaks=c("X1","X9","X26","X37","X44","X58","X65","X73"), labels=c("Start","m1g","m22g","anticodon","varloop","m1a","65","tail")) + guide_legend(title="RNA modifications")   #+scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon", "tail"))
 
 aminoname = paste(opt$directory,"/",curramino,"-coverage",outputformat, sep = "")
 #print(aminoname)
@@ -206,7 +280,6 @@ ggsave(filename=aminoname, aminocoverage,height=2 + scalefactor*1.5*length(uniqu
 
 }
 }
-
 
 
 if(!is.null(opt$unique)){
@@ -217,10 +290,10 @@ multactable <- read.table(paste(opt$unique, "-multaccoverages.txt",sep= ""), hea
 multtrnas <- read.table(paste(opt$unique, "-multtrnacoverages.txt",sep= ""), header = TRUE)
 uniquetable <- read.table(paste(opt$unique, "-uniquecoverages.txt",sep= ""), header = TRUE)
 
-uniquetable$maptype = "Unique tRNA"
-multactable$maptype = "Unique Acceptor"
-multamino$maptype = "Nonunique Acceptor"
-multtrnas$maptype = "Unique Decoder"
+uniquetable$maptype = "Transcript specific"
+multactable$maptype = "Isotype Specific"
+multamino$maptype = "Nonspecific"
+multtrnas$maptype = "Isodecoder Specific" 
 #allmulttables <- rbind(uniquetable,multactable,multamino,multtrnas)
 
 #allmulttables <- rbind(multamino,multtrnas,multactable,uniquetable)
@@ -242,13 +315,16 @@ allmultmelt <- allmultmeltagg
 
 #
 #allmultmelt$maptype <- factor(allmultmelt$maptype, levels=c("Unique tRNA","Unique Decoder","Unique Acceptor","Nonunique Acceptor"))
-allmultmelt$maptype <- factor(allmultmelt$maptype, levels=c("Nonunique Acceptor","Unique Acceptor","Unique Decoder","Unique tRNA"))
+#allmultmelt$maptype <- factor(allmultmelt$maptype, levels=c("Nonunique Acceptor","Unique Acceptor","Unique Decoder","Unique tRNA"))
+#allmultmelt$maptype <- factor(allmultmelt$maptype, levels=c("Transcript specific","Isodecoder Specific","Isotype Specific","Nonspecific"))
+allmultmelt$maptype <- factor(allmultmelt$maptype, levels=c("Nonspecific","Isotype Specific","Isodecoder Specific","Transcript specific"))
 
-allmultmelt <- allmultmelt[order(allmultmelt$maptype),]
+
+allmultmelt <- allmultmelt[order(-as.numeric(allmultmelt$maptype)),]
 #print(head(allmultmelt))
-#allcoverages <- ggplot(coveragemelt,aes(x=variable,y=value), size = 2) +                                           theme_bw()+ facet_grid(Feature ~ Sample, scales="free") + geom_bar(stat="identity") +  geom_vline(aes(xintercept = dist, col = mod),data = modomicstable,show_guide=TRUE)+                     theme(axis.text.y=element_text(colour="black",size=6),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8), strip.text.y = element_text(angle=0),strip.text.x = element_text(size = ,angle=0))+                                            ylab("Normalized Read Count") +   scale_y_continuous(breaks=myBreaks) +scale_x_discrete(breaks=c("X1","X9","X26","X37","X44","X58","X65","X73"), labels=c("Start","m1g","m22g","anticodon","varloop","m1a","65","tail"))   #+scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon", "tail"))  
+#allcoverages <- ggplot(coveragemelt,aes(x=variable,y=value), size = 2) +                                           theme_bw()+ facet_grid(Feature ~ Sample, scales="free") + geom_bar(stat="identity") +  geom_vline(aes(xintercept = dist, col = Modification),data = modomicstable,show.legend=TRUE)+                     theme(axis.text.y=element_text(colour="black",size=6),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8), strip.text.y = element_text(angle=0),strip.text.x = element_text(size = ,angle=0))+                                            ylab("Normalized Read Count") +   scale_y_continuous(breaks=myBreaks) +scale_x_discrete(breaks=c("X1","X9","X26","X37","X44","X58","X65","X73"), labels=c("Start","m1g","m22g","anticodon","varloop","m1a","65","tail"))   #+scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon", "tail"))  
 
-#uniqcoverage <- ggplot(allmultmelt,aes(x=variable,y=value, fill = maptype, order=-as.numeric(maptype))) + theme_bw()+ facet_grid(Feature ~ Sample, scales="free") + geom_bar(stat="identity") +  geom_vline(aes(xintercept = dist, col = mod),linetype = "longdash",data = modomicstable,show_guide=TRUE)+theme(axis.text.y=element_text(colour="black",size=6),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8), strip.text.y = element_text(angle=0),strip.text.x = element_text(size = ,angle=0))+ scale_fill_discrete(name="Mapping\nType")+ylab("Normalized Read Coverage") +   scale_y_continuous(breaks=myBreaks) +scale_x_discrete(breaks=c("X1","X9","X26","X37","X44","X58","X65","X73"), labels=c("Start","m1g","m22g","anticodon","varloop","m1a","65","tail"),name="RNA\nModification") + abs(Y = "tRNA position")   #+scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon", "tail"))
+
 
 for (curramino in unique(acceptorType)){
 
@@ -257,27 +333,44 @@ aminomodomicstable = modomicstable[modomicstable$Feature %in% unique(aminodata$F
 #This bit messes up the sample ordering
 #aminodata$Sample <- gsub("_", " ", aminodata$Sample)  
 
-aminocoverage <- ggplot(aminodata,aes(x=variable,y=value, fill = maptype, order=-as.numeric(maptype)), size = 2) + theme_bw()+facet_grid(Feature ~ Sample, scales="free") + geom_bar(stat="identity") +  geom_vline(aes(xintercept = dist, col = mod),data = aminomodomicstable,show_guide=TRUE)+theme(axis.text.y=element_text(colour="black",size=6),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8), strip.text.y = element_text(angle=0),strip.text.x = element_text(size = ,angle=0)) + ylab("Normalized Read Count") +   xlab("tRNA position") + scale_y_continuous(breaks=myBreaks) +scale_x_discrete(breaks=c("X1","X9","X26","X37","X44","X58","X65","X73"), labels=c("Start","m1g","m22g","anticodon","varloop","m1a","65","tail")) + labs(fill="Mappability", vline="RNA\nModification") #+ guide_legend(title="RNA modifications")   #+scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon", "tail"))
+
+#scale_x_discrete(breaks=c("X1","X13","X22","X31","X39","X53","X61","X73"), labels=c("Start","D-loop start","D-loop end","acc-loop start","acc-loop end","D-loop start","D-loop end","tail"))
+#scale_x_discrete(breaks=c("X1","X9","X26","X37","X44","X58","X65","X73"), labels=c("Start","m1g","m22g","anticodon","varloop","m1a","65","tail"))
+aminocoverage   <- ggplot(aminodata,aes(x=variable,y=value, fill = maptype, order=-as.numeric(maptype)), size = 2) + theme_bw()+facet_grid(Feature ~ Sample, scales="free") + geom_bar(stat="identity") +  geom_vline(aes(xintercept = dist, col = Modification),data = aminomodomicstable,show.legend=TRUE,size=.2,linetype = "longdash")+theme(axis.text.y=element_text(colour="black",size=6),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8)) + ylab("Normalized Read Count") + xlab("tRNA position") + scale_y_continuous(breaks=myBreaks) +scale_x_discrete(breaks=c("X1","X13","X22","X31","X39","X53","X61","X73"), labels=c("Start","D-loop start","D-loop end","acc-loop start","acc-loop end","D-loop start","D-loop end","tail")) + labs(fill="Mappability", vline="RNA\nModification") #+ scale_color_hue("mod")+labs(fill="RNA\nModification")#+scale_fill_manual(name="RNA\nmodifications")#+scale_colour_manual(data = aminomodomicstable, name="RNA\nModification") #+scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon", "tail"))
+#all formula
+#aminocoverage <-ggplot(aminodata,aes(x=variable,y=value, fill = maptype, order=-as.numeric(maptype)), size = 2) + theme_bw()+facet_grid(Feature ~ Sample, scales="free") + geom_bar(stat="identity") +  geom_vline(aes(xintercept = dist, col = Modification),data = modomicstable,show.legend=TRUE,size=.2,linetype = "longdash")+theme(axis.text.y=element_text(colour="black",size=6),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8), strip.text.y = element_text(angle=0),strip.text.x = element_text(size = 8,angle=0)) + ylab("Normalized Read Count") +   xlab("tRNA position") + scale_y_continuous(breaks=myBreaks) +scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon","tail")) + labs(fill="Mappability", vline="RNA\nModification") #+ guide_legend(title="RNA modifications")   #+scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon", "tail"))
+
+aminocoverage <- configurecov(aminocoverage)
 
 aminoname = paste(opt$directory,"/",curramino,"-uniqcoverage",outputformat, sep = "")
 #print(aminoname)
-ggsave(filename=aminoname, aminocoverage,height=2 + scalefactor*1.5*length(unique(aminodata$Feature)),width=scalefactor*10*length(unique(aminodata$Sample)), limitsize=FALSE, dpi = 600)
+ggsave(filename=aminoname, aminocoverage,height=scalefactor*(2 + 1.5*length(unique(aminodata$Feature))),width=scalefactor*(2+5*length(unique(aminodata$Sample))), limitsize=FALSE, dpi = 600)
+
 
 }
 
 
-#aminocoverage <- ggplot(aminodata,aes(x=variable,y=value, fill = maptype, order=-as.numeric(maptype)), size = 2) + theme_bw()+facet_grid(Feature ~ Sample, scales="free") + geom_bar(stat="identity") +  geom_vline(aes(xintercept = dist, col = mod),data = aminomodomicstable,show_guide=TRUE)+theme(axis.text.y=element_text(colour="black",size=6),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8), strip.text.y = element_text(angle=0),strip.text.x = element_text(size = ,angle=0)) + ylab("Normalized Read Count") +   xlab("tRNA position") + scale_y_continuous(breaks=myBreaks) +scale_x_discrete(breaks=c("X1","X9","X26","X37","X44","X58","X65","X73"), labels=c("Start","m1g","m22g","anticodon","varloop","m1a","65","tail")) + labs(fill="Mappability", vline="RNA\nModification") #+ guide_legend(title="RNA modifications")   #+scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon", "tail"))
 
-uniqcoverage <- ggplot(allmultmelt,aes(x=variable,y=value, fill = maptype, order=-as.numeric(maptype)), size = 2) + theme_bw()+facet_grid(Feature ~ Sample, scales="free") + geom_bar(stat="identity") +  geom_vline(aes(xintercept = dist, col = mod),data = modomicstable,show_guide=TRUE)+theme(axis.text.y=element_text(colour="black",size=6),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8), strip.text.y = element_text(angle=0),strip.text.x = element_text(size = ,angle=0)) + ylab("Normalized Read Count") +   xlab("tRNA position") + scale_y_continuous(breaks=myBreaks) +scale_x_discrete(breaks=c("X1","X9","X26","X37","X44","X58","X65","X73"), labels=c("Start","m1g","m22g","anticodon","varloop","m1a","65","tail")) + labs(fill="Mappability", vline="RNA\nModification") #+ guide_legend(title="RNA modifications")   #+scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon", "tail"))
+uniqcoverage <- ggplot(allmultmelt,aes(x=variable,y=value, fill = maptype, order=-as.numeric(maptype)), size = 2) + theme_bw()+facet_grid(Feature ~ Sample, scales="free") + geom_bar(stat="identity") +  geom_vline(aes(xintercept = dist, col = Modification),data = modomicstable,show.legend=TRUE,size=.2,linetype = "longdash")+theme(axis.text.y=element_text(colour="black",size=6),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8), strip.text.y = element_text(angle=0),strip.text.x = element_text(size = 8,angle=0)) + ylab("Normalized Read Count") +   xlab("tRNA position") + scale_y_continuous(breaks=myBreaks) +scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon","tail")) + labs(fill="Mappability", vline="RNA\nModification") #+ guide_legend(title="RNA modifications")   #+scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon", "tail"))
 
-#uniqcoverage <- ggplot(allmultmelt,aes(x=variable,y=value)) + theme_bw()+ facet_grid(Feature ~ Sample, scales="free") + geom_bar(stat="identity") +  geom_vline(aes(xintercept = dist, col = mod),linetype = "longdash",data = modomicstable,show_guide=TRUE)+theme(axis.text.y=element_text(colour="black",size=6),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8), strip.text.y = element_text(angle=0),strip.text.x = element_text(size = ,angle=0))+ scale_fill_discrete(name="Mapping\nType")+ylab("Normalized Read Coverage") +   scale_y_continuous(breaks=myBreaks) +scale_x_discrete(breaks=c("X1","X9","X26","X37","X44","X58","X65","X73"), labels=c("Start","m1g","m22g","anticodon","varloop","m1a","65","tail"),name="RNA\nModification")   #+scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon", "tail"))
+
 #ggsave(paste(opt$unique, "-uniquecoverages",outputformat,sep= ""), width = 15, height = 30)
-#ggsave(, uniqcoverage,height=2 + scalefactor*1.5*length(unique(allmultmelt$Feature)),width=scalefactor*5*length(unique(allmultmelt$Sample)), limitsize=FALSE, dpi = 600)
 
 print(unique(allmultmelt$Sample))
 print(scalefactor*5*length(unique(allmultmelt$Sample)))
-scalefactor = .5
-ggsave(filename=paste(opt$unique, "-uniquecoverages.pdf",sep= ""), uniqcoverage,height=2 + scalefactor*1.5*length(unique(allmultmelt$Feature)),width=scalefactor*5*length(unique(allmultmelt$Sample)), limitsize=FALSE, dpi = 600)
+
+smallcovall<-uniqcoverage
+configurecov <- configurecov(smallcovall)
+ggsave(filename=paste(opt$unique, "-uniquecoverages.pdf",sep= ""), uniqcoverage,height=scalefactor*(2 + 1.5*length(unique(allmultmelt$Feature))),width=scalefactor*(2+5*length(unique(allmultmelt$Sample))), limitsize=FALSE, dpi = 600)
+
+
+
+#configurecov <- configurecov(smallcovall)
+
+#ggsave(filename=paste(opt$unique, "-smalluniquecoverages.pdf",sep= ""), smallcovall,height=2 + scalefactor*1.5*length(unique(allmultmelt$Feature)),width=2+scalefactor*5*length(unique(allmultmelt$Sample)), limitsize=FALSE, dpi = 600)
+
+#width should be .75, same as for combined
+#ggsave(filename=paste(opt$unique, "-smallalluniquecoverages.png",sep= ""), smallcovall, width =2+.75*length(unique(coveragemelt$Sample)), height = 1 + scalefactor*.75*length(unique(allmultmelt$Feature)), limitsize=FALSE)
 
 
 #ggsave(filename=paste(opt$unique, "-uniquecoverages.svg",sep= ""), uniqcoverage,height=2 + scalefactor*1.5*length(unique(allmultmelt$Feature)),width=scalefactor*5*length(unique(allmultmelt$Sample)), limitsize=FALSE, dpi = 600)
@@ -289,5 +382,5 @@ ggsave(filename=paste(opt$unique, "-uniquecoverages.pdf",sep= ""), uniqcoverage,
 
 
 
-#theme(axis.title.x=element_blank(), axis.text.x=element_text(colour="black"), strip.text.y = element_text(angle=0))
+
 

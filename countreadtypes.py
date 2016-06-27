@@ -34,6 +34,7 @@ def main(**argdict):
     trnatable = argdict["trnatable"]
     trnaaminofile = argdict["trnaaminofile"]
     sampledata = samplefile(argdict["samplefile"])
+    minpretrnaextend = 5
     mitochrom = None
     if argdict["mitochrom"]:
         mitochrom = argdict["mitochrom"]
@@ -42,6 +43,7 @@ def main(**argdict):
         sizefactor = getsizefactors(argdict["sizefactors"]) 
         
     bedfiles = list()
+    
     if argdict["bedfile"]  is not None:
         bedfiles = argdict["bedfile"]
     trnalocifiles = list()
@@ -221,7 +223,7 @@ def main(**argdict):
             for currbed in locilist:
                 for currfeat in trnaloci[currbed].getbin(currread):
                     expandfeat = currfeat.addmargin(30)
-                    if expandfeat.coverage(currread) > 5:
+                    if currfeat.coverage(currread) > 10 and (currread.start + minpretrnaextend <= currfeat.start or currread.end - minpretrnaextend >= currfeat.end):
                         trnalocuscounts[currsample][currbed] += 1
                         if currread.start + fullpretrnathreshold <  currfeat.start and currread.end - fullpretrnathreshold + 3 >  currfeat.end:
                             fulltrnalocuscounts[currsample][currbed] += 1
@@ -310,9 +312,10 @@ def main(**argdict):
                 emblbiotypes.add(currtype)
             if not gotread and bamnofeature:
                 outbamnofeature.write(currread.data["bamline"])
-    
+    #currently not counting indels, but might later.
     for currsample in samples:
-        print >>sys.stderr, currsample+" indels: "+ str(indelaligns[currsample])+"/"+str(totalsamplecounts[currsample])+":"+str(1.*indelaligns[currsample]/totalsamplecounts[currsample])
+        pass
+        #print >>sys.stderr, currsample+" indels: "+ str(indelaligns[currsample])+"/"+str(totalsamplecounts[currsample])+":"+str(1.*indelaligns[currsample]/totalsamplecounts[currsample])
     def sumsamples(countdict,sampledata, repname, currfeat = None, sizefactors = defaultdict(lambda: 1)):
         if currfeat is None: #To account for the "other" counts, which don't have a feature
             return sum(countdict[currsample]/sizefactors[currsample] for currsample in sampledata.getrepsamples(repname))

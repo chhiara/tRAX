@@ -153,7 +153,7 @@ def getbesttrnamappings(trnafile, bamout = True, logfile = sys.stderr):
             #finalset = trnareads
             if len(trnamappings) > 1:
                 ambtrna += 1
-            tags = [("YA",len(anticodons))] + [("YM",len(aminos))]  + [("YT",len(trnamappings))]
+            tags = [("YA",len(anticodons))] + [("YM",len(aminos))]  + [("YR",len(trnamappings))]
             for currtrnamap in trnamappings:
                 currtrnamap.tags = currtrnamap.tags + [("YA",len(anticodons))] + [("YM",len(aminos))]  + [("YR",len(trnamappings))]
             finalset = trnamappings
