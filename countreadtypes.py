@@ -7,21 +7,6 @@ import os.path
 from collections import defaultdict
 from trnasequtils import *
 
-dbname = 'sacCer3'
-'''
-
-
-~/pythonsource/trnaseq/countreadtypes.py --samplefile=agingshort.txt   --maturetrnas=sacCer3-maturetRNAs.bed --trnaloci=sacCer3-trnas.bed --bedfile sacCer3-rRNA.bed sacCer3-snoRNAs.bed sacCer3-transcripts.bed 
-
-
-~/pythonsource/trnaseq/countreadtypes.py --sizefactors=tRNAseq_SizeFactors.txt --combinereps --samplefile=agingshort.txt   --maturetrnas=sacCer3-maturetRNAs.bed --countfrags --trnaloci=sacCer3-trnas.bed --bedfile sacCer3-rRNA.bed sacCer3-snoRNAs.bed  >repfragtypenormcounts.txt
-'''
-
-
-
-count = 0
-
-
 
 
 
@@ -41,6 +26,10 @@ def main(**argdict):
     sizefactor = defaultdict(lambda: 1)
     if argdict["sizefactors"]:
         sizefactor = getsizefactors(argdict["sizefactors"]) 
+        for currsample in sampledata.getsamples():
+            if currsample not in sizefactor:
+                print >>sys.stderr, "Size factor file "+argdict["sizefactors"]+" missing "+currsample
+                sys.exit(1)
         
     bedfiles = list()
     
@@ -62,6 +51,8 @@ def main(**argdict):
     trnaaminofilename = argdict["trnaaminofile"]
     trnanormfile = argdict["trnanormfile"]
     allreadsnormfile = argdict["allreadsnormfile"]
+    readlengthfile = argdict["readlengthfile"]
+    
     if argdict["countfile"] == "stdout":
         countfile = sys.stdout
     else:
@@ -92,11 +83,7 @@ def main(**argdict):
     
         
 
-    for currsample in samples:
-        if currsample not in sizefactor:
-            print >>sys.stderr, "Sample "+currsample+" not in "+args["sizefactors"]
-            sys.exit(1)
-    #print >>sys.stderr, " ".join(bamlist)
+    #print >>sys.stderr, "**READCOUNT**"
     try:
         featurelist = dict()
         trnaloci = dict()
@@ -152,6 +139,11 @@ def main(**argdict):
     partialtrnalocuscounts  = defaultdict(lambda: defaultdict(int))
     trnalocustrailercounts = defaultdict(lambda: defaultdict(int))
     trnaaminocounts = defaultdict(lambda: defaultdict(int))
+    
+    readlengths = defaultdict(lambda: defaultdict(int))
+    trnareadlengths = defaultdict(lambda: defaultdict(int))
+    pretrnareadlengths = defaultdict(lambda: defaultdict(int))
+    
     aminos = set()
     
     othercounts = defaultdict(int)
@@ -217,13 +209,17 @@ def main(**argdict):
                     pass
                 isindel = True
                 continue
+
             else:
                 pass
                 #continue
+            readlength = len(currread.data['seq'])
+            readlengths[currsample][readlength] += 1
             for currbed in locilist:
                 for currfeat in trnaloci[currbed].getbin(currread):
                     expandfeat = currfeat.addmargin(30)
                     if currfeat.coverage(currread) > 10 and (currread.start + minpretrnaextend <= currfeat.start or currread.end - minpretrnaextend >= currfeat.end):
+                        pretrnareadlengths[currsample][readlength] += 1
                         trnalocuscounts[currsample][currbed] += 1
                         if currread.start + fullpretrnathreshold <  currfeat.start and currread.end - fullpretrnathreshold + 3 >  currfeat.end:
                             fulltrnalocuscounts[currsample][currbed] += 1
@@ -233,6 +229,7 @@ def main(**argdict):
                         gotread = True
                         break
                     if currfeat.getdownstream(30).coverage(currread) > 10:
+                        pretrnareadlengths[currsample][readlength] += 1
                         trnalocustrailercounts[currsample][currbed] += 1 
                         #print >>sys.stderr, currfeat.bedstring()
                         gotread = True
@@ -246,6 +243,7 @@ def main(**argdict):
             for currbed in trnalist:
                 for currfeat in trnalist[currbed].getbin(currread):
                     if currfeat.coverage(currread) > 10:
+                        trnareadlengths[currsample][readlength] += 1
                         trnasamplecounts[currsample] += 1
                         trnacounts[currsample][currbed] += 1
                         fragtype = getfragtype(currfeat, currread)
@@ -409,6 +407,14 @@ def main(**argdict):
         mean = 1.*sum(totalsamplecounts.values())/len(totalsamplecounts.values())
         print >>allreadsnormfile,"\t".join(samples)
         print >>allreadsnormfile,"\t".join(str(totalsamplecounts[currsample]/mean) for currsample in samples)
+    if readlengthfile is not None:    
+        readlengthfile = open(readlengthfile, "w")
+        print >>readlengthfile, "Length\tSample\tall\ttrnas\tpretrnas"
+        for currsample in readlengths.keys():
+            for curr in range(0,max(readlengths[currsample].keys())+1):
+                othercount = trnareadlengths[currsample][curr] + pretrnareadlengths[currsample][curr]
+                print >>readlengthfile, str(curr)+"\t"+currsample+"\t"+str(readlengths[currsample][curr] - othercount)+"\t"+str(trnareadlengths[currsample][curr]) +"\t"+str(pretrnareadlengths[currsample][curr])
+        
         
         
 if __name__ == "__main__":
@@ -442,6 +448,9 @@ if __name__ == "__main__":
                        help='Create normalization file to use to normalize to total tRNA reads')
     parser.add_argument('--allreadsnormfile',
                        help='Create normalization file to use to normalize to total reads')
+    parser.add_argument('--readlengthfile',
+                       help='optional read lengths table')
+    
     
     parser.add_argument('--bamnofeature', action="store_true", default=False,
                        help='Create bam file output for reads without a feature')

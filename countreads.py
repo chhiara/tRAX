@@ -8,8 +8,6 @@ from collections import defaultdict
 from trnasequtils import *
 import itertools
 
-dbname = 'sacCer3'
-
 
 def getdupes(namelist):
     allset = set()
@@ -20,7 +18,6 @@ def getdupes(namelist):
             allset.add(currname)
         
 
-count = 0
 
 def main(**argdict):
     argdict = defaultdict(lambda: None, argdict)
@@ -71,14 +68,19 @@ def main(**argdict):
     
     
     samples = sampledata.getsamples()
-    
+    genetypes = dict()
     fullpretrnathreshold = 2
     #Grabbing all the features to count
     try:
         featurelist = list()
         trnaloci = list()
         for currfile in bedfiles:
-            featurelist.extend(list(readfeatures(currfile, removepseudo = removepseudo)))
+            
+            bedfeatures = list(readfeatures(currfile, removepseudo = removepseudo))
+            for curr in bedfeatures:
+                genetypes[curr.name] = os.path.basename(currfile)
+                
+            featurelist.extend(bedfeatures)
         trnalist = list()
         for currfile in trnalocifiles:
             trnaloci.extend(list(readbed(currfile)))
@@ -114,7 +116,7 @@ def main(**argdict):
     
     aminocounts  = defaultdict(lambda: defaultdict(int))
     anticodoncounts =  defaultdict(lambda: defaultdict(int))                                         
-    genetypes = dict()
+    
     #how much a pre-tRNA must extend off the end
     minpretrnaextend = 5
     #minimum mapq
@@ -122,7 +124,7 @@ def main(**argdict):
     if nomultimap:
         minmapq = 2
     #minimum number of reads for a feature to be reported
-    minreads = 20
+    minreads = 5
     for currsample in samples:
         
         currbam = sampledata.getbam(currsample)
@@ -169,17 +171,24 @@ def main(**argdict):
             except ValueError:
                 pass
         for currfeat in trnaloci:
-            for currread in getbamrange(bamfile, currfeat, singleonly = nomultimap, maxmismatches = maxmismatches,allowindels = allowindels):
+            #print >>sys.stderr,  currfeat.bedstring()
+            #print >>sys.stderr,  currfeat.getdownstream(30).bedstring()
+            for currread in getbamrange(bamfile, currfeat.addmargin(30), singleonly = nomultimap, maxmismatches = maxmismatches,allowindels = allowindels):
                 #gotta be more than 5 bases off one end to be a true pre-tRNA
                 #might want to shove these to the real tRNA at some point, but they are for now just ignored
+
                 if currfeat.coverage(currread) > 10 and (currread.start + minpretrnaextend <= currfeat.start or currread.end - minpretrnaextend >= currfeat.end):
                     trnalocuscounts[currsample][currfeat.name] += 1
                     if currread.start + fullpretrnathreshold <  currfeat.start and currread.end - fullpretrnathreshold + 3 >  currfeat.end:
                         fulltrnalocuscounts[currsample][currfeat.name] += 1
                     else:
                         partialtrnalocuscounts[currsample][currfeat.name] += 1
-                if currfeat.getdownstream(30).coverage(currread) > 10:
+                elif currfeat.getdownstream(30).coverage(currread) > 10:  #need the elif otherwise fragments that include trailer get in there
+                    trnalocuscounts[currsample][currfeat.name] += 1
                     trnalocustrailercounts[currsample][currfeat.name] += 1
+                else:
+                    #print >>sys.stderr,  currfeat.getdownstream(30).coverage(currread)
+                    pass
         
         for currfeat in trnalist:
             for currread in getbamrange(bamfile, currfeat, singleonly = nomultimap, maxmismatches = maxmismatches,allowindels = allowindels):
@@ -227,6 +236,8 @@ def main(**argdict):
         
     
     for currfeat in trnaloci:
+        if currfeat.name == "tRNA-Ile-AAT-5-5":
+            print >>sys.stderr, "**||: "+str(max(trnalocuscounts[currsample][currfeat.name] for currsample in samples))
         if max(trnalocuscounts[currsample][currfeat.name] for currsample in samples) < minreads:
             continue
         if includebase:
@@ -242,17 +253,19 @@ def main(**argdict):
                 print >>typefile, "AminoTotal_"+curramino+"\t"+"\t".join(str(aminocounts[currsample][curramino]) for currsample in samples)
         for currac in trnainfo.allanticodons():
                 print >>typefile, "AnticodonTotal_"+currac+"\t"+"\t".join(str(anticodoncounts[currsample][currac]) for currsample in samples)
-
-
+    if genetypefile is not None:
+        genetypeout = open(genetypefile, "w")
     for currfeat in featurelist :
         if currfeat.name in trnanames:
             continue
         trnanames.add(currfeat.name)
         if max(counts[currsample][currfeat.name] for currsample in samples) > minreads:
             print >>countfile, currfeat.name+"\t"+"\t".join(str(counts[currsample][currfeat.name]) for currsample in samples)
+            if genetypefile is not None:
+                print >>genetypeout, currfeat.name+"\t"+genetypes[currfeat.name]   
     
     if genetypefile is not None:
-        genetypeout = open(genetypefile, "w")
+        
         for currfeat in trnaloci:
             print >>genetypeout, currfeat.name+"_wholeprecounts"+"\t"+"trna_wholeprecounts"
             print >>genetypeout, currfeat.name+"_partialprecounts"+"\t"+"trna_partialprecounts"
@@ -270,11 +283,15 @@ def main(**argdict):
         if genename in trnanames:
             continue
         trnanames.add(genename)
+        if genename is None:
+            print >>sys.stderr, currfeat.name
+            continue
         if max(counts[currsample][genename] for currsample in samples) > minreads:
             print >>countfile, genename+"\t"+"\t".join(str(counts[currsample][genename]) for currsample in samples)
             if genetypefile is not None:
                 print >>genetypeout, genename+"\t"+genetypes[genename]          
             
+
 
                     
     if genetypefile is not None:

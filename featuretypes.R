@@ -16,9 +16,6 @@ counts <- read.table(args[1],check.names=FALSE)
 selectcounts = counts
 
 
-
-
-
 temp = cbind(selectcounts, seq = factor(rownames(selectcounts),rev(rownames(selectcounts)), ordered = TRUE))
 
 #levels(temp$seq) <- rev(rownames(selectcounts))
@@ -41,9 +38,9 @@ sampletotals = aggregate(countsmelt$value, list(countsmelt$variable), sum)
 countsmelt = countsmelt[countsmelt$value > sampletotals$x[countsmelt$variable] / 100,]
 #countsmelt = countsmelt
 #head(countsmelt)
-ggplot(countsmelt,aes(x = variable, y = value,fill = seq, stat="identity")) +
+ggplot(countsmelt,aes(x = variable, y = value,fill = seq, stat="identity")) + theme_bw() + theme(panel.border = element_rect(linetype = "blank"), panel.grid = element_line(linetype = "blank")) + 
 	geom_bar(position = "fill",stat="identity") + 
-    geom_bar(position = "fill",stat="identity",color="black",show_guide=FALSE) + 
+    geom_bar(position = "fill",stat="identity",color="black",show.legend=FALSE) + 
     scale_y_continuous(labels = percent_format()) +
     theme(axis.text.x = element_text(size=5))+
     xlab("Sample") +

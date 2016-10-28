@@ -437,7 +437,10 @@ class GenomeRange:
         newname = name
         if name is None:
             newname = self.name
-        return GenomeRange(self.dbname, self.chrom, self.end,self.end + dist,self.strand, name = newname, fastafile = self.fastafile)
+        if self.strand != '-':
+            return GenomeRange(self.dbname, self.chrom, self.end,self.end + dist,self.strand, name = newname, fastafile = self.fastafile)
+        else:
+            return GenomeRange(self.dbname, self.chrom, self.start - dist,self.start,self.strand, name = newname, fastafile = self.fastafile)
     def getfirst(self, dist = 50, name = None):
         newname = name
         if name is None:
@@ -550,7 +553,10 @@ def readgtf(filename, orgdb="genome", seqfile= None, filterpsuedo = False, filte
                 elif currname == "gene_name":
                     genename = currvalue.strip('"')
                 #print >>sys.stderr, "***||"
-            
+            if genename is None:
+                #print >>sys.stderr, "No name for gtf entry "+featname
+                genename = featname
+                pass
             if filterpsuedo and biotype == "pseudogene":
                 #print >>sys.stderr, "*******"
                 continue

@@ -35,18 +35,16 @@ def wrapbowtie2(bowtiedb, unpaired, outfile, scriptdir, trnafile, maxmaps = MAXM
     '''
 
     bowtiecommand = program+' -x '+bowtiedb+' -k '+str(maxmaps)+' --very-sensitive --ignore-quals --np 5 --reorder -p '+str(numcores)+' -U '+unpaired
+
+    #print >>sys.stderr, bowtiecommand
+    
+    bowtiecommand = bowtiecommand + ' | '+scriptdir+'choosemappings.py '+trnafile+' | samtools sort - '+outfile
     if logfile:
         print >>logfile,  bowtiecommand
-    #print >>sys.stderr, bowtiecommand
-    logfile.flush()
-    bowtiecommand = bowtiecommand + ' | '+scriptdir+'choosemappings.py '+trnafile+' | samtools sort - '+outfile
     bowtierun = None
-        #print >>sys.stderr, "***LOG"
+    logfile.flush()
     bowtierun = subprocess.Popen(bowtiecommand, shell = True, stderr = subprocess.PIPE)
 
-    #bowtierun = subprocess.popen(bowtiecommand, shell = True, stderr = subprocess.PIPE)
-    #errorcode = bowtierun.wait()
-    #bowtierun.stdout.close()
     output = bowtierun.communicate()
     errinfo = output[1]
     if logfile is not None:
@@ -74,14 +72,7 @@ def wrapbowtie2(bowtiedb, unpaired, outfile, scriptdir, trnafile, maxmaps = MAXM
         sys.exit(1)
         return None
     
-'''
-./trnaseq/mapreads.py --samplefile=HumanTrnas.txt --bowtiedb=/scratch/encodeshortrna/hg19
-nohup ../trnaseq/mapreads.py --samplefile=SaraShortSamples.txt --bowtiedb=/scratch/encodeshortrna/hg19
 
-
-
-nohup ../trnaseq/mapreads.py --samplefile=SaraSamples.txt --bowtiedb=/projects/lowelab/users/holmes/pythonsource/seqqa/combinedb/hg19-pad
-'''
 
 #print >>sys.stderr, os.path.dirname(os.path.realpath(sys.argv[0]))
 #print >>sys.stderr, os.path.abspath(__file__)
@@ -101,7 +92,6 @@ def main(**argdict):
     
     samples = sampledata.getsamples()
     
-    #scriptdir = '/projects/lowelab/users/holmes/pythonsource/trnaseq/'
     trnafile = trnafile
         
     if logfile:
@@ -115,7 +105,6 @@ def main(**argdict):
     totalreads = defaultdict(int)
     
     if not os.path.isfile(bowtiedb+".fa"):
-        #print >>sys.stderr, "No bowtie2 database "+bowtiedb
         print >>sys.stderr, "No bowtie2 database "+bowtiedb
         sys.exit(1)
     for samplename in samples:

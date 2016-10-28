@@ -105,7 +105,8 @@ aminoletters <-  unlist(lapply(aminoletters, utf8ToInt))
 
 
 trnacounts$fragtype <- mapvalues(trnacounts$fragtype, from = c("trna_threeprime", "trna_fiveprime", "trna_other", "trna_wholecounts"), to = c("Three-prime fragments","Five-prime fragments","Other fragments","Whole tRNAs"))
-if(TRUE)
+#remove non-tRNAs
+if(FALSE)
 {
 trnacounts = trnacounts[trnacounts$fragtype != "nontRNA",]
 }
@@ -149,9 +150,9 @@ sublabel = paste("Pearson Correlation: ",corr$estimate, sep = "")
 
 
 
-#currplot <- qplot(data=counts,x=counts[,xaxis],y=counts[,yaxis],xlab = xaxis,ylab = yaxis,color=type, asp=1)+geom_abline(intercept = 0, slope = 1) + geom_abline(intercept = dashinterc, slope = 1,linetype = 2)+geom_abline(intercept = 0- dashinterc, slope = 1,linetype = 2)+scale_x_continuous(trans=log2_trans(),limits = c(1, maxlim)) + scale_y_continuous(trans=log2_trans(),limits = c(1, maxlim)) + theme_bw() + theme(legend.box="horizontal",aspect.ratio=1,axis.text.x=element_text(angle=90,hjust=1,vjust=0.5))
+currplot <- qplot(data=counts,x=trnacounts[,xaxis],y=trnacounts[,yaxis],xlab = xaxis,ylab = yaxis,color=type, asp=1)+geom_abline(intercept = 0, slope = 1) + geom_abline(intercept = dashinterc, slope = 1,linetype = 2)+geom_abline(intercept = 0- dashinterc, slope = 1,linetype = 2)+scale_x_continuous(trans=log2_trans(),limits = c(1, maxlim)) + scale_y_continuous(trans=log2_trans(),limits = c(1, maxlim)) + theme_bw() + theme(legend.box="horizontal",aspect.ratio=1,axis.text.x=element_text(angle=90,hjust=1,vjust=0.5))
 #currplot <- arrangeGrob(currplot, sub = textGrob(sublabel, x = 0, hjust = -0.1, vjust=0.1, gp = gpar(fontsize = 14)))
-#ggsave(paste(experimentname,"/",comparisons[i,1],"_",comparisons[i,2] ,"-typescatter",outputformat,sep= ""), currplot)
+ggsave(paste(experimentname,"/",comparisons[i,1],"_",comparisons[i,2] ,"-typescatter",outputformat,sep= ""), currplot)
 
 
 #+scale_shape_manual(values = c(20,15, 17,18,19)) theme(legend.position = "bottom")
