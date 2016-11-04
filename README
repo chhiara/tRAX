@@ -117,7 +117,7 @@ Special file formats
     
 How to run
  - Create tRNA database with maketrnadb.py
-   - Usage: ~/pythonsource/trnaseq/maketrnadb.py --databasename=dbname --genomefile=../../hgtrnadb/genome.fa --trnascanfile=trnascan.txt --gtrnafafile=db-tRNAs.fa
+   - Usage: maketrnadb.py --databasename=dbname --genomefile=genome.fa --trnascanfile=trnascan.txt --gtrnafafile=db-tRNAs.fa
      - dbname is the name that will be used for that database
      - trnascan.txt is the output of a tRNAscan-SE run on the genome
      - genome.fa contains a fasta file of the genome
@@ -125,7 +125,7 @@ How to run
    - Need to do this once for each organism 
      
  - Map reads and analyze with processsamples.py
-   - Usage: ~/pythonsource/trnaseq/processsamples.py --experimentname=expname --databasename=dbname --samplefile=samplefile.txt --ensemblgtf=genes.gtf.gz --exppairs=samplespairs.txt 
+   - Usage: processsamples.py --experimentname=expname --databasename=dbname --samplefile=samplefile.txt --ensemblgtf=genes.gtf.gz --exppairs=samplespairs.txt 
      
      - expname is a name that will be used for results
      - dbname is the directory and name of a database from a previous run of maketrnadb.bash
