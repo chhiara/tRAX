@@ -14,11 +14,11 @@ import aligntrnalocus
 
 
 parser = argparse.ArgumentParser(description='Generate fasta file containing mature tRNA sequences.')
-parser.add_argument('--databasename',
+parser.add_argument('--databasename',required=True,
                    help='database name to be used')
-parser.add_argument('--genomefile',
+parser.add_argument('--genomefile',required=True,
                    help='Fasta file containing genome sequence')
-parser.add_argument('--trnascanfile',
+parser.add_argument('--trnascanfile',required=True,
                    help='output from tRNAscan-SE run')
 parser.add_argument('--gtrnafafile',
                    help='Fasta file of tRNA sequences from gtRNAdb')

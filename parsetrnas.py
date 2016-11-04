@@ -275,10 +275,14 @@ def readtRNAdb(scanfile, genomefile, trnamap):
         trnascanname = currchrom+"."+"trna"+trnanum+"-"+curramino+currac
         #print >>sys.stderr, trnamap.keys()
         #print >>sys.stderr, trnascanname
-        if trnascanname not in trnamap:
+        shorttrnascanname = currchrom+"."+"trna"+trnanum
+        if trnascanname in trnamap:
+            currtRNA = GenomeRange(orgname, currchrom,start,end, name = trnamap[trnascanname],strand = "+",orderstrand = True)
+        elif shorttrnascanname in trnamap:
+            currtRNA = GenomeRange(orgname, currchrom,start,end, name = trnamap[shorttrnascanname],strand = "+",orderstrand = True)
+        else:
             print >>sys.stderr, "Skipping "+trnascanname+", has no transcript name"
             continue
-        currtRNA = GenomeRange(orgname, currchrom,start,end, name = trnamap[trnascanname],strand = "+",orderstrand = True)
         currtrans = currtRNA
 
         trnaamino[currtrans.name] = curramino

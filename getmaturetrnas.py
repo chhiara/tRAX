@@ -16,7 +16,9 @@ from trnasequtils import *
 
 def main(**args):
     args = defaultdict(lambda: None, args)
-    trnanamere = re.compile(r"^\>\S+_(tRNA\-\w+\-[\w\?]+\-\d+\-\d+)\s+\((\S+)\)")
+    #>Saccharomyces_cerevisiae_tRNA-Ala-AGC-1-2 (tRNAscan-SE ID: chrVI.trna6) chrVI:204924-204996 (-) Ala (AGC) 73 bp Sc: 69.6
+
+    trnanamere = re.compile(r"^\>\S+_(tRNA\-\w+\-[\w\?]+\-\d+\-\d+)\s+\(tRNAscan\-SE\s+ID:\s+(\S+)\)")
     #trnanamere = re.compile(r"^\>\S+_(tRNA\-\w+\-\w+\-\d+\-\d+)\s+")#\((S+)\)")
     if "maturetrnafa" in args:
         maturetrnafa = open(args["maturetrnafa"], "w")
@@ -30,11 +32,16 @@ def main(**args):
             trnamatch = trnanamere.match(currline)
             #print >>sys.stderr, currline
             if trnamatch:
+
                 #print >>sys.stderr, trnamatch.group(1)+":"+trnamatch.group(2)
                 gtrnatrans[trnamatch.group(2)] = trnamatch.group(1)
             elif currline.startswith(">"):
                 pass
                 #print >>sys.stderr, currline
+        if len(gtrnatrans.keys()) == 0:
+            print >>sys.stderr, "Could not extract names from gtrnadb fasta file"
+            print >>sys.stderr, "must have names in format '>Saccharomyces_cerevisiae_tRNA-Ala-AGC-1-10 (tRNAscan-SE ID: chrXIII.trna9)'"
+            sys.exit()
             
             
     alltrnas = list()
@@ -47,7 +54,6 @@ def main(**args):
         else:
             trnascantrnas.extend(readtRNAscan(currfile, args["genome"]))
             #print >>sys.stderr, len(trnascantrnas)
-            
             
         
     '''
