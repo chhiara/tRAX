@@ -38,7 +38,9 @@ def wrapbowtie2(bowtiedb, unpaired, outfile, scriptdir, trnafile, maxmaps = MAXM
 
     #print >>sys.stderr, bowtiecommand
     
-    bowtiecommand = bowtiecommand + ' | '+scriptdir+'choosemappings.py '+trnafile+' | samtools sort - '+outfile
+    #bowtiecommand = bowtiecommand + ' | '+scriptdir+'choosemappings.py '+trnafile+' | samtools sort - '+outfile
+    bowtiecommand = bowtiecommand + ' | '+scriptdir+'choosemappings.py '+trnafile+' | samtools sort -T '+outfile+'temp - -o '+outfile+'.bam'
+    print >>sys.stderr,  bowtiecommand
     if logfile:
         print >>logfile,  bowtiecommand
     bowtierun = None
