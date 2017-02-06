@@ -17,8 +17,8 @@ from trnasequtils import *
 def main(**args):
     args = defaultdict(lambda: None, args)
     #>Saccharomyces_cerevisiae_tRNA-Ala-AGC-1-2 (tRNAscan-SE ID: chrVI.trna6) chrVI:204924-204996 (-) Ala (AGC) 73 bp Sc: 69.6
-
-    trnanamere = re.compile(r"^\>\S+_(tRNA\-\w+\-[\w\?]+\-\d+\-\d+)\s+\(tRNAscan\-SE\s+ID:\s+(\S+)\)")
+                                #nmt-tRNA-Gln-TTG-13-1
+    trnanamere = re.compile(r"^\>\S+_((?:\w+\-)?tRNA\-\w+\-[\w\?]+\-\d+\-\d+)\s+\(tRNAscan\-SE\s+ID:\s+(\S+)\)")
     #trnanamere = re.compile(r"^\>\S+_(tRNA\-\w+\-\w+\-\d+\-\d+)\s+")#\((S+)\)")
     if "maturetrnafa" in args:
         maturetrnafa = open(args["maturetrnafa"], "w")
@@ -33,7 +33,7 @@ def main(**args):
             #print >>sys.stderr, currline
             if trnamatch:
 
-                #print >>sys.stderr, trnamatch.group(1)+":"+trnamatch.group(2)
+                print >>sys.stderr, trnamatch.group(1)+":"+trnamatch.group(2)
                 gtrnatrans[trnamatch.group(2)] = trnamatch.group(1)
             elif currline.startswith(">"):
                 pass

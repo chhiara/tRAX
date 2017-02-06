@@ -40,7 +40,7 @@ def wrapbowtie2(bowtiedb, unpaired, outfile, scriptdir, trnafile, maxmaps = MAXM
     
     #bowtiecommand = bowtiecommand + ' | '+scriptdir+'choosemappings.py '+trnafile+' | samtools sort - '+outfile
     bowtiecommand = bowtiecommand + ' | '+scriptdir+'choosemappings.py '+trnafile+' | samtools sort -T '+outfile+'temp - -o '+outfile+'.bam'
-    print >>sys.stderr,  bowtiecommand
+    #print >>sys.stderr,  bowtiecommand
     if logfile:
         print >>logfile,  bowtiecommand
     bowtierun = None
@@ -54,7 +54,8 @@ def wrapbowtie2(bowtiedb, unpaired, outfile, scriptdir, trnafile, maxmaps = MAXM
     logfile.flush()
     if bowtierun.returncode:
         print >>sys.stderr, "Failure to Bowtie2 map"
-       
+        print >>sys.stderr, "check logfile"
+        logfile.close()
         sys.exit(1)
 
     rereadtotal = re.search(r'(\d+).*reads',errinfo )
@@ -69,7 +70,7 @@ def wrapbowtie2(bowtiedb, unpaired, outfile, scriptdir, trnafile, maxmaps = MAXM
         return [unmappedreads,singlemaps,multmaps,totalreads]
         
     else:
-        print >>sys.stderr, "Could not extract mapping information for "+unpaired
+        print >>sys.stderr, "Could not map "+unpaired +", check logfile"
         print >>sys.stderr, "Exiting..."
         sys.exit(1)
         return None
@@ -96,8 +97,11 @@ def main(**argdict):
     
     trnafile = trnafile
         
-    if logfile:
+    if logfile and lazycreate:
         logfile = open(logfile,'a')
+        print >>logfile, "New mapping"
+    elif logfile:
+        logfile = open(logfile,'w')
     else:
         logfile = sys.stderr
 

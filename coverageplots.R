@@ -53,6 +53,11 @@ myBreaks <- function(x){
     names(breaks) <- attr(breaks,"labels")
     breaks
 }
+percentbreaks <- function(x){
+    breaks <- c(0,1)
+    names(breaks) <- attr(breaks,"labels")
+    breaks
+}
 configurecov <- function(covplot){
 covplot<- covplot+ theme_bw()
 covplot<- covplot+theme(text = element_text(size = 4))
@@ -220,13 +225,18 @@ colnames(modomicstable)[colnames(modomicstable) == 'mod'] <- 'Modification'
 
 
     
-    
-allcoverages <- ggplot(coveragemelt,aes(x=variable,y=value), size = 2) + theme_bw()+ facet_grid(Feature ~ Sample, scales="free") + geom_bar(stat="identity") +  geom_vline(aes(xintercept = dist, col = Modification),data = modomicstable,show.legend=TRUE)+theme(axis.text.y=element_text(colour="black",size=6),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8), strip.text.y = element_text(angle=0),strip.text.x = element_text(size = ,angle=0))+ ylab("Normalized Read Count") + xlab("tRNA position") +   scale_y_continuous(breaks=myBreaks) +scale_x_discrete(breaks=c("X1","X9","X26","X37","X44","X58","X65","X73"), labels=c("Start","m1g","m22g","anticodon","varloop","m1a","65","tail"))   #+scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon", "tail"))  
+if(max(coveragemelt$value) <= 1.1){
+allcoverages <- ggplot(coveragemelt,aes(x=variable,y=value), size = 2) + theme_bw()+ facet_grid(Feature ~ Sample, scales="free") + geom_bar(stat="identity") +  geom_vline(aes(xintercept = dist, col = Modification),size=.4,linetype = "longdash",data = modomicstable,show.legend=TRUE)+theme(axis.text.y=element_text(colour="black",size=6),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8), strip.text.y = element_text(angle=0),strip.text.x = element_text(size = ,angle=0))+ ylab("Normalized Read Count") + xlab("tRNA position") +   scale_y_continuous(breaks=percentbreaks,limits = c(0, 1.01)) +scale_x_discrete(breaks=c("X1","X9","X26","X37","X44","X58","X65","X73"), labels=c("Start","m1g","m22g","anticodon","varloop","m1a","65","tail"))   #+scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon", "tail"))
+}else{
+allcoverages <- ggplot(coveragemelt,aes(x=variable,y=value), size = 2) + theme_bw()+ facet_grid(Feature ~ Sample, scales="free") + geom_bar(stat="identity") +  geom_vline(aes(xintercept = dist, col = Modification),size=.4,linetype = "longdash",data = modomicstable,show.legend=TRUE)+theme(axis.text.y=element_text(colour="black",size=6),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8), strip.text.y = element_text(angle=0),strip.text.x = element_text(size = ,angle=0))+ ylab("Normalized Read Count") + xlab("tRNA position") +   scale_y_continuous(breaks=myBreaks) +scale_x_discrete(breaks=c("X1","X9","X26","X37","X44","X58","X65","X73"), labels=c("Start","m1g","m22g","anticodon","varloop","m1a","65","tail"))   #+scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon", "tail"))
+}
 #ggsave(filename=outputfile, width = 30, height = 30)
 
 scalefactor = .5
 
-ggsave(filename=outputfile, allcoverages,height=scalefactor*1*length(unique(coveragemelt$Feature)),width=2+scalefactor*5*length(unique(coveragemelt$Sample)), limitsize=FALSE, dpi = 600)
+
+ggsave(filename=outputfile, allcoverages,height=scalefactor*(2 + 1*length(unique(coveragemelt$Feature))),width=scalefactor*(2+4*length(unique(coveragemelt$Sample))), limitsize=FALSE, dpi = 600)
+#ggsave(filename=outputfile, allcoverages,height=scalefactor*1*length(unique(coveragemelt$Feature)),width=2+scalefactor*5*length(unique(coveragemelt$Sample)), limitsize=FALSE, dpi = 600)
 #ggsave(filename=outputfile, allcoverages,dpi = 1000, limitsize=FALSE)
 #set dpi
 

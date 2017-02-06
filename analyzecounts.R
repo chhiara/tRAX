@@ -89,7 +89,6 @@ resavglist = lapply(compareresults, function(currresult){colgetlogname(currresul
 dds = cds
 
 
-
 #print adjusted p-values
 allprobs = Reduce(function(x,y) cbind(x,y), reslist)
 write.table(allprobs,paste(experimentname,"/",experimentname,"-padjs.txt", sep = ""),sep="	")

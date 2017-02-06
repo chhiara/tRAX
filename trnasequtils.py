@@ -285,6 +285,7 @@ class transcriptfile:
         trnafile = open(trnafilename)
         locustranscript = dict()
         trnatranscripts = list()
+        loci = list()
         amino = dict()
         anticodon = dict()
         for i, line in enumerate(trnafile):
@@ -296,16 +297,20 @@ class transcriptfile:
             anticodon[fields[0]] = fields[3]
             for currlocus in fields[1].split(','):
                 locustranscript[currlocus] = fields[0]
+                loci.append(currlocus)
 
         
         self.locustranscript = locustranscript
         self.transcripts = trnatranscripts
         self.amino = amino
         self.anticodon = anticodon
+        self.loci = loci
     def gettranscripts(self):
         return set(self.transcripts)
     def getlocustranscript(self, locus):
         return  self.locustranscript[locus]
+    def getloci(self):
+        return  self.loci
     def getamino(self, trna):
         return  self.amino[trna]
     def getanticodon(self, trna):
