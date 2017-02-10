@@ -177,7 +177,7 @@ anticodonname = as.character(unlist(lapply(strsplit(featnames, "-", fixed = TRUE
 aminoname = as.character(unlist(lapply(strsplit(featnames, "-", fixed = TRUE), function(x) { return( x[length(x) - 2] ) })))
 
 
-featnames = featnames[order(aminoname, anticodonname,tails)]
+#featnames = featnames[order(aminoname, anticodonname,tails)]
 #featnames
 
 coveragemelt$Feature = factor(as.character(coveragemelt$Feature), levels = featnames)
