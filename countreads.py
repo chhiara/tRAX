@@ -223,7 +223,7 @@ def main(**argdict):
     
     trnanames = set()
     for currfeat in trnalist:
-        if max(trnacounts[currsample][currfeat.name] for currsample in samples) < minreads:
+        if max(itertools.chain((trnacounts[currsample][currfeat.name] for currsample in samples), [0])) < minreads:
             continue
         if includebase:
             print >>countfile, currfeat.name+"\t"+"\t".join(str(trnacounts[currsample][currfeat.name]) for currsample in samples)
@@ -236,9 +236,7 @@ def main(**argdict):
         
     
     for currfeat in trnaloci:
-        if currfeat.name == "tRNA-Ile-AAT-5-5":
-            print >>sys.stderr, "**||: "+str(max(trnalocuscounts[currsample][currfeat.name] for currsample in samples))
-        if max(trnalocuscounts[currsample][currfeat.name] for currsample in samples) < minreads:
+        if max(itertools.chain((trnalocuscounts[currsample][currfeat.name] for currsample in samples),[0])) < minreads:
             continue
         if includebase:
             print >>countfile, currfeat.name+"\t"+"\t".join(str(trnalocuscounts[currsample][currfeat.name]) for currsample in samples)

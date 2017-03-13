@@ -24,8 +24,10 @@ spec <- matrix(c(
 
 opt = getopt(spec);
 
+if (length(readLines(opt$cov, n = 2)) < 2){quit('yes')}
 
 coverages <- read.table(opt$cov, header = TRUE)
+
 trnatable <- read.table(opt$trna)
 sampletable <- read.table(opt$samples)
 

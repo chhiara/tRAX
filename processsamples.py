@@ -44,6 +44,8 @@ parser.add_argument('--lazyremap', action="store_true", default=False,
                    help='Skip mapping reads if bam files exit')
 parser.add_argument('--nofrag', action="store_true", default=False,
                    help='Omit fragment determination (Used for TGIRT mapping)')
+parser.add_argument('--olddeseq', action="store_true", default=False,
+                   help='Use old DESeq1 for analysis')
 parser.add_argument('--nosizefactors', action="store_true", default=False,
                    help='Don\'t use Deseq size factors in plotting')
 parser.add_argument('--maxmismatch',
@@ -53,7 +55,9 @@ rlogfile = open(rlogname, "w")
 
 def runrscript(*script):
     retcode = subprocess.call("Rscript "+" ".join(script), shell=True, stdout = rlogfile, stderr = subprocess.STDOUT)
+    print >>rlogfile, "Rscript "+" ".join(script)
     if retcode > 0:
+        print >>rlogfile, script[0]+" failed"
         print >>sys.stderr, "R script "+script[0]+" failed"
         print >>sys.stderr, "Check "+rlogname+" for details"
         
@@ -152,6 +156,7 @@ lazyremap = args.lazyremap
 bedfiles= args.bedfile
 nofrag= args.nofrag
 nosizefactors = args.nosizefactors
+olddeseq = args.olddeseq
 scriptdir = os.path.dirname(os.path.realpath(sys.argv[0]))+"/"
 
 def get_location(program, allowfail = False):
@@ -268,26 +273,40 @@ if len(getsamples.getsamples()) == 1:
 print >>sys.stderr, "Mapping Reads"
 #need to check here for names with dashes
 mapsamples(samplefilename, trnainfo,expinfo, lazyremap)
+runrscript(scriptdir+"/featuretypes.R",expinfo.mapinfo,expinfo.mapplot)
+
 #Count the reads for DEseq2 and scatter plots
 print >>sys.stderr, "Counting Reads"
 countfeatures(samplefilename, trnainfo,expinfo, ensgtf, bedfiles)
-#Create a plot of mapped reads
+#Create a plot of mapped reads                                
+
 print >>sys.stderr, "Analyzing counts"
-runrscript(scriptdir+"/featuretypes.R",expinfo.mapinfo,expinfo.mapplot)
 
 #Analyze counts and create scatter plots if pair file is provided
 if pairfile:
-	deseqret = runrscript(scriptdir+"/analyzecounts.R",expname,expinfo.genecounts,samplefilename, pairfile)
-	if deseqret == 2:
-	    print >>sys.stderr, "Deseq analysis failed, cannot continue"
-	    sys.exit(1)
+    if olddeseq:
+        deseqret = runrscript(scriptdir+"/deseq1.R",expname,expinfo.genecounts,samplefilename)
+        if deseqret == 2:
+            print >>sys.stderr, "Deseq analysis failed, cannot continue"
+            sys.exit(1)    
+    else:
+        deseqret = runrscript(scriptdir+"/analyzecounts.R",expname,expinfo.genecounts,samplefilename, pairfile)
+        if deseqret == 2:
+            print >>sys.stderr, "Deseq analysis failed, cannot continue"
+            sys.exit(1)
+    
 	runrscript(scriptdir+"/makescatter.R",expname,expinfo.normalizedcounts,trnainfo.trnatable,expinfo.genetypes,samplefilename,pairfile)
 elif not nosizefactors:
-	
-	deseqret = runrscript(scriptdir+"/analyzecounts.R",expname,expinfo.genecounts,samplefilename)
-	if deseqret == 2:
-	    print >>sys.stderr, "Deseq analysis failed, cannot continue"
-	    sys.exit(1)
+    if olddeseq:
+        deseqret = runrscript(scriptdir+"/deseq1.R",expname,expinfo.genecounts,samplefilename)
+        if deseqret == 2:
+            print >>sys.stderr, "Deseq analysis failed, cannot continue"
+            sys.exit(1)    
+    else:
+        deseqret = runrscript(scriptdir+"/analyzecounts.R",expname,expinfo.genecounts,samplefilename)
+        if deseqret == 2:
+            print >>sys.stderr, "Deseq analysis failed, cannot continue"
+            sys.exit(1)
 #Count the reads by gene type
 print >>sys.stderr, "Counting Read Types"
 counttypes(samplefilename, trnainfo,expinfo, ensgtf, bedfiles, ignoresizefactors = nosizefactors)
