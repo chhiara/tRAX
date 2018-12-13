@@ -165,12 +165,6 @@ def main(**argdict):
     
     '''
     
-    '''
-    
-    samtools sort SRR1508385_nofeat.bam SRR1508385_nofeatsort
-    bash ~/pythonsource/tcgatest/gettranscripts.bash SRR1508385_nofeatsort.bam 30 >SRR1508385_nofeat.bed
-    
-    '''
     trnasamplecounts  = defaultdict(int)
     totalsamplecounts = defaultdict(int)
     emblbiotypes = set()
