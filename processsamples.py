@@ -291,7 +291,10 @@ def getgithash(scriptdir):
         sys.exit(1)
     gitjob = subprocess.Popen([gitloc,"--git-dir="+scriptdir+"/.git","rev-parse","HEAD"],stdout = subprocess.PIPE,stderr = subprocess.STDOUT )
     githash = gitjob.communicate()[0]
-    return githash
+    gitjob = subprocess.Popen([gitloc,"--git-dir="+scriptdir+"/.git","describe"],stdout = subprocess.PIPE,stderr = subprocess.STDOUT )
+    gitversion = gitjob.communicate()[0]
+
+    return githash, gitversion
 
     
 
@@ -307,7 +310,7 @@ get_location("Rscript")
 testsamtools()
 get_location("bowtie2")
 
-gitversionhash = getgithash(scriptdir)
+gitversionhash, gitversion = getgithash(scriptdir)
 
 #trnainfo.test(trnainfo)
 
@@ -411,6 +414,8 @@ print >>dbinfo, "expname\t"+expname
 print >>dbinfo, "time\t"+str(runtime)+"("+str(loctime[1])+"/"+str(loctime[2])+"/"+str(loctime[0])+")"
 print >>dbinfo, "samplefile\t"+os.path.realpath(samplefilename)
 print >>dbinfo, "dbname\t"+os.path.realpath(dbname)
+print >>dbinfo, "git version\t"+gitversion
+
 print >>dbinfo, "git version hash\t"+gitversionhash
 dbinfo.close()
 
