@@ -5,6 +5,9 @@ import sys
 import tempfile
 import re
 import gzip
+import subprocess
+from distutils.spawn import find_executable
+
 from collections import defaultdict
 
 def readmultifasta(fafile):
@@ -940,3 +943,26 @@ def revcom(sequence):
     seq.reverse()
     comp = {"A":"T","T":"A", "C":"G","G":"C","N":"N","R":"Y","Y":"R","S":"W","W":"S", "K":"M", "M":"K","-":"-",".":"."}
     return ''.join(comp[base] for base in seq)            
+    
+    
+def get_location(program, allowfail = False):
+    progloc = find_executable(program)
+    if find_executable(program) is None and not allowfail:
+        print >>sys.stderr, "Could not find "+program+" in path"
+        print >>sys.stderr, "Aborting"
+        sys.exit(1)
+    else:
+        return progloc
+    
+def getgithash(scriptdir):
+    gitloc = get_location("git")
+    
+    if gitloc is None:
+        print >>sys.stderr, "Cannot find git in path"
+        print >>sys.stderr, "Recording of versioning not possible"
+    gitjob = subprocess.Popen([gitloc,"--git-dir="+scriptdir+"/.git","rev-parse","HEAD"],stdout = subprocess.PIPE,stderr = subprocess.STDOUT )
+    githash = gitjob.communicate()[0].rstrip()
+    gitjob = subprocess.Popen([gitloc,"--git-dir="+scriptdir+"/.git","describe"],stdout = subprocess.PIPE,stderr = subprocess.STDOUT )
+    gitversion = gitjob.communicate()[0].rstrip()
+
+    return githash, gitversion

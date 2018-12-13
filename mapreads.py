@@ -68,7 +68,10 @@ def wrapbowtie2(bowtiedb, unpaired, outfile, scriptdir, trnafile, maxmaps = MAXM
     
 
 def checkheaders(bamname, fqname):
-    bamfile = pysam.Samfile(bamname, "r" )
+    try:
+        bamfile = pysam.Samfile(bamname, "r" )
+    except ValueError:
+        return True
     newheader = bamfile.header
     if len(newheader["PG"]) > 1 and newheader["PG"][1]["PN"] == "TRAX":
         

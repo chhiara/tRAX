@@ -22,16 +22,7 @@ minnontrnasize = 20
 
 maxmaps = 50
 
-def getgithash(scriptdir):
-    gitloc = get_location("git")
-    
 
-    gitjob = subprocess.Popen([gitloc,"--git-dir="+scriptdir+"/.git","rev-parse","HEAD"],stdout = subprocess.PIPE,stderr = subprocess.STDOUT )
-    githash = gitjob.communicate()[0].rstrip()
-    gitjob = subprocess.Popen([gitloc,"--git-dir="+scriptdir+"/.git","describe"],stdout = subprocess.PIPE,stderr = subprocess.STDOUT )
-    gitversion = gitjob.communicate()[0].rstrip()
-
-    return gitversion, githash
 
 
 

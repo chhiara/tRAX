@@ -16,7 +16,6 @@ import getcoverage
 import getends
 import countreadtypes
 import maketrackhub
-from distutils.spawn import find_executable
 from distutils.version import LooseVersion, StrictVersion
 
 
@@ -223,14 +222,7 @@ if args.makeall:
 
 scriptdir = os.path.dirname(os.path.realpath(sys.argv[0]))+"/"
 
-def get_location(program, allowfail = False):
-    progloc = find_executable(program)
-    if find_executable(program) is None and not allowfail:
-        print >>sys.stderr, "Could not find "+program+" in path"
-        print >>sys.stderr, "Aborting"
-        sys.exit(1)
-    else:
-        return progloc
+
 
 def testsamtools(): #Version: 1.6
     samversionre = re.compile(r"Version\:\s*([\.\d]+)")
@@ -273,22 +265,7 @@ def testrstats():
     else:
         print >>sys.stderr, "Could not find R version number"
 
-def getgithash(scriptdir):
-    gitloc = get_location("git")
-    
-    if gitloc is None:
-        print >>sys.stderr, "Cannot find git in path"
-        print >>sys.stderr, "Recording of versioning not possible"
-    gitjob = subprocess.Popen([gitloc,"--git-dir="+scriptdir+"/.git","rev-parse","HEAD"],stdout = subprocess.PIPE,stderr = subprocess.STDOUT )
-    githash = gitjob.communicate()[0].rstrip()
-    gitjob = subprocess.Popen([gitloc,"--git-dir="+scriptdir+"/.git","describe"],stdout = subprocess.PIPE,stderr = subprocess.STDOUT )
-    gitversion = gitjob.communicate()[0].rstrip()
 
-    return githash, gitversion
-
-    
-
-    #"git rev-parse HEAD"
 
 
 
