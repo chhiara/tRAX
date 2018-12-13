@@ -965,4 +965,4 @@ def getgithash(scriptdir):
     gitjob = subprocess.Popen([gitloc,"--git-dir="+scriptdir+"/.git","describe"],stdout = subprocess.PIPE,stderr = subprocess.STDOUT )
     gitversion = gitjob.communicate()[0].rstrip()
 
-    return githash, gitversion
+    return gitversion, githash 

@@ -86,11 +86,19 @@ aligntrnalocus.main(genomefile=genomefile,stkfile=dbname+"-trnaloci.stk",trnaloc
 
 shellcall("cat "+dbname+"-maturetRNAs.fa "+genomefile+" >"+dbname+"-tRNAgenome.fa", failquit = True)
     
-shellcall("bowtie2-build "+dbname+"-tRNAgenome.fa "+dbname+"-tRNAgenome", failquit = True)
-
+scriptdir = os.path.dirname(os.path.realpath(sys.argv[0]))+"/"
+gitversion, githash = getgithash(scriptdir)
+    
+    
 dbinfo = open(dbname+ "-dbinfo.txt","w")
 print >>dbinfo, "time\t"+str(runtime)+"("+str(loctime[1])+"/"+str(loctime[2])+"/"+str(loctime[0])+")"
 print >>dbinfo, "genomefile\t"+str(genomefile)
 print >>dbinfo, "trnascanfile\t"+str(scanfile)
+print >>dbinfo, "git version\t"+str(gitversion)
+dbinfo.close()
+    
+shellcall("bowtie2-build "+dbname+"-tRNAgenome.fa "+dbname+"-tRNAgenome", failquit = True)
+
+
 
 

@@ -262,7 +262,7 @@ def testrstats():
             print >>sys.stderr, "Old R version "+rstatsres.group(1)+" found"
             print >>sys.stderr, "Upgrade to latest version"
             sys.exit(1)
-    else:
+    else:g
         print >>sys.stderr, "Could not find R version number"
 
 
@@ -277,7 +277,7 @@ get_location("Rscript")
 testsamtools()
 get_location("bowtie2")
 
-gitversionhash, gitversion = getgithash(scriptdir)
+gitversion, gitversionhash = getgithash(scriptdir)
 
 #trnainfo.test(trnainfo)
 
@@ -378,7 +378,7 @@ else:
     print >>dbinfo, "redoing"
     
 print >>dbinfo, "expname\t"+expname
-print >>dbinfo, "time\t"+str(runtime)+"("+str(loctime[1])+"/"+str(loctime[2])+"/"+str(loctime[0])+")"
+print >>dbinfo, "time\t"+str(runtime)+" ("+str(loctime[1])+"/"+str(loctime[2])+"/"+str(loctime[0])+")"
 print >>dbinfo, "samplefile\t"+os.path.realpath(samplefilename)
 print >>dbinfo, "dbname\t"+os.path.realpath(dbname)
 print >>dbinfo, "git version\t"+gitversion
