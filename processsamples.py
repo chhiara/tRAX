@@ -283,7 +283,7 @@ def testrstats():
         print >>sys.stderr, "Could not find R version number"
 
 def getgithash(scriptdir):
-    gitloc = get_location("samtools")
+    gitloc = get_location("git")
     
     if gitloc is None:
         print >>sys.stderr, "Cannot find git in path"
