@@ -13,15 +13,6 @@ from trnasequtils import *
 
 
 
-
-
-
-'''
-~/pythonsource/aligntrnalocus.py --genomefile= --stkfile= --trnaloci
-
-~/pythonsource/trnaseq/aligntrnalocus.py --genomefile=hg19.fa --stkfile=hg19-trnaloci.stk --trnaloci=hg19-trnaloci.bed
-'''
-
 def main(**args):
     args = defaultdict(lambda: None, args)
     stkfile = args["stkfile"]
