@@ -290,9 +290,9 @@ def getgithash(scriptdir):
         print >>sys.stderr, "Recording of versioning not possible"
         sys.exit(1)
     gitjob = subprocess.Popen([gitloc,"--git-dir="+scriptdir+"/.git","rev-parse","HEAD"],stdout = subprocess.PIPE,stderr = subprocess.STDOUT )
-    githash = gitjob.communicate()[0]
+    githash = gitjob.communicate()[0].rstrip()
     gitjob = subprocess.Popen([gitloc,"--git-dir="+scriptdir+"/.git","describe"],stdout = subprocess.PIPE,stderr = subprocess.STDOUT )
-    gitversion = gitjob.communicate()[0]
+    gitversion = gitjob.communicate()[0].rstrip()
 
     return githash, gitversion
 
