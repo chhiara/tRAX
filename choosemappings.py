@@ -21,6 +21,20 @@ Here is where I need to use the tRNA ontology between mature tRNAs and chromosom
 minnontrnasize = 20
 
 maxmaps = 50
+
+def getgithash(scriptdir):
+    gitloc = get_location("git")
+    
+
+    gitjob = subprocess.Popen([gitloc,"--git-dir="+scriptdir+"/.git","rev-parse","HEAD"],stdout = subprocess.PIPE,stderr = subprocess.STDOUT )
+    githash = gitjob.communicate()[0].rstrip()
+    gitjob = subprocess.Popen([gitloc,"--git-dir="+scriptdir+"/.git","describe"],stdout = subprocess.PIPE,stderr = subprocess.STDOUT )
+    gitversion = gitjob.communicate()[0].rstrip()
+
+    return gitversion, githash
+
+
+
 def isprimarymapping(mapping):
     return not (mapping.flag & 0x0100 > 0)
 
@@ -42,6 +56,10 @@ def getbesttrnamappings(trnafile, bamout = True, logfile = sys.stderr, progname 
     shortened = 0
     mapsremoved = 0
     totalmaps = 0
+    getgithash
+    
+    scriptdir = os.path.dirname(os.path.realpath(sys.argv[0]))+"/"
+    gitversion, githash = getgithash(scriptdir)
     #prints the sam header that samtools need to convert to bam
     #grab and iterate through all mappings of a single read
     #most mappers will ensure that read mappings are in the same order as they were in the fastq file, with all mappings of the same read together
@@ -63,7 +81,7 @@ def getbesttrnamappings(trnafile, bamout = True, logfile = sys.stderr, progname 
     newheader["RG"] = list()
     newheader["RG"].append(dict())
     if  progname is  not None:
-        newheader["PG"].append({"PN" :progname})
+        newheader["PG"].append({"PN" :progname, "ID": progname,"VN":gitversion})
     if fqname is not None:
         newheader["RG"][0]["ID"] = fqname 
     if libname is not None:

@@ -288,7 +288,6 @@ def getgithash(scriptdir):
     if gitloc is None:
         print >>sys.stderr, "Cannot find git in path"
         print >>sys.stderr, "Recording of versioning not possible"
-        sys.exit(1)
     gitjob = subprocess.Popen([gitloc,"--git-dir="+scriptdir+"/.git","rev-parse","HEAD"],stdout = subprocess.PIPE,stderr = subprocess.STDOUT )
     githash = gitjob.communicate()[0].rstrip()
     gitjob = subprocess.Popen([gitloc,"--git-dir="+scriptdir+"/.git","describe"],stdout = subprocess.PIPE,stderr = subprocess.STDOUT )
