@@ -6,7 +6,7 @@ import os.path
 import itertools
 import pysam
 import subprocess
-
+import argparse
 
 from trnasequtils import *
 
@@ -24,7 +24,7 @@ maxmaps = 50
 def isprimarymapping(mapping):
     return not (mapping.flag & 0x0100 > 0)
 
-def getbesttrnamappings(trnafile, bamout = True, logfile = sys.stderr):
+def getbesttrnamappings(trnafile, bamout = True, logfile = sys.stderr, progname = None, fqname = None, libname = None):
     
     trnadata = transcriptfile(trnafile)
     trnatranscripts = set(trnadata.gettranscripts())
@@ -58,11 +58,21 @@ def getbesttrnamappings(trnafile, bamout = True, logfile = sys.stderr):
     ambtrna = 0
     acsets = defaultdict(int)
     aminosets = defaultdict(int)
+    newheader = bamfile.header
+    print >>sys.stderr, newheader
+    newheader["RG"] = list()
+    newheader["RG"].append(dict())
+    if  progname is  not None:
+        newheader["PG"].append({"PN" :progname})
+    if fqname is not None:
+        newheader["RG"][0]["ID"] = fqname 
+    if libname is not None:
+        newheader["RG"][0]["LB"] = libname
     
     if bamout:
-        outfile = pysam.Samfile( "-", "wb", template = bamfile )
+        outfile = pysam.Samfile( "-", "wb", header = newheader )
     else:
-        outfile = pysam.Samfile( "-", "w", template = bamfile )
+        outfile = pysam.Samfile( "-", "w", header = newheader )
     for pairedname, allmaps in itertools.groupby(bamfile,lambda x: x.qname):
         allmaps = list(allmaps)
         if sum(curr.flag & 0x004 > 0 for curr in allmaps):
@@ -224,6 +234,18 @@ def getbesttrnamappings(trnafile, bamout = True, logfile = sys.stderr):
     print >>logfile, "Mappings Removed:"+str(mapsremoved)+"/"+str(totalmaps)
     outfile.close()
     
-    
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='get all best tRNA reads')
+    parser.add_argument('trnaname',
+                    help='name of tRNA database')
+    parser.add_argument('--progname',
+                       help='program name')
+    parser.add_argument('--fqname',
+                       help='fastq file name')
+    parser.add_argument('--expname',
+                       help='library name')
 
-getbesttrnamappings(sys.argv[1])
+    
+    args = parser.parse_args()
+    getbesttrnamappings(args.trnaname, progname = args.progname, fqname = args.fqname, libname = args.expname)
+

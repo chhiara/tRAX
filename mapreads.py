@@ -11,20 +11,12 @@ from trnasequtils import *
 
 MAXMAPS = 100
 
-'''
-~/pythonsource/trnaseq/mapreads.py --samplefile=/projects/lowelab/users/holmes/pythonsource/trnatest/testcomp.txt --bowtiedb=hg19-trnagenome >counts.txt
-
-~/pythonsource/trnaseq/mapreads.py --samplefile=agingshort.txt --trnafile=sacCer3-trnatable.txt --bowtiedb=sacCer3-trnagenome >aging-counts.txt
-
-cat <(samtools view -H HBV10_1.bam) <(samtools view HBV10_1.bam | grep UNC11-SN627:301:C21RKACXX:3:1101:20489:57142) | ~/pythonsource/trnaseq/choosemappings.py hg19-trnatable.txt | samtools view -
-
-'''
 
 numcores = 4
 
 
 
-def wrapbowtie2(bowtiedb, unpaired, outfile, scriptdir, trnafile, maxmaps = MAXMAPS,program = 'bowtie2', logfile = None, mapfile = None):
+def wrapbowtie2(bowtiedb, unpaired, outfile, scriptdir, trnafile, maxmaps = MAXMAPS,program = 'bowtie2', logfile = None, mapfile = None, expname = None):
     '''
     I think the quals are irrelevant, and N should be scored as only slightly better than a mismatch
     this does both
@@ -37,9 +29,8 @@ def wrapbowtie2(bowtiedb, unpaired, outfile, scriptdir, trnafile, maxmaps = MAXM
     bowtiecommand = program+' -x '+bowtiedb+' -k '+str(maxmaps)+' --very-sensitive --ignore-quals --np 5 --reorder -p '+str(numcores)+' -U '+unpaired
 
     #print >>sys.stderr, bowtiecommand
-    
     #bowtiecommand = bowtiecommand + ' | '+scriptdir+'choosemappings.py '+trnafile+' | samtools sort - '+outfile
-    bowtiecommand = bowtiecommand + ' | '+scriptdir+'choosemappings.py '+trnafile+' | samtools sort -T '+outfile+'temp - -o '+outfile+'.bam'
+    bowtiecommand = bowtiecommand + ' | '+scriptdir+'choosemappings.py '+trnafile+' --progname='+"TRAX"+ ' --fqname=' +unpaired+' --expname='+expname + ' | samtools sort -T '+tempfile.gettempdir()+"/"+outfile+'temp - -o '+outfile+'.bam'
     #print >>sys.stderr,  bowtiecommand
     if logfile:
         print >>logfile,  bowtiecommand
@@ -76,12 +67,22 @@ def wrapbowtie2(bowtiedb, unpaired, outfile, scriptdir, trnafile, maxmaps = MAXM
         return None
     
 
+def checkheaders(bamname, fqname):
+    bamfile = pysam.Samfile(bamname, "r" )
+    newheader = bamfile.header
+    if len(newheader["PG"]) > 1 and newheader["PG"][1]["PN"] == "TRAX":
+        
+        if newheader["RG"][0]["ID"] != fqname:
+            return False
+    return True
 
 #print >>sys.stderr, os.path.dirname(os.path.realpath(sys.argv[0]))
 #print >>sys.stderr, os.path.abspath(__file__)
 def main(**argdict):
     argdict = defaultdict(lambda: None, argdict)
     scriptdir = os.path.dirname(os.path.realpath(sys.argv[0]))+"/"
+    samplefilename = argdict["samplefile"]
+    
     sampledata = samplefile(argdict["samplefile"])
     trnafile = argdict["trnafile"]
     logfile = argdict["logfile"]
@@ -113,15 +114,43 @@ def main(**argdict):
     if not os.path.isfile(bowtiedb+".fa"):
         print >>sys.stderr, "No bowtie2 database "+bowtiedb
         sys.exit(1)
+    badsamples = list()
     for samplename in samples:
         bamfile = workingdir+samplename
-        if lazycreate and os.path.isfile(bamfile+".bam"):
-            print >>sys.stderr, "Skipping "+samplename
+        
+        if lazycreate and os.path.isfile(bamfile+".bam"):   
+            if not checkheaders(bamfile+".bam", sampledata.getfastq(samplename)):
+                badsamples.append(bamfile+".bam")
+
+                
+            
         else:
+            if os.path.isfile(bamfile+".bam"):
+
+                if not checkheaders(bamfile+".bam", sampledata.getfastq(samplename)):
+                    badsamples.append(bamfile+".bam")
+    
+    if len(badsamples) > 0:
+        print >>sys.stderr, "Bam files "+",".join(badsamples)+" does not match fq files"
+        print >>sys.stderr, "Aborting"
+        sys.exit(1)               
+                    
+    for samplename in samples:
+        bamfile = workingdir+samplename
+        
+        if lazycreate and os.path.isfile(bamfile+".bam"):
+            pass
+                
+            print >>sys.stderr, "Skipping "+samplename
+            
+        else:
+            if os.path.isfile(bamfile+".bam"):
+                pass
+
             print >>logfile, "Mapping "+samplename
             print >>sys.stderr, "Mapping "+samplename
             logfile.flush()
-            mapresults = wrapbowtie2(bowtiedb, sampledata.getfastq(samplename),bamfile,scriptdir, trnafile,  logfile=logfile)
+            mapresults = wrapbowtie2(bowtiedb, sampledata.getfastq(samplename),bamfile,scriptdir, trnafile,  logfile=logfile, expname = samplefilename)
 
             
             if mapresults is not None:

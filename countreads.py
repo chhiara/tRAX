@@ -155,7 +155,7 @@ def main(**argdict):
          
         for genename, featset in itertools.groupby(embllist,lambda x: x.data["genename"]):
             
-            #pass
+            #pass 
             try:
                 allreads =set()
                 for currfeat in list(featset):
@@ -192,7 +192,7 @@ def main(**argdict):
         
         for currfeat in trnalist:
             for currread in getbamrange(bamfile, currfeat, singleonly = nomultimap, maxmismatches = maxmismatches,allowindels = allowindels):
-                
+
                 if not currfeat.strand == currread.strand:
                     continue
                 if not currfeat.coverage(currread) > 10:
@@ -202,6 +202,7 @@ def main(**argdict):
                 trnacounts[currsample][currfeat.name] += 1
                     
                 fragtype = getfragtype(currfeat, currread)
+
                 if fragtype == "Whole":
                     trnawholecounts[currsample][currfeat.name] += 1
                 elif fragtype == "Fiveprime":

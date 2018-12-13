@@ -204,6 +204,10 @@ def main(**argdict):
             for currread in getbamrange(bamfile, trnalist[i],maxmismatches = maxmismatches,allowindels = False):
 
                 if  trnalist[i].coverage(currread) > 10:
+                    
+                    if currfeat.name == "tRNA-Glu-TTC-5-1":
+                        pass
+                        #print "**"
                     if minextend is not None and not (currread.start + minextend <= trnalist[i].start or currread.end - minextend >= trnalist[i].end):
                         continue
                     if trnalist[i].name == "tRNA-Ile-AAT-5-5":
@@ -213,7 +217,7 @@ def main(**argdict):
                         #continue
                         pass
 
-                    
+  
                     allcoverages[currsample][trnalist[i].name].addread(currread)
                     if not isuniqueaminomapping(currread):
                         multaminocoverages[currsample][trnalist[i].name].addread(currread)
@@ -234,13 +238,13 @@ def main(**argdict):
     print >>allcoveragefile, "Feature"+"\t"+"Sample"+"\t"+"\t".join(positionnums)
         
     for currfeat in trnalist:
-        totalreads = sum(allcoverages[currsample][currfeat.name].totalreads for currsample in samples)
 
+        totalreads = sum(allcoverages[currsample][currfeat.name].totalreads for currsample in samples)
+        if currfeat.name == "tRNA-Glu-TTC-5-1":
+            pass
+            #print >>sys.stderr, "**||"+str(totalreads)
         if totalreads < mincoverage:
             continue
-        if currfeat.name == "tRNA-Leu-AAG-1-2":
-            print >>sys.stderr, "total"
-            print >>sys.stderr, totalreads
         if combinereps:
     
             replicates = sampledata.allreplicates()

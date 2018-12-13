@@ -51,7 +51,13 @@ def main(**argdict):
     trnaaminofilename = argdict["trnaaminofile"]
     trnanormfile = argdict["trnanormfile"]
     allreadsnormfile = argdict["allreadsnormfile"]
-    readlengthfile = argdict["readlengthfile"]
+    readlengthfile = argdict["readlengthfile"]    
+    
+    if argdict["realcountfile"] == "stdout":
+        realcountfile = sys.stdout
+    else:
+        realcountfile = open(argdict["realcountfile"],"w")
+    
     
     if argdict["countfile"] == "stdout":
         countfile = sys.stdout
@@ -355,6 +361,7 @@ def main(**argdict):
         print  >>countfile, "other"+"\t"+"\t".join(str(sumsamples(othercounts,sampledata,currrep, sizefactors = sizefactor)) for currrep in replicates)
     else:
         print  >>countfile, "\t".join(samples)
+        
         for currbed in trnalist:
             
             if countfrags:
@@ -363,23 +370,60 @@ def main(**argdict):
                 print  >>countfile, "tRNA_threeprime\t"+"\t".join(str(trnathreecounts[currsample][currbed]/sizefactor[currsample]) for currsample in samples)
                 print  >>countfile, "tRNA_other\t"+"\t".join(str((trnacounts[currsample][currbed] - (trnathreecounts[currsample][currbed] + trnafivecounts[currsample][currbed] + trnawholecounts[currsample][currbed]))/sizefactor[currsample]) for currsample in samples)
                 print  >>countfile, "tRNA_antisense\t"+"\t".join(str(trnaantisense[currsample][currbed]/sizefactor[currsample]) for currsample in samples)
+
+                
+                
             else:
-                print  >>countfile, currbed+"\t"+"\t".join(str(trnacounts[currsample][currbed]/sizefactor[currsample]) for currsample in samples)
-            
-            
-        
+                print  >>countfile, "tRNA\t"+"\t".join(str(trnacounts[currsample][currbed]/sizefactor[currsample]) for currsample in samples)
         for currbed in locilist:
             if countfrags:
-                print  >>countfile, os.path.basename(currbed)+"\t"+"\t".join(str(fulltrnalocuscounts[currsample][currbed]/sizefactor[currsample]) for currsample in samples)
-                print  >>countfile, os.path.basename(currbed)+"\t"+"\t".join(str(partialtrnalocuscounts[currsample][currbed]/sizefactor[currsample]) for currsample in samples)
-                print  >>countfile, os.path.basename(currbed)+"\t"+"\t".join(str(trnalocustrailercounts[currsample][currbed]/sizefactor[currsample]) for currsample in samples)
+                print  >>countfile, "pretRNA_full\t"+"\t".join(str(fulltrnalocuscounts[currsample][currbed]/sizefactor[currsample]) for currsample in samples)
+                print  >>countfile, "pretRNA_partial\t"+"\t".join(str(partialtrnalocuscounts[currsample][currbed]/sizefactor[currsample]) for currsample in samples)
+                print  >>countfile, "pretRNA_trailer\t"+"\t".join(str(trnalocustrailercounts[currsample][currbed]/sizefactor[currsample]) for currsample in samples)
             else:
-                print  >>countfile, os.path.basename(currbed)+"\t"+"\t".join(str(trnalocuscounts[currsample][currbed]/sizefactor[currsample]) for currsample in samples)
+                print  >>countfile, "pretRNA\t"+"\t".join(str(trnalocuscounts[currsample][currbed]/sizefactor[currsample]) for currsample in samples)
         for currbiotype in emblbiotypes:
             print  >>countfile, currbiotype+"\t"+"\t".join(str(emblcounts[currsample][currbed]/sizefactor[currsample]) for currsample in samples)
         for currbed in bedlist:
             print  >>countfile, os.path.basename(currbed)+"\t"+"\t".join(str(counts[currsample][currbed]/sizefactor[currsample]) for currsample in samples)
         print  >>countfile, "other"+"\t"+"\t".join(str(othercounts[currsample]/sizefactor[currsample]) for currsample in samples)
+        
+    if realcountfile:      
+        print  >>realcountfile, "\t".join(samples)
+        
+        for currbed in trnalist:
+            
+            if countfrags:
+                print  >>realcountfile, "tRNA_wholecounts\t"+"\t".join(str(trnawholecounts[currsample][currbed]) for currsample in samples)
+                print  >>realcountfile, "tRNA_fiveprime\t"+"\t".join(str(trnafivecounts[currsample][currbed]) for currsample in samples)
+                print  >>realcountfile, "tRNA_threeprime\t"+"\t".join(str(trnathreecounts[currsample][currbed]) for currsample in samples)
+                print  >>realcountfile, "tRNA_other\t"+"\t".join(str((trnacounts[currsample][currbed] - (trnathreecounts[currsample][currbed] + trnafivecounts[currsample][currbed] + trnawholecounts[currsample][currbed]))) for currsample in samples)
+                print  >>realcountfile, "tRNA_antisense\t"+"\t".join(str(trnaantisense[currsample][currbed]) for currsample in samples)
+
+                
+                
+            else:
+                print  >>realcountfile, "tRNA\t"+"\t".join(str(trnacounts[currsample][currbed]) for currsample in samples)
+                
+
+            
+            
+        
+        for currbed in locilist:
+            if countfrags:
+                print  >>realcountfile, "pretRNA_full\t"+"\t".join(str(fulltrnalocuscounts[currsample][currbed]) for currsample in samples)
+                print  >>realcountfile, "pretRNA_partial\t"+"\t".join(str(partialtrnalocuscounts[currsample][currbed]) for currsample in samples)
+                print  >>realcountfile, "pretRNA_trailer\t"+"\t".join(str(trnalocustrailercounts[currsample][currbed]) for currsample in samples)
+            else:
+                print  >>realcountfile, "pretRNA\t"+"\t".join(str(trnalocuscounts[currsample][currbed]) for currsample in samples)
+        for currbiotype in emblbiotypes:
+            print  >>realcountfile, currbiotype+"\t"+"\t".join(str(emblcounts[currsample][currbed]) for currsample in samples)
+        for currbed in bedlist:
+            print  >>realcountfile, os.path.basename(currbed)+"\t"+"\t".join(str(counts[currsample][currbed]) for currsample in samples)
+        print  >>realcountfile, "other"+"\t"+"\t".join(str(othercounts[currsample]) for currsample in samples)
+        
+        
+        
     
     #print >>sys.stderr, trnaaminocounts
     if trnaaminofilename is not None:

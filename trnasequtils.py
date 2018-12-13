@@ -8,7 +8,7 @@ import gzip
 from collections import defaultdict
 
 def readmultifasta(fafile):
-    #print chrom+":"+ chromstart+"-"+ chromend
+    #print chrom+":"+ chromstart+"-"+ chromendre
     if fafile == "stdin":
         fafile = sys.stdin
     else:
@@ -288,6 +288,7 @@ class transcriptfile:
         loci = list()
         amino = dict()
         anticodon = dict()
+        transcriptdict = defaultdict(set)
         for i, line in enumerate(trnafile):
             fields = line.split()
             if len(fields) < 2:
@@ -298,12 +299,14 @@ class transcriptfile:
             for currlocus in fields[1].split(','):
                 locustranscript[currlocus] = fields[0]
                 loci.append(currlocus)
+                transcriptdict[fields[0]].add(currlocus)
 
         
         self.locustranscript = locustranscript
         self.transcripts = trnatranscripts
         self.amino = amino
         self.anticodon = anticodon
+        self.transcriptdict = transcriptdict
         self.loci = loci
     def gettranscripts(self):
         return set(self.transcripts)
@@ -579,7 +582,7 @@ def readgtf(filename, orgdb="genome", seqfile= None, filterpsuedo = False, filte
                                     
                 yield GenomeRange( orgdb, fields[0],fields[3],fields[4],fields[6], name = featname, fastafile = seqfile, data = {"biotype":biotype, "source":genesource, "genename":genename})
             
-def readbed(filename, orgdb="genome", seqfile= None):
+def readbed(filename, orgdb="genome", seqfile= None, includeintrons = False):
     bedfile = None
     if filename == "stdin":
         bedfile = sys.stdin
@@ -588,8 +591,10 @@ def readbed(filename, orgdb="genome", seqfile= None):
     else:
         bedfile = open(filename, "r")
     skippedlines = 0
+    
     for currline in bedfile:
         #print currline
+        data = dict()
         if currline.startswith('track') or currline.startswith('#'):
             continue
         fields = currline.rstrip().split()
@@ -605,7 +610,11 @@ def readbed(filename, orgdb="genome", seqfile= None):
                 print >>sys.stderr, "non-number coordinates in "+filename
                 skippedlines += 1
             else:
-                yield GenomeRange( orgdb, fields[0],fields[1],fields[2],strand, name = fields[3], fastafile = seqfile)
+                if includeintrons and len(fields) > 7:
+                    data["blockcount"] = int(fields[9])
+                    data["blocksizes"] = tuple(int(curr) for curr in fields[10].rstrip(",").split(","))
+                    data["blockstarts"] = tuple(int(curr) for curr in fields[11].rstrip(",").split(",")) 
+                yield GenomeRange( orgdb, fields[0],fields[1],fields[2],strand, name = fields[3], fastafile = seqfile, data = data)
     
     if skippedlines > 0:
         print >>sys.stderr, "skipped "+str(skippedlines)+" in "+filename
@@ -702,8 +711,14 @@ def getpileuprange(bamfile, chromrange = None):
         bamiter = bamfile.pileup(chromrange.chrom, chromrange.start, chromrange.end)
     else:
         bamiter = bamfile.pileup()
-    
+
+
+    posdict = defaultdict(lambda: defaultdict(int))
+    refdict = defaultdict(lambda:'N') 
+
     for currpos in bamiter:
+
+        
         readcounts = defaultdict(int)
         reference = 'N'
         for read in currpos.pileups:
@@ -711,9 +726,17 @@ def getpileuprange(bamfile, chromrange = None):
             
             
             if not read.indel and not read.is_del:
-                readcounts[aln.seq[read.qpos]] += 1
-        yield read.qpos, readcounts
-                
+                readcounts[aln.seq[read.query_position]] += 1
+        #print >>sys.stderr,currpos
+        #print >>sys.stderr, currpos
+        #print >>sys.stderr, "****"
+        #yield currpos.pos, read.query_position, readcounts
+        #yield currpos.pos, readcounts
+        posdict[currpos.pos] = readcounts
+        refdict[currpos.pos] = read.query_position
+        
+    for i in range(chromrange.start, chromrange.end):
+        yield i, refdict[i], posdict[i]
         
 def getseqdict(genelist, faifiles = None):
     namedict = getnamedict(genelist)

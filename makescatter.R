@@ -3,6 +3,7 @@ library(gridExtra)
 library(scales)
 library(plyr)
 
+
 args <- commandArgs(trailingOnly = TRUE)
 
 #args[3]
@@ -91,9 +92,20 @@ trnacounts$fragtype <- factor(ifelse(as.character(trnacounts[,"type"]) %in% trna
 trnacounts$amino <- as.factor(trnacounts$amino)
 #levels(trnacounts$amino) <- sort(trnacounts$amino)
 
+#script.dir <- dirname(sys.frame(1)$ofile)
 
-aminoinfo <- read.table("/projects/lowelab/users/holmes/pythonsource/trnaseq/aminotable.txt", stringsAsFactors = FALSE)
+#frame_files <- lapply(sys.frames(), function(x) x$ofile)
+#frame_files <- Filter(Negate(is.null), frame_files)
+#script.dir <- dirname(frame_files[[length(frame_files)]])
 
+
+#aminoinfo <- read.table(paste(script.dir, "aminotable.txt", sep=''), stringsAsFactors = FALSE)
+
+aminos = c(" Glycine","Proline","Alanine","Valine","Leucine","Isoleucine","Methionine","Cysteine","Phenylalanine","Tyrosine","Tryptophan","Histidine","Lysine","Arginine","Glutamine","Asparagine","Glutamic_Acid","Aspartic_Acid","Serine","Threonine","iMethionine")
+threecodes = c("Gly","Pro","Ala","Val","Leu","Ile","Met","Cys","Phe","Tyr","Trp","His","Lys","Arg","Gln","Asn","Glu","Asp","Ser","Thr","iMet")
+onecodes = c("G","P","A","V","L","I","M","C","F","Y","W","H","K","R","Q","N","E","D","S","T","M")
+
+aminoinfo = data.frame(aminos,threecodes,onecodes, stringsAsFactors = FALSE)
 
 aminoletters <- aminoinfo[match(aminoinfo[,2], levels(trnacounts$amino)),3]
 aminoletters <- aminoinfo[match(levels(trnacounts$amino),aminoinfo[,2]),3]
@@ -141,6 +153,11 @@ yaxis = yname
 #print(yaxis)
 
 #maxlim = max(max(log(trnacounts[,xaxis])), max(log(trnacounts[,yaxis]))) #, xlim = c(0,maxlim), ylim = c(0,maxlim)
+
+#here is error
+#"Untreated"
+#print(trnacounts)
+#print (xaxis)
 maxlim = max(c(max(trnacounts[,xaxis]), max(trnacounts[,yaxis]))) #, xlim = c(0,maxlim), ylim = c(0,maxlim) + 1
 
 
@@ -162,8 +179,8 @@ ggsave(paste(experimentname,"/",comparisons[i,1],"_",comparisons[i,2] ,"-typesca
 #scale_shape_manual(values=1:nlevels(trnacounts$amino))
 #print("***DONESCATTER")
 
-#print(head(trnacounts))
-currplot <- ggplot(trnacounts[trnacounts$fragtype != "nontRNA",], aes_string(x=xaxis, y=yaxis))+geom_point(data = transform(trnacounts[trnacounts$fragtype == "nontRNA",], fragtype=NULL), aes(size = dotsize))+xlab(gsub("_", " ", xname))+ylab(gsub("_", " ", yname))+geom_point(aes(shape=amino, color=amino, size = dotsize))+guides(size=FALSE, ncol = 1)+scale_shape_manual(values=aminoletters) +facet_wrap( ~fragtype , ncol = 2) + scale_size_continuous(range = c(.25,4))+geom_abline(intercept = 0, slope = 1) + geom_abline(intercept = dashinterc, slope = 1,linetype = 2)+geom_abline(intercept = 0- dashinterc, slope = 1,linetype = 2)+scale_x_continuous(trans=log2_trans(),limits = c(1, maxlim),breaks = trans_breaks('log2', function(x) 2^x, n = 10)) + scale_y_continuous(trans=log2_trans(),limits = c(1, maxlim),breaks= trans_breaks('log2', function(x) 2^x, n = 10)) + theme_bw() + theme(legend.box="horizontal",aspect.ratio=1,axis.text.x=element_text(angle=90,hjust=1,vjust=0.5)) + labs(shape="Acceptor\nType", color="Acceptor\nType") 
+#print(head(trnacounts)) #PNK +geom_point(data = transform(trnacounts[trnacounts$fragtype == "nontRNA",], fragtype=NULL), aes(size = dotsize))
+currplot <- ggplot(trnacounts[trnacounts$fragtype != "nontRNA",], aes_string(x=xaxis, y=yaxis))+xlab(gsub("_", " ", xname))+ylab(gsub("_", " ", yname))+geom_point(aes(shape=amino, color=amino, size = dotsize))+guides(size=FALSE, ncol = 1)+scale_shape_manual(values=aminoletters) +facet_wrap( ~fragtype , ncol = 2) + scale_size_continuous(range = c(.25,4))+geom_abline(intercept = 0, slope = 1) + geom_abline(intercept = dashinterc, slope = 1,linetype = 2)+geom_abline(intercept = 0- dashinterc, slope = 1,linetype = 2)+scale_x_continuous(trans=log2_trans(),limits = c(1, maxlim),breaks = trans_breaks('log2', function(x) 2^x, n = 10)) + scale_y_continuous(trans=log2_trans(),limits = c(1, maxlim),breaks= trans_breaks('log2', function(x) 2^x, n = 10)) + theme_bw() + theme(legend.box="horizontal",aspect.ratio=1,axis.text.x=element_text(angle=90,hjust=1,vjust=0.5)) + labs(shape="Acceptor\nType", color="Acceptor\nType") 
 ggsave(paste(experimentname,"/",comparisons[i,1],"_",comparisons[i,2] ,"-aminoscatter",outputformat,sep= ""), currplot, height = 10, width = 12)
 
 #currplot <- qplot(data=onlytrnas,x=onlytrnas[,xaxis],y=onlytrnas[,yaxis],xlab = xaxis,ylab = yaxis, asp=1)+geom_abline(intercept = 0, slope = 1) + geom_abline(intercept = dashinterc, slope = 1,linetype = 2)+geom_abline(intercept = 0- dashinterc, slope = 1,linetype = 2)+scale_x_continuous(trans=log2_trans(),limits = c(1, maxlim)) + scale_y_continuous(trans=log2_trans(),limits = c(1, maxlim)) +facet_wrap( ~amino, , ncol = 2)

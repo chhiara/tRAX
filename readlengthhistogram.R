@@ -65,7 +65,7 @@ binnedlengths <- binnedlengths[order(binnedlengths$Sample,binnedlengths$bin),]
 #binnedlengths
 #binnedlengths$variable <- factor(binnedlengths$variable, levels = c("trnas", "all"))
 binnedlengths$variable <- factor(binnedlengths$variable, levels = c("all", "trnas"))
-ggplot(data=binnedlengths, aes(x = binnedlengths$bin, y = binnedlengths$value, fill = binnedlengths$variable))+geom_bar(stat="identity")+facet_wrap( ~ Sample, scales="free",ncol = 3)+ xlim(0,maxlen) + ylab("Count") + xlab("Read Length") + scale_fill_discrete(name="Gene Type") 
+ggplot(data=binnedlengths, aes(x = binnedlengths$bin, y = binnedlengths$value, fill = binnedlengths$variable))+geom_bar(stat="identity")+facet_wrap( ~ Sample, scales="free",ncol = 3)+ xlim(0,maxlen) + ylab("Count") + xlab("Read Length") + scale_fill_discrete(name="Gene Type")  + scale_x_continuous(labels = comma)
 #length(unique(binnedlengths$Sample))
 ggsave(filename=args[2],limitsize=FALSE,width = 8)#, width = 3 * length(unique(binnedlengths$Sample)))
     

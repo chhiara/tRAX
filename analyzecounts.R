@@ -97,11 +97,57 @@ write.table(allprobs,paste(experimentname,"/",experimentname,"-padjs.txt", sep =
 alllogvals = Reduce(function(x,y) cbind(x,y), resloglist)
 write.table(alllogvals,paste(experimentname,"/",experimentname,"-logvals.txt", sep = ""),sep="	")
 
+#Print log values
+colnames(alllogvals) <- paste("log2", colnames(alllogvals), sep = "_")
+colnames(allprobs) <- paste("pval", colnames(allprobs), sep = "_")
+allcombinevals = cbind(alllogvals,allprobs)
+write.table(allcombinevals,paste(experimentname,"/",experimentname,"-combine.txt", sep = ""),sep="	", col.names=NA,quote=FALSE) 
+
+
+#stop("Message")
 #Print out the size factors
 write.table(rbind(colnames(readcounts),dds$sizeFactor),file=paste(experimentname,"/",experimentname,"-SizeFactors.txt", sep = ""), row.names=FALSE,col.names=FALSE)
-
+#stop("Message")
 #get deseq normalized  raw counts
 normalizedrnas = sweep(readcounts,2,dds$sizeFactor, "/" )
 write.table(normalizedrnas,paste(experimentname,"/",experimentname,"-normalized.txt", sep = ""), sep = "\t")
+#
+
+#stop("Message")
+allcombined = cbind(allcombinevals,normalizedrnas)
+#write.table(allcombined,paste(experimentname,"/",experimentname,"-combineall.txt", sep = ""),sep="	", col.names=NA,quote=FALSE)
 
 
+#write.table(allcombined[apply(normalizedrnas,1,max) > 30 & apply(alllogvals,1,min) < .05 ,],paste(experimentname,"/",experimentname,"-relevnormalized.txt", sep = ""), col.names=NA )
+
+#write.table(data[abs( log2(data$AlkB_control)- log2(data$AlkB_HCC_1)) > 1.5,],paste(experimentname,"/",experimentname,"-significant.txt", sep = ""))
+
+medcounts = list()
+
+samplenames <- unique(sampledata[,2])
+for (i in 1:length(samplenames)){
+cols <- sampledata[sampledata[,2] == samplenames[i],1]
+if (length(cols) > 1){
+medcounts[[samplenames[i]]] <- apply(normalizedrnas[,cols], 1, median)
+
+}else{
+medcounts[[samplenames[i]]] <- normalizedrnas[,cols]
+}
+}
+
+medcountmat <- do.call("cbind",medcounts)
+colnames(medcountmat) <- samplenames
+
+medcountmat = as.matrix(medcountmat)
+allcombinevals = as.matrix(allcombinevals)
+
+#medcounts
+typeof(allcombinevals)
+typeof(medcountmat)
+typeof(medcounts)
+typeof(normalizedrnas)
+allcombinevals = cbind(allcombinevals,medcountmat)
+
+write.table(allcombinevals[apply(readcounts,1,max) > 30 & apply(alllogvals,1,min) < .05 ,],paste(experimentname,"/",experimentname,"-relevnormalizedsamples.txt", sep = ""), col.names=NA )
+
+write.table(allcombinevals,paste(experimentname,"/",experimentname,"-normalizedsamples.txt", sep = ""), col.names=NA )

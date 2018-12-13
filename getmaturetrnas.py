@@ -20,12 +20,27 @@ def main(**args):
                                 #nmt-tRNA-Gln-TTG-13-1
     trnanamere = re.compile(r"^\>\S+_((?:\w+\-)?tRNA\-\w+\-[\w\?]+\-\d+\-\d+)\s+\(tRNAscan\-SE\s+ID:\s+(\S+)\)")
     #trnanamere = re.compile(r"^\>\S+_(tRNA\-\w+\-\w+\-\d+\-\d+)\s+")#\((S+)\)")
+    genomefile = os.path.expanduser(args["genome"])
     if "maturetrnafa" in args:
         maturetrnafa = open(args["maturetrnafa"], "w")
     else:
         maturetrnafa=sys.stdout
     gtrnatrans = None
-    if args["gtrnafa"]:
+    if args["namemap"]:
+        gtrnafa = open(args["namemap"], "r")
+        gtrnatrans = dict()
+        for currline in gtrnafa:
+            fields = currline.rstrip().split()
+
+
+            if "tRNAscan-SE_id" == fields[0] or len(fields) < 2 or len(fields[1].split("-")) < 4:
+                continue
+            shortname = fields[0].split("-")[0]
+
+            gtrnatrans[shortname] = fields[1] 
+
+        #sys.exit()
+    elif args["gtrnafa"]:
         gtrnafa = open(args["gtrnafa"], "r")
         gtrnatrans = dict()
         for currline in gtrnafa:
@@ -43,19 +58,19 @@ def main(**args):
             print >>sys.stderr, "must have names in format '>Saccharomyces_cerevisiae_tRNA-Ala-AGC-1-10 (tRNAscan-SE ID: chrXIII.trna9)'"
             sys.exit()
             
-            
+
     alltrnas = list()
     trnascantrnas = list()
     trnadbtrnas = list()
     trnacentraltrnas = list()
     for currfile in args["trnascan"]:
         if gtrnatrans:
-            trnadbtrnas.extend(readtRNAdb(currfile, args["genome"], gtrnatrans))
+            trnadbtrnas.extend(readtRNAdb(currfile, genomefile, gtrnatrans))
         else:
-            trnascantrnas.extend(readtRNAscan(currfile, args["genome"]))
+            trnascantrnas.extend(readtRNAscan(currfile, genomefile))
             #print >>sys.stderr, len(trnascantrnas)
             
-        
+    #print >>sys.stderr, "||**"
     '''
     for currfile in args["trnascan"]:
         trnascantrnas.extend(readtRNAscan(currfile, args["genome"]))
@@ -63,6 +78,7 @@ def main(**args):
     for currfile in args["rnacentral"]:
         trnacentraltrnas.extend(readrnacentral(currfile,args.chromtranslate,mode = 'transcript'))
     '''    
+ 
     alltrnas = list(getuniquetRNAs(trnascantrnas)) + trnacentraltrnas + trnadbtrnas
     mitomode = args["mitomode"]
     trnabed = None
@@ -99,7 +115,6 @@ def main(**args):
             
     scriptdir = os.path.dirname(os.path.realpath(sys.argv[0]))+"/"
     
-    #cp /projects/lowelab/users/pchan/data/tRNA/stdModels/infernal-1.1/TRNAinf.cm ./
     if mitomode:
         trnacmfile = scriptdir+'TRNAMatureMitoinf.cm'
     else:
@@ -135,10 +150,19 @@ def main(**args):
             transcriptrange = GenomeRange("genome", name, margin, margin + len(currtrans.getmatureseq()), strand = "+", name = name)
             print >>trnabed, transcriptrange.bedstring()
         if args["locibed"]:
+            itemrgb = "0"
             for currlocus in currtrans.loci:
                 pass
-                print >>locibed, currlocus.loc.bedstring()
-        
+                trnalength = currlocus.loc.end - currlocus.loc.start
+                if currlocus.intron is None:
+                    print >>locibed, currlocus.loc.bedstring()+"\t"+"\t".join([str(currlocus.loc.start), str(currlocus.loc.end),itemrgb,"1",str(trnalength),"0"])
+                else:
+                    
+                    blockcounts = 2
+                    blocksizes = str(currlocus.intron[0] + 1)+","+str(trnalength - currlocus.intron[1] - 1)
+                    blockstarts = "0,"+str(currlocus.intron[1] + 1)
+                    print >>locibed, currlocus.loc.bedstring()+"\t"+"\t".join([str(currlocus.loc.start), str(currlocus.loc.end),itemrgb,str(blockcounts),str(blocksizes),str(blockstarts)])
+
     
     
     #sys.exit()

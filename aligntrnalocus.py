@@ -25,7 +25,7 @@ from trnasequtils import *
 def main(**args):
     args = defaultdict(lambda: None, args)
     stkfile = args["stkfile"]
-    genomefile = args["genomefile"]
+    genomefile = os.path.expanduser(args["genomefile"])
     mitomode = args["mitomode"]
     trnalocifile = args["trnaloci"]
     

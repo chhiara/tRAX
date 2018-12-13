@@ -22,7 +22,7 @@ from trnasequtils import *
 
 
 class tRNAlocus:
-    def __init__(self, loc, seq, score, amino, anticodon, intronseq, rawseq = None):
+    def __init__(self, loc, seq, score, amino, anticodon, intronseq, intron, rawseq = None):
         self.name = loc.name
         self.loc = loc
         self.seq = seq
@@ -30,6 +30,7 @@ class tRNAlocus:
         self.amino = amino
         self.anticodon = anticodon
         self.intronseq = intronseq
+        self.intron = intron
         self.rawseq = rawseq
 
 class tRNAtranscript:
@@ -143,7 +144,7 @@ def readrnacentral(scanfile,chromnames, mode = 'locus'):
                     newseq += sequence[i]
                     
             rawseq = newseq.replace('-','')
-            currlocus = tRNAlocus(currtRNA,rawseq, score,amino,anticodon,intronseqs)
+            currlocus = tRNAlocus(currtRNA,rawseq, score,amino,anticodon,intronseqs, None)
             transcriptinfo[transcriptname].append(currlocus)
             if mode == 'locus':
                 yield currlocus
@@ -224,13 +225,15 @@ def readtRNAscan(scanfile, genomefile, mode = None):
     intronseq = defaultdict(str)
     
     for curr in trnaseqs.iterkeys():
+        currintron = None
         if curr in tRNAintron:
             start = tRNAintron[curr][0]
             end = tRNAintron[curr][1]
             intronseq[curr] = trnaseqs[curr][start:end]
             trnaseqs[curr] = trnaseqs[curr][:start] + trnaseqs[curr][end:]
-        
-        yield tRNAlocus(trnas[curr], trnaseqs[curr], trnascore[curr],trnaamino[curr],trnaanticodon[curr],intronseq[curr])
+            currintron = tRNAintron[curr]
+            
+        yield tRNAlocus(trnas[curr], trnaseqs[curr], trnascore[curr],trnaamino[curr],trnaanticodon[curr],intronseq[curr], introns)
 def striplocus(trnaname):
     return re.sub(r"\-\d+$", "",trnaname)
 #Sequence		tRNA     	Bounds   	tRNA	Anti	Intron Bounds	Inf	HMM	2'Str	Hit	      	Isotype	Isotype	Type
@@ -251,8 +254,11 @@ def readtRNAdb(scanfile, genomefile, trnamap):
     trnaamino = dict()
     tRNAintron = dict()
     trnas = dict()
-    for currline in trnascan:
+    for linenum, currline in enumerate(trnascan):
         if  currline.startswith("Sequence") or  currline.startswith("Name") or  currline.startswith("------"):
+            continue
+        if len(currline) < 5:
+            print >>sys.stderr, "cannot read line: " +str(linenum) +" of "+scanfile
             continue
         fields = currline.split()
         
@@ -294,11 +300,12 @@ def readtRNAdb(scanfile, genomefile, trnamap):
     
         
         currtRNA.fastafile = genomefile
+        #print >>sys.stderr, genomefile
         trnalist.append(currtRNA)
         if int(fields[6]) != 0:
             if currtRNA.strand ==  "-":
-                intronstart = int(fields[2]) - int(fields[6]) 
-                intronend = int(fields[2]) - int(fields[7]) +1
+                intronstart = int(fields[2]) - int(fields[6]) - 2
+                intronend = int(fields[2]) - int(fields[7])  - 1
             else:
                 intronstart = int(fields[6]) - int(fields[2]) - 1
                 intronend = int(fields[7]) - int(fields[2])
@@ -307,13 +314,16 @@ def readtRNAdb(scanfile, genomefile, trnamap):
     intronseq = defaultdict(str)
     trnaloci = list()
     for curr in trnaseqs.iterkeys():
+        currintron = None
         if curr in tRNAintron:
             start = tRNAintron[curr][0]
             end = tRNAintron[curr][1]
             intronseq[curr] = trnaseqs[curr][start:end]
             trnaseqs[curr] = trnaseqs[curr][:start] + trnaseqs[curr][end:]
+            currintron = tRNAintron[curr]
+
         
-        trnaloci.append( tRNAlocus(trnas[curr], trnaseqs[curr], trnascore[curr],trnaamino[curr],trnaanticodon[curr],intronseq[curr]))
+        trnaloci.append( tRNAlocus(trnas[curr], trnaseqs[curr], trnascore[curr],trnaamino[curr],trnaanticodon[curr],intronseq[curr],currintron))
         
     trnaloci.sort(key = lambda x: striplocus(x.name))
     for transname, currloci in itertools.groupby(trnaloci, lambda x: striplocus(x.name)):

@@ -11,6 +11,7 @@ import getmaturetrnas
 import aligntrnalocus
 from distutils.spawn import find_executable
 from distutils.version import LooseVersion, StrictVersion
+import time
 
 def get_location(program, allowfail = False):
     progloc = find_executable(program)
@@ -32,6 +33,8 @@ parser.add_argument('--trnascanfile',required=True,
                    help='output from tRNAscan-SE run')
 parser.add_argument('--gtrnafafile',
                    help='Fasta file of tRNA sequences from gtRNAdb')
+parser.add_argument('--namemapfile',
+                   help='Name mapping from gtRNAdb')
 
 
 def shellcall(shellcommand,failquit = False):
@@ -52,9 +55,14 @@ dbname = args.databasename
 scanfile = args.trnascanfile
 genomefile = args.genomefile
 gtrnafafile = args.gtrnafafile
+namemapfile = args.namemapfile
 
 
-    
+
+runtime = time.time()
+loctime = time.localtime(runtime)
+
+
 #$1 is database name
 #trnascanfile is trnascan file
 #genomefile is fasta file of genome
@@ -69,12 +77,20 @@ get_location("bowtie2-build")
 if not os.path.isfile(genomefile+".fai"):
     shellcall("samtools faidx "+genomefile)
     
+    
 
-getmaturetrnas.main(trnascan=[scanfile], genome=genomefile,gtrnafa=gtrnafafile,bedfile=dbname+"-maturetRNAs.bed",maturetrnatable=dbname+"-trnatable.txt",trnaalignment=dbname+"-trnaalign.stk",locibed=dbname+"-trnaloci.bed",maturetrnafa=dbname+"-maturetRNAs.fa")
+
+getmaturetrnas.main(trnascan=[scanfile], genome=genomefile,gtrnafa=gtrnafafile,namemap=namemapfile, bedfile=dbname+"-maturetRNAs.bed",maturetrnatable=dbname+"-trnatable.txt",trnaalignment=dbname+"-trnaalign.stk",locibed=dbname+"-trnaloci.bed",maturetrnafa=dbname+"-maturetRNAs.fa")
 aligntrnalocus.main(genomefile=genomefile,stkfile=dbname+"-trnaloci.stk",trnaloci=dbname+"-trnaloci.bed")
 
 
 shellcall("cat "+dbname+"-maturetRNAs.fa "+genomefile+" >"+dbname+"-tRNAgenome.fa", failquit = True)
     
 shellcall("bowtie2-build "+dbname+"-tRNAgenome.fa "+dbname+"-tRNAgenome", failquit = True)
+
+dbinfo = open(dbname+ "-dbinfo.txt","w")
+print >>dbinfo, "time\t"+str(runtime)+"("+str(loctime[1])+"/"+str(loctime[2])+"/"+str(loctime[0])+")"
+print >>dbinfo, "genomefile\t"+str(genomefile)
+print >>dbinfo, "trnascanfile\t"+str(scanfile)
+
 

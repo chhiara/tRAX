@@ -31,13 +31,8 @@ parser.add_argument('--tag', nargs='1',
 args = parser.parse_args()
 
 
-#/projects/lowelab/users/holmes/pythonsource/trnastuff/ucscToINSDC.txt
 
-'''
-./gettrnabed.py --rnacentral hg19-trnacentral.txt  --genome /scratch/encodeshortrna/hg19.fa --chromtranslate /projects/lowelab/users/holmes/pythonsource/trnatest/trnastuff/ucscToINSDC.txt
 
-Need to add bits to create maf files and bed files for these genomes
-'''
 
 
 
