@@ -9,12 +9,7 @@ from trnasequtils import *
 import itertools
 
 
-'''
-python ~/pythonsource/trnaseq/condensebam.py --samplefile=kitcomp.txt --trnaloci=../hgtrnadb/hg19-trnaloci.bed --maturetrnas=../hgtrnadb/hg19-maturetRNAs.bed --trnatable=../hgtrnadb/hg19-trnatable.txt | "/projects/lowelab/users/holmes/pythonsource/tdrnamer/nametdrs.py" ../hgtrnadb/hg19 kitcomp-frags.stk kitcomp-locifrags.stk >kitcomp-frags.txt
 
-"/projects/lowelab/users/holmes/pythonsource/tdrnamer/clustertdrs.py" kitcomp-frags.txt kitcomp-frags.stk >kitcomp-clusters.txt
-"/projects/lowelab/users/holmes/pythonsource/tdrnamer/clustertdrs.py" kitcomp-frags.txt kitcomp-locifrags.stk >kitcomp-lociclusters.txt
-'''
 class prunedict:
     def __init__(self, maxkeys = 1000000, autotrim = True):
         self.counts = defaultdict(int) 

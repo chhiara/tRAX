@@ -3,13 +3,6 @@ library(reshape2)
 library(scales)
 library(getopt)
 
-#args <- commandArgs(trailingOnly = TRUE)
-
-#args <- c("aging-coverage.txt","sacCer3-trnatable.txt", "YeastAging.txt", "aging-coverage.pdf")
-#args <- c("ExosomeData-coverage.txt","/soe/holmes/pythonsource/trnatest/hgtrnadb/hg19-trnatable.txt","exosomesamples.txt","ExosomeData-SizeFactors.txt","ExosomeData-coverage.pdf")
-#args
-
-#hcvm.i <- melt(hcvm.i, id.vars=c(grep("^readC", names(hcvm.i), value=TRUE, invert=TRUE)), variable.name="Feature.basePosition", value.name="read.density")
 
 spec <- matrix(c(
         'cov'     , 'c', 1, "character", "coverage file from getcoverage.py (required)",
