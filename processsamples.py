@@ -15,7 +15,6 @@ import countreads
 import getcoverage
 import getends
 import countreadtypes
-import getmismatches
 import maketrackhub
 from distutils.spawn import find_executable
 from distutils.version import LooseVersion, StrictVersion
@@ -169,14 +168,6 @@ def gettrnacoverage(samplefile, trnainfo,expinfo, ignoresizefactors = False):
     else:
         getcoverage.main(samplefile=samplefile,bedfile=[trnainfo.maturetrnas],stkfile=trnainfo.trnaalign,uniquename=expname+"/"+expname, allcoverage=expinfo.trnacoveragefile)
         runrscript(scriptdir+"/coverageplots.R","--cov="+expinfo.trnacoveragefile,"--trna="+trnainfo.trnatable,"--samples="+samplefile,"--allcov="+expinfo.trnacoverageplot,"--uniquename="+expname+"/"+expname,"--modomics="+trnainfo.modomics,"--combinecov="+expinfo.trnacombinecoverageplot,"--directory="+expname)
-def getmismatchcoverage(samplefile, trnainfo,expinfo, ignoresizefactors = False):
-    if not ignoresizefactors:
-        getmismatches.main(samplefile=samplefile,bedfile=[trnainfo.maturetrnas],sizefactors=expinfo.sizefactors,stkfile=trnainfo.trnaalign,uniquename=expname+"/"+expname, allmismatch=expinfo.trnamismatchfile)
-        runrscript(scriptdir+"/mismatchplots.R","--cov="+expinfo.trnamismatchfile,"--trna="+trnainfo.trnatable,"--samples="+samplefile,"--allcov="+expinfo.trnamismatchplot,"--uniquename="+expname+"/"+expname,"--modomics="+trnainfo.modomics,"--directory="+expname)
-
-    else:
-        getmismatches.main(samplefile=samplefile,bedfile=[trnainfo.maturetrnas],stkfile=trnainfo.trnaalign,uniquename=expname+"/"+expname, allmismatch=expinfo.trnamismatchfile)
-        runrscript(scriptdir+"/mismatchplots.R","--cov="+expinfo.trnamismatchfile,"--trna="+trnainfo.trnatable,"--samples="+samplefile,"--allcov="+expinfo.trnamismatchplot,"--uniquename="+expname+"/"+expname,"--modomics="+trnainfo.modomics,"--directory="+expname)
 
 
 def getendscoverage(samplefile, trnainfo,expinfo, ignoresizefactors = False):
