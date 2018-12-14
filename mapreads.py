@@ -29,8 +29,9 @@ def wrapbowtie2(bowtiedb, unpaired, outfile, scriptdir, trnafile, maxmaps = MAXM
     bowtiecommand = program+' -x '+bowtiedb+' -k '+str(maxmaps)+' --very-sensitive --ignore-quals --np 5 --reorder -p '+str(numcores)+' -U '+unpaired
 
     #print >>sys.stderr, bowtiecommand
+    temploc = os.path.basename(outfile)
     #bowtiecommand = bowtiecommand + ' | '+scriptdir+'choosemappings.py '+trnafile+' | samtools sort - '+outfile
-    bowtiecommand = bowtiecommand + ' | '+scriptdir+'choosemappings.py '+trnafile+' --progname='+"TRAX"+ ' --fqname=' +unpaired+' --expname='+expname + ' | samtools sort -T '+tempfile.gettempdir()+"/"+outfile+'temp - -o '+outfile+'.bam'
+    bowtiecommand = bowtiecommand + ' | '+scriptdir+'choosemappings.py '+trnafile+' --progname='+"TRAX"+ ' --fqname=' +unpaired+' --expname='+expname + ' | samtools sort -T '+tempfile.gettempdir()+"/"+temploc+'temp - -o '+outfile+'.bam'
     #print >>sys.stderr,  bowtiecommand
     if logfile:
         print >>logfile,  bowtiecommand
@@ -137,7 +138,19 @@ def main(**argdict):
         print >>sys.stderr, "Bam files "+",".join(badsamples)+" does not match fq files"
         print >>sys.stderr, "Aborting"
         sys.exit(1)               
-                    
+    'samtools sort -T '+tempfile.gettempdir()+"/"+outfile+'temp - -o '+outfile+'.bam'
+    for samplename in samples:
+        #redundant but ensures compatibility
+        bamfile = workingdir+samplename
+        temploc = os.path.basename(bamfile)
+        tempfiles = list()
+        for currfile in os.listdir(tempfile.gettempdir()):
+            if currfile.startswith(bamfile+'temp'):
+                tempfiles.append(currfile)
+        if len(tempfiles) > 0:
+            print >>sys.stderr, ",".join(tempfiles) + "bamfile file exists"
+            sys.exit(1)
+            
     for samplename in samples:
         bamfile = workingdir+samplename
         
