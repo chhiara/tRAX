@@ -262,7 +262,7 @@ def testrstats():
             print >>sys.stderr, "Old R version "+rstatsres.group(1)+" found"
             print >>sys.stderr, "Upgrade to latest version"
             sys.exit(1)
-    else:g
+    else:
         print >>sys.stderr, "Could not find R version number"
 
 
