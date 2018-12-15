@@ -138,18 +138,31 @@ def main(**argdict):
         print >>sys.stderr, "Bam files "+",".join(badsamples)+" does not match fq files"
         print >>sys.stderr, "Aborting"
         sys.exit(1)               
-    'samtools sort -T '+tempfile.gettempdir()+"/"+outfile+'temp - -o '+outfile+'.bam'
+    #'samtools sort -T '+tempfile.gettempdir()+"/"+outfile+'temp - -o '+outfile+'.bam'
+    tempfilesover = list()
+    missingfqfiles = list()
     for samplename in samples:
         #redundant but ensures compatibility
         bamfile = workingdir+samplename
         temploc = os.path.basename(bamfile)
-        tempfiles = list()
+        #print >>sys.stderr, "***"
+        #print >>sys.stderr, samplename+'temp'
+        
         for currfile in os.listdir(tempfile.gettempdir()):
-            if currfile.startswith(bamfile+'temp'):
-                tempfiles.append(currfile)
-        if len(tempfiles) > 0:
-            print >>sys.stderr, ",".join(tempfiles) + "bamfile file exists"
-            sys.exit(1)
+            #
+            if currfile.startswith(samplename+'temp'):
+                tempfilesover.append(currfile)
+        fqfile = sampledata.getfastq(samplename)
+        if not os.path.isfile(fqfile):
+            missingfqfiles.append(fqfile)
+    if len(tempfilesover) > 0:
+        for currfile in tempfilesover:
+            print >>sys.stderr, tempfile.gettempdir() +"/"+ currfile + " temp bam files exists"
+        print >>sys.stderr, "these files must be deleted to proceed"
+        sys.exit(1)
+    if len(missingfqfiles) > 0:
+        print >>sys.stderr, ",".join(missingfqfiles) + " fastq files missing"
+        sys.exit(1)
             
     for samplename in samples:
         bamfile = workingdir+samplename
