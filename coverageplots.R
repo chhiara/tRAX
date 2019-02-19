@@ -195,10 +195,10 @@ smallcovsummary <- ggplot(coveragemelt,aes(x=variable,y=value, fill = sortaccept
 scalefactor = 3
 
 smallcovsummary <- configurecombine(smallcovsummary)
-ggsave(filename=paste(combinedfile,sep= ""), smallcovsummary, width =scalefactor*(1.5+.75*length(unique(coveragemelt$Sample))), height = scalefactor*.9)
+ggsave(filename=paste(combinedfile,sep= ""), smallcovsummary, width =scalefactor*(1.5+.75*length(unique(coveragemelt$Sample))), height = scalefactor*.9, limitsize = FALSE)
 #ggsave(filename=paste(opt$unique, "-combinedcoverages.svg",sep= ""), smallcovsummary, width =.5+.75*length(unique(coveragemelt$Sample)), height = 1)
 combinescale = 3
-ggsave(filename=paste(opt$unique, "-combinedcoverages.pdf",sep= ""), smallcovsummary, width =combinescale*(.5+.75*length(unique(coveragemelt$Sample))), height = combinescale*1)
+ggsave(filename=paste(opt$unique, "-combinedcoverages.pdf",sep= ""), smallcovsummary, width =combinescale*(.5+.75*length(unique(coveragemelt$Sample))), height = combinescale*1,limitsize = FALSE)
 #ggsave(filename=paste(opt$unique, "-combinedcoverages.eps",sep= ""), smallcovsummary, width =.5+.75*length(unique(coveragemelt$Sample)), height = 1)
 
 
@@ -326,8 +326,8 @@ aminocoverage   <- ggplot(aminodata,aes(x=variable,y=value, fill = maptype, orde
 #aminocoverage <-ggplot(aminodata,aes(x=variable,y=value, fill = maptype, order=-as.numeric(maptype)), size = 2) + theme_bw()+facet_grid(Feature ~ Sample, scales="free") + geom_bar(stat="identity") +  geom_vline(aes(xintercept = dist, col = Modification),data = modomicstable,show.legend=TRUE,size=.2,linetype = "longdash")+theme(axis.text.y=element_text(colour="black",size=6),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8), strip.text.y = element_text(angle=0),strip.text.x = element_text(size = 8,angle=0)) + ylab("Normalized Read Count") +   xlab("tRNA position") + scale_y_continuous(breaks=myBreaks) +scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon","tail")) + labs(fill="Mappability", vline="RNA\nModification") #+ guide_legend(title="RNA modifications")   #+scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon", "tail"))
 
 aminocoverage <- configurecov(aminocoverage)
-
-aminoname = paste(opt$directory,"/",curramino,"-uniqcoverage",outputformat, sep = "")
+aminoname = paste(opt$unique, "-",curramino,"_cov",outputformat,sep= "")
+#aminoname = paste(opt$directory,"/",curramino,"-coverage",outputformat, sep = "")
 #print(aminoname)
 ggsave(filename=aminoname, aminocoverage,height=scalefactor*(2 + 1.5*length(unique(aminodata$Feature))),width=scalefactor*(2+5*length(unique(aminodata$Sample))), limitsize=FALSE, dpi = 600)
 

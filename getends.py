@@ -341,7 +341,7 @@ def main(**argdict):
                     #print currpair[0]+":"+currpair[1]
                     #print currfeat.name+":"+currpos+":"+str(modpos)+","+str(modpos)
                     pass
-    print >>mismatchreport, "tRNA_name\tsample\tposition\tpercentmismatch\tcoverage\ttRNAreadstotal\tactualbase\tmismatchedbases\tadenines\tthymines\tcytosines\tguanines"                            
+    print >>mismatchreport, "tRNA_name\tsample\tposition\tpercentmismatch\tcoverage\tends\ttRNAreadstotal\tactualbase\tmismatchedbases\tadenines\tthymines\tcytosines\tguanines"                            
     for currfeat in trnalist:
         
         totalreads = sum(allcoverages[currsample][currfeat.name].totalreads for currsample in samples)
@@ -356,7 +356,8 @@ def main(**argdict):
             covcounts = list(curr/(1.*readcounts[currsample][currfeat.name]) if curr is not None else 0 for curr in readmismatches[currsample][currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
             #covcounts = list(curr/(1.*readcounts[currsample][currfeat.name]) if curr is not None else "NA" for curr in allcoverages[currsample][currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
             mismatches =  list(curr if curr is not None else 0 for curr in readmismatches[currsample][currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
-
+            
+            allstarts  = list(curr if curr is not None else 0 for curr in allcoverages[currsample][currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
             allcovcount  = list(curr if curr is not None else 0 for curr in allcoverages[currsample][currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
             #covcounts = list(curr/(1.*readcounts[currrep][currfeat.name]) if curr is not None else 1 for curr in sumsamples(readmismatches,sampledata,currrep,currfeat))
             #mismatchfractions = list(curr  if curr is not None else 0 for curr in sumsamples(currcoverage,sampledata,currrep,currfeat))
@@ -375,7 +376,7 @@ def main(**argdict):
                 #mismatchfraction = mismatchcounts[i]/(1.*covcounts[i]+10)
                 if True: #currcount > mismatchthreshold and allcovcount[i] > 20:
                     #print >>mismatchreport, currfeat.name+"\t"+currsample+"\t"+str(positionnums[i])+"\t"+str(currcount) 
-                    print >>mismatchreport, "\t".join([currfeat.name,currsample,str(positionnums[i]),str(currcount),str(allcovcount[i]),str(1.*readcounts[currsample][currfeat.name]),trnastk.aligns[currfeat.name][i],str(mismatches[i]),str(adeninecount[i]),str(thyminecount[i]),str(cytosinecount[i]),str(guanosinecount[i]) ])
+                    print >>mismatchreport, "\t".join([currfeat.name,currsample,str(positionnums[i]),str(currcount),str(allcovcount[i]),str(allstarts[i]),str(1.*readcounts[currsample][currfeat.name]),trnastk.aligns[currfeat.name][i],str(mismatches[i]),str(adeninecount[i]),str(thyminecount[i]),str(cytosinecount[i]),str(guanosinecount[i]) ])
             
     mismatchfile = open(mismatchfilename, "w")
     #print >>allcoveragefile, "Feature"+"\t"+"Sample"+"\t"+"\t".join(positionnums)

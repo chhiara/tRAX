@@ -40,11 +40,17 @@ class readcoverage:
         if len(self.coverage) != len(string.translate(alignment, None, str(gapchars))):
             print >>sys.stderr, "Alignment length does not match bed length"            
         i = 0
+        lastcoverage = None
         for curr in alignment:
             #print >>sys.stderr, curr
             if curr in gapchars:
-                yield gapoutput
+                if lastcoverage is None:
+                    yield gapoutput
+                    
+                else:
+                    yield lastcoverage
             else:
+                lastcoverage = self.coverage[i]/sizefactor
                 yield self.coverage[i]/sizefactor
                 i += 1
 def nasum(operands, naval = "NA"):
