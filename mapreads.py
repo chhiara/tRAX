@@ -46,7 +46,7 @@ def wrapbowtie2(bowtiedb, unpaired, outfile, scriptdir, trnafile, maxmaps = MAXM
     logfile.flush()
     if bowtierun.returncode:
         print >>sys.stderr, "Failure to Bowtie2 map"
-        print >>sys.stderr, "check logfile"
+        print >>sys.stderr, "check mapstats file"
         logfile.close()
         sys.exit(1)
 
@@ -62,7 +62,7 @@ def wrapbowtie2(bowtiedb, unpaired, outfile, scriptdir, trnafile, maxmaps = MAXM
         return [unmappedreads,singlemaps,multmaps,totalreads]
         
     else:
-        print >>sys.stderr, "Could not map "+unpaired +", check logfile"
+        print >>sys.stderr, "Could not map "+unpaired +", check mapstats file"
         print >>sys.stderr, "Exiting..."
         sys.exit(1)
         return None
@@ -101,7 +101,7 @@ def main(**argdict):
     samples = sampledata.getsamples()
     
     trnafile = trnafile
-        
+    print >>sys.stderr, "logging to "+logfile
     if logfile and lazycreate:
         logfile = open(logfile,'a')
         print >>logfile, "New mapping"
