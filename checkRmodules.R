@@ -1,6 +1,6 @@
 
 
-library("DESeq2")
+#library("DESeq2")
 library("ggplot2")
 library("reshape2")
 library("scales")
