@@ -110,7 +110,7 @@ write.table(rbind(colnames(readcounts),dds$sizeFactor),file=paste(experimentname
 #stop("Message")
 #get deseq normalized  raw counts
 normalizedrnas = sweep(readcounts,2,dds$sizeFactor, "/" )
-write.table(normalizedrnas,paste(experimentname,"/",experimentname,"-normalized.txt", sep = ""), sep = "\t")
+write.table(normalizedrnas,paste(experimentname,"/",experimentname,"-normalizedreadcounts.txt", sep = ""), sep = "\t")
 #
 
 #stop("Message")

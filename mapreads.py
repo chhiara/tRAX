@@ -73,6 +73,9 @@ def checkheaders(bamname, fqname):
         bamfile = pysam.Samfile(bamname, "r" )
     except ValueError:
         return True
+    except IOError:
+        print >>sys.stderr, "Failed to read "+bamname
+        sys.exit(1)
     newheader = bamfile.header
     if len(newheader["PG"]) > 1 and newheader["PG"][1]["PN"] == "TRAX":
         
