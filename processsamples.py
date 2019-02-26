@@ -304,8 +304,10 @@ for currsample in replicates:
         print >>sys.stderr, "Sample names starting with digits are not allowed"
         sys.exit(1)
 
-
-if runrscript(scriptdir+"checkRmodules.R") > 0:
+deseqversion = "DESeq2"
+if olddeseq:
+    deseqversion = "DESeq"
+if runrscript(scriptdir+"checkRmodules.R",deseqversion) > 0:
     print >>sys.stderr, "Not all R modules needed are installed"
     print >>sys.stderr, "check README for needed R modules"
     sys.exit(1)
@@ -403,11 +405,10 @@ dbinfo.close()
 runrscript(scriptdir+"/featuretypes.R",expinfo.mapinfo,expinfo.mapplot)
 
 
-print >>sys.stderr, "Counting Read Types"
-counttypes(samplefilename, trnainfo,expinfo, ensgtf, bedfiles, ignoresizefactors = nosizefactors)
+#print >>sys.stderr, "Counting Read Types"
+#counttypes(samplefilename, trnainfo,expinfo, ensgtf, bedfiles, ignoresizefactors = nosizefactors)
 
 
-sys.exit(0)
 #Count the reads for DEseq2 and scatter plots
 print >>sys.stderr, "Counting Reads"
 countfeatures(samplefilename, trnainfo,expinfo, ensgtf, bedfiles)

@@ -1,6 +1,9 @@
 
 
-#library("DESeq2")
+
+args = commandArgs(trailingOnly=TRUE)
+if(args[1] == "DESeq2") {library("DESeq2")}
+if(args[1] == "DESeq") {library("DESeq")}
 library("ggplot2")
 library("reshape2")
 library("scales")
