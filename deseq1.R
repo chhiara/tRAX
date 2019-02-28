@@ -15,3 +15,6 @@ scalingfactors = t(sizeFactors( cds ))
 #write.table(rbind(colnames(readcounts),dds$sizeFactor),file=paste(experimentname,"/",experimentname,"-SizeFactors.txt", sep = ""), row.names=FALSE,col.names=FALSE)
 
 write.table(rbind(conditions,scalingfactors),file=paste(experimentname,"/",experimentname,"-SizeFactors.txt", sep = ""), row.names=FALSE,col.names=FALSE)
+
+normalizedrnas = sweep(countTable,2,scalingfactors, "/" )
+write.table(normalizedrnas,paste(experimentname,"/",experimentname,"-normalizedreadcounts.txt", sep = ""), sep = "\t")

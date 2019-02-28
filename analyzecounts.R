@@ -92,11 +92,11 @@ dds = cds
 #print adjusted p-values
 allprobs = Reduce(function(x,y) cbind(x,y), reslist)
 write.table(allprobs,paste(experimentname,"/",experimentname,"-padjs.txt", sep = ""),sep="	")
-                                                                   
+#stop("Message")                                                              
 #Print log values
 alllogvals = Reduce(function(x,y) cbind(x,y), resloglist)
 write.table(alllogvals,paste(experimentname,"/",experimentname,"-logvals.txt", sep = ""),sep="	")
-
+#stop("Message")
 #Print log values
 colnames(alllogvals) <- paste("log2", colnames(alllogvals), sep = "_")
 colnames(allprobs) <- paste("pval", colnames(allprobs), sep = "_")
@@ -113,7 +113,6 @@ normalizedrnas = sweep(readcounts,2,dds$sizeFactor, "/" )
 write.table(normalizedrnas,paste(experimentname,"/",experimentname,"-normalizedreadcounts.txt", sep = ""), sep = "\t")
 #
 
-#stop("Message")
 allcombined = cbind(allcombinevals,normalizedrnas)
 #write.table(allcombined,paste(experimentname,"/",experimentname,"-combineall.txt", sep = ""),sep="	", col.names=NA,quote=FALSE)
 

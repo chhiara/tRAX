@@ -39,14 +39,14 @@ countsmelt = countsmelt[countsmelt$value > sampletotals$x[countsmelt$variable] /
 #countsmelt = countsmelt
 #head(countsmelt)
 ggplot(countsmelt,aes(x = variable, y = value,fill = seq, stat="identity")) + theme_bw() + theme(panel.border = element_rect(linetype = "blank"), panel.grid = element_line(linetype = "blank")) + 
-	geom_bar(position = "fill",stat="identity") + 
+	geom_bar(position = "fill",stat="identity") +
     geom_bar(position = "fill",stat="identity",color="black",show.legend=FALSE) + 
     scale_y_continuous(labels = percent_format()) +
     theme(axis.text.x = element_text(size=5))+
     xlab("Sample") +
     ylab("Percentage of Total Reads") + 
     labs(fill="Read\nType")+
-    theme(axis.title.x = element_text(face="bold", size=15), axis.text.x = element_text(face="bold", size=9,angle = 90, vjust = .5))
+    theme(axis.title.x = element_text(face="bold", size=15), axis.text.x = element_text(face="bold", size=9,angle = 90, vjust = .5)) + scale_fill_brewer( type="qual")
 
 ggsave(filename=args[2])
     
