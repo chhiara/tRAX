@@ -25,7 +25,7 @@ countsmelt = melt(temp, id.vars = c('seq'))
 
 countsmelt = within(countsmelt, seq <- factor(seq, 
     rev(rownames(selectcounts)), 
-    ordered = TRUE))
+    ordered = FALSE))
 
 #head(countsmelt)
 sampletotals = aggregate(countsmelt$value, list(countsmelt$variable), sum)
@@ -46,7 +46,7 @@ ggplot(countsmelt,aes(x = variable, y = value,fill = seq, stat="identity")) + th
     xlab("Sample") +
     ylab("Percentage of Total Reads") + 
     labs(fill="Read\nType")+
-    theme(axis.title.x = element_text(face="bold", size=15), axis.text.x = element_text(face="bold", size=9,angle = 90, vjust = .5)) + scale_fill_brewer( type="qual")
+    theme(axis.title.x = element_text(face="bold", size=15), axis.text.x = element_text(face="bold", size=9,angle = 90, vjust = .5)) +scale_colour_gradient() #+ scale_fill_brewer( palette="RdPu")
 
 ggsave(filename=args[2])
     
