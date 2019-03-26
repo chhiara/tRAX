@@ -124,7 +124,7 @@ def main(**args):
     if args["trnaalignment"]:
         devnull = open(os.devnull, 'w')
         seqfile = tempmultifasta(((currtrans.name, currtrans.getmatureseq()) for currtrans in alltrnas))
-        cmcommand = ['cmalign', "-o", stkfile,"--nonbanded", "-g",trnacmfile,seqfile.name]
+        cmcommand = ['cmalign', "-o", stkfile,"--nonbanded", "--notrunc","-g",trnacmfile,seqfile.name]
         #print >>sys.stderr, " ".join(cmcommand)
         cmrun = subprocess.Popen(cmcommand, stdout = devnull)
         result = cmrun.wait()

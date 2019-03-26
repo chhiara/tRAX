@@ -33,7 +33,7 @@ def main(**args):
     #lociseqfile = tempmultifasta(lociseqs)
     devnull = open(os.devnull, 'w')
     seqfile = tempmultifasta(lociseqs.iteritems())
-    cmcommand = ['cmalign', "-o", stkfile,"--nonbanded", "-g",trnacmfile,seqfile.name]
+    cmcommand = ['cmalign', "-o", stkfile,"--nonbanded","--notrunc", "-g",trnacmfile,seqfile.name]
     #print >>sys.stderr, " ".join(cmcommand)
     cmrun = subprocess.Popen(cmcommand, stdout = devnull)
     result = cmrun.wait()

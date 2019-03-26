@@ -9,7 +9,6 @@ from trnasequtils import *
 
 
 
-
 def main(**argdict):
     argdict = defaultdict(lambda: None, argdict)
     countfrags = argdict["countfrags"]
@@ -74,6 +73,7 @@ def main(**argdict):
     otherfrags = dict()
     allfrags = dict()
     alltrnas = list()
+    maturenames = dict()
     
     
     ncrnaorder = defaultdict(int)
@@ -99,9 +99,11 @@ def main(**argdict):
             featurelist[currfile] = RangeBin(readfeatures(currfile))
         
         for currfile in locifiles:
-            trnaloci[currfile] = RangeBin(readbed(currfile))
+            trnaloci[currfile] = RangeBin(readbed(currfile), binfactor = 10000)
         for currfile in maturetrnafiles:
-            trnalist[currfile] = RangeBin(readbed(currfile))
+            matlist = list(readbed(currfile))
+            trnalist[currfile] = list(matlist)
+            maturenames[currfile] = {curr.name:curr for curr in matlist}
         if ensemblgtf is not None:    
             embllist = RangeBin(readgtf(ensemblgtf, filtertypes = set()))
         else:
@@ -189,11 +191,11 @@ def main(**argdict):
             sys.exit()
         
         for i, currread in enumerate(getbamrange(bamfile, primaryonly = True)):
-            if i > 10000:
-                pass
+
             isindel = False
     
             gotread = False
+            # continue point1
             totalsamplecounts[currsample] += 1
             if len(currread.data["CIGAR"]) > 1:
                 
@@ -215,6 +217,7 @@ def main(**argdict):
                 #continue
             readlength = len(currread.data['seq'])
             readlengths[currsample][readlength] += 1
+            #continue #point2
             for currbed in locilist:
                 for currfeat in trnaloci[currbed].getbin(currread):
                     expandfeat = currfeat.addmargin(30)
@@ -240,24 +243,29 @@ def main(**argdict):
                         break
             if gotread: 
                 continue
+            #continue #point3
+                
             for currbed in trnalist:
-                for currfeat in trnalist[currbed].getbin(currread):
-                    if currfeat.coverage(currread) > 10:
+                if currread.chrom in maturenames[currbed]:
+                    currfeat = maturenames[currbed][currread.chrom]
+                    if currread.strand == "+":
                         trnareadlengths[currsample][readlength] += 1
                         trnasamplecounts[currsample] += 1
                         trnacounts[currsample][currbed] += 1
-                        fragtype = getfragtype(currfeat, currread)
+                        
                         trnaaminocounts[currsample][trnainfo.getamino(currfeat.name)] += 1
                         aminos.add(trnainfo.getamino(currfeat.name))
-                        if fragtype == "Whole":
-                            
-                            trnawholecounts[currsample][currbed] += 1
-                        elif fragtype == "Fiveprime":
-                            trnafivecounts[currsample][currbed] += 1
-                        elif fragtype == "Threeprime":
-                            trnathreecounts[currsample][currbed] += 1
-                        elif fragtype == "Trailer":
-                            trnatrailercounts[currsample][currbed] += 1
+                        if countfrags:
+                            fragtype = getfragtype(currfeat, currread)
+                            if fragtype == "Whole":
+                                
+                                trnawholecounts[currsample][currbed] += 1
+                            elif fragtype == "Fiveprime":
+                                trnafivecounts[currsample][currbed] += 1
+                            elif fragtype == "Threeprime":
+                                trnathreecounts[currsample][currbed] += 1
+                            elif fragtype == "Trailer":
+                                trnatrailercounts[currsample][currbed] += 1
                         gotread = True
                         break
                             #print >>sys.stderr, str(currread.start - currfeat.start)+"-"+str(currread.end - currfeat.start)  
@@ -269,7 +277,7 @@ def main(**argdict):
                         break
             if gotread: 
                 continue
-    
+            #continue #point4
             if embllist is not None:
                 currtype = None
                 for currfeat in embllist.getbin(currread):
@@ -279,7 +287,6 @@ def main(**argdict):
                             
                             pass
     
-                        #print >>sys.stderr, "*******"
                         if currtype is None or ncrnaorder[currfeat.data["source"]] > ncrnaorder[currtype]:
                             currtype= currfeat.data["source"]
                             if mitochrom == currread.chrom:
@@ -294,6 +301,8 @@ def main(**argdict):
                         #print >>sys.stderr, currbam +":"+ currbed
             if gotread: 
                 continue
+            #continue #point5
+
             for currbed in bedlist:
                 
                 for currfeat in featurelist[currbed].getbin(currread):

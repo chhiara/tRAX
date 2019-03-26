@@ -652,17 +652,10 @@ def getbamrange(bamfile, chromrange = None, primaryonly = False, singleonly = Fa
             seq = currline.seq
             #print currline.cigar
             #print >>sys.stderr, currline.qname
-            if 'SRR1508404.892272' ==  currline.qname:
-                pass
-                #print >>sys.stderr, "***"
-                #print >>sys.stderr, currline.mapq
-                #print >>sys.stderr, issinglemapped(currline)
             if primaryonly and not isprimarymapping(currline):
                 continue
             if singleonly and not issinglemapping(currline):
                 continue
-            if strand == "-":
-                pass
             #[("YA",len(anticodons))] + [("YM",len(aminos))]  + [("YR",len(trnamappings))]
             uniqueac = True
             uniqueamino = True
@@ -685,7 +678,7 @@ def getbamrange(bamfile, chromrange = None, primaryonly = False, singleonly = Fa
                     secondbestscore = float(currtag[1])
                 if currtag[0] == "AS":
                     alignscore = float(currtag[1])
-            if  secondbestscore is None or alignscore > secondbestscore:
+            if secondbestscore is None or alignscore > secondbestscore:
                 uniquemapping = True
             if maxmismatches is not None and currtag[1] > maxmismatches:
                 continue  
@@ -919,6 +912,8 @@ class RangeBin:
         self.length += 1
         #print self.bins[binstart]
     def getrange(self, item):
+        #print >>sys.stderr, item.start / self.binfactor
+
         for i in range(int(item.start / self.binfactor)-1,int(item.end / self.binfactor)+1):
             if i < len(self.bins):
                 for currrange in self.bins[i]:
@@ -926,6 +921,8 @@ class RangeBin:
                             yield currrange
                             
     def getbin(self, item):
+        #print >>sys.stderr, item.start / self.binfactor
+        #print >>sys.stderr, range(int(item.start / self.binfactor)-1,int(item.end / self.binfactor)+1)
         for i in range(int(item.start / self.binfactor)-1,int(item.end / self.binfactor)+1):
             if i < len(self.bins) and i >= 0:
                 

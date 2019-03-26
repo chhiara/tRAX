@@ -109,6 +109,13 @@ allsamples = set()
 
 minsize = 15
 outputfiles = list()
+
+prepout = ""
+for currsample in samplefiles.iterkeys():
+    for currfile in samplefiles[currsample]:
+        if not os.path.isfile(currfile):
+            print >>sys.stderr, currfile +" does not exist"
+            sys.exit(1)
 for currsample in samplefiles.iterkeys():
     if not singleendmode:
         #seqprepcommmand = program+' -x '+bowtiedb+' -k '+str(maxmaps)+' --very-sensitive --ignore-quals --np 5 --reorder -p '+str(numcores)+' -U '+unpaired
@@ -122,8 +129,11 @@ for currsample in samplefiles.iterkeys():
         
         output = seqpreprun.communicate()
         errinfo = output[1]
+        if seqpreprun.returncode != 0:
+            print >>sys.stderr, "seqprep failed"
+            print >>sys.stderr, errinfo
         
-        
+        prepout += errinfo
         for line in errinfo.split("\n"):
         
             
@@ -155,14 +165,17 @@ for currsample in samplefiles.iterkeys():
         
         output = cutadaptrun.communicate()
         errinfo = output[1]
-        
-        
+        if cutadaptrun.returncode != 0:
+            print >>sys.stderr, "seqprep failed"
+            print >>sys.stderr, errinfo
+        #print >>sys.stderr, errinfo
+        prepout += errinfo
         for line in errinfo.split("\n"):
             totalmatch = recutadapttotal.match(line)
             trimmatch = recutadapttrimmed.match(line) 
             discardmatch = recutadaptshort.match(line) 
             writtenmatch = recutadaptwritten.match(line) 
-            
+            #trimmed = None
 
             if totalmatch:
                 totalreads = int(totalmatch.group(1).replace(",",""))
@@ -181,7 +194,7 @@ for currsample in samplefiles.iterkeys():
 #print >>sys.stderr, cutadaptcounts
 if not singleendmode:
     samplefile = open(runname+"_sp.txt", "w")
-    logplefile = open(runname+"_log.txt", "w")
+    logfile = open(runname+"_log.txt", "w")
     print >>samplefile,"\t".join(sampleorder)
     for currtype in ["merged","unmerged","discarded"]:
         print >>samplefile,currtype+"\t"+"\t".join(str(seqprepcounts[currsample][currtype]) for currsample in sampleorder)
@@ -192,6 +205,8 @@ if not singleendmode:
     print >>logfile ,"second adapter: "+ secadapter
     print >>logfile ,"output files: "+ ",".join(outputfiles)
     print >>logfile ," ".join(sys.argv)
+    print >>logfile ,"************************"
+    print >>logfile ,prepout
 
 
     logfile.close()    
@@ -208,6 +223,8 @@ else:
     print >>logfile ,"adapter: "+ firadapter
     print >>logfile ,"output files: "+ ",".join(outputfiles)
     print >>logfile ," ".join(sys.argv)
+    print >>logfile ,"************************"
+    print >>logfile ,prepout
 
     logfile.close()
     runrscript(scriptdir+"/featuretypesreal.R",runname+"_ca.txt",runname+"_ca.pdf")

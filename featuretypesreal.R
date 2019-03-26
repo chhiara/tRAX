@@ -16,7 +16,7 @@ counts <- read.table(args[1],check.names=FALSE)
 selectcounts = counts
 
 
-temp = cbind(selectcounts, seq = factor(rownames(selectcounts),rev(rownames(selectcounts)), ordered = TRUE))
+temp = cbind(selectcounts, seq = factor(rownames(selectcounts),rev(rownames(selectcounts))))
 
 #levels(temp$seq) <- rev(rownames(selectcounts))
 
@@ -24,8 +24,7 @@ countsmelt = melt(temp, id.vars = c('seq'))
 
 
 countsmelt = within(countsmelt, seq <- factor(seq, 
-    rev(rownames(selectcounts)), 
-    ordered = TRUE))
+    rev(rownames(selectcounts))))
 
 #head(countsmelt)
 sampletotals = aggregate(countsmelt$value, list(countsmelt$variable), sum)
