@@ -159,21 +159,19 @@ def main(**argdict):
             try:
                 allreads =set()
                 for currfeat in list(featset):
-                    #print >>sys.stderr, currfeat.name
-                    for currread in getbamrange(bamfile, currfeat, singleonly = nomultimap, maxmismatches = maxmismatches,allowindels = allowindels):
+                    for currread in getbamrangeshort(bamfile, currfeat, singleonly = nomultimap, maxmismatches = maxmismatches,allowindels = allowindels, skiptags = True):
                         #print >>sys.stderr, "**"+currread.name
+                        #continue
                         if currfeat.coverage(currread) > 10:
-                            pass
                             counts[currsample][genename] += 1 
                             genetypes[genename] = currfeat.data["source"]
                             #print >>sys.stderr, currfeat.bedstring()
-    
             except ValueError:
                 pass
         for currfeat in trnaloci:
             #print >>sys.stderr,  currfeat.bedstring()
             #print >>sys.stderr,  currfeat.getdownstream(30).bedstring()
-            for currread in getbamrange(bamfile, currfeat.addmargin(30), singleonly = nomultimap, maxmismatches = maxmismatches,allowindels = allowindels):
+            for currread in getbamrangeshort(bamfile, currfeat.addmargin(30), singleonly = nomultimap, maxmismatches = maxmismatches,allowindels = allowindels, skiptags = True):
                 #gotta be more than 5 bases off one end to be a true pre-tRNA
                 #might want to shove these to the real tRNA at some point, but they are for now just ignored
 

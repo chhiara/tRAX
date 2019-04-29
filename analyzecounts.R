@@ -35,10 +35,14 @@ samplefile = args[3]
 
 readcounts = read.table(inputtable,check.names=FALSE)
 sampledata = read.table(samplefile,check.names=FALSE)
-
+#print("*|*")
+#print(sampledata)
+#print(colnames(readcounts))
+#print(gsub("-", ".", sampledata[,1])
 #sampleinfo = as.character(sampledata[colnames(readcounts) == sampledata[,1],2])
 sampleinfo = as.character(sampledata[colnames(readcounts) == gsub("-", ".", sampledata[,1]) ,2])
 
+#print(sampleinfo)
 
 #gsub("-", ".", sampledata[,1]) 
 #sampledata[,2]
@@ -57,7 +61,6 @@ pairtable = read.table(args[4], stringsAsFactors = FALSE)
 pairreduce = pairtable[pairtable[,1] %in% samplenames & pairtable[,2] %in% samplenames,]
 comparisons <- apply(pairreduce, 1, list)
 comparisons <- lapply(comparisons,unlist)
-print(comparisons)
 
 
 }else{
@@ -66,6 +69,10 @@ comparisons = combn(unique(sampleinfo),2,simplify = FALSE)
 
 
 coldata = data.frame(condition=factor(sampleinfo))
+
+#print(ncol(readcounts))
+#print(nrow(coldata))
+#print(sampleinfo)
 
 cds = DESeqDataSetFromMatrix(countData = readcounts,coldata  ,design = ~ condition)
 cds = DESeq(cds,betaPrior=TRUE)

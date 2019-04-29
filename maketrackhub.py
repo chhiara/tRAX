@@ -63,6 +63,58 @@ def samtoolsmerge(bamfiles, outbam, force = False):
         samtoolsresults = samtoolsjob.communicate()[0]
         print >>sys.stderr, samtoolsresults
     
+
+	
+	
+def createmultiwigtrackdb(sampledata, expname):
+    trackcolors = list(['0,217,47','47,142,248','220,21,235','264,115,6','95,238,230'])
+    #trackcolors = list(['55,128,128','204,0,0','0,204,0'])    #'120,235,204'
+    currpriority = 2.3
+    trackdb = open (expname+"/trackhub/trackdb.txt", "w")
+    
+    print  >>trackdb, "track "+expname+"tracks            "
+    #print  >>trackdb, "compositeTrack on                     "
+    print  >>trackdb, "superTrack on show"
+    
+    print  >>trackdb, "shortLabel "+expname+"   "
+    print  >>trackdb, "longLabel Data from "+expname+"    "
+    #print  >>trackdb, "type bigWig                           "
+    #print  >>trackdb, "dragAndDrop on                        "
+    #print  >>trackdb, "autoScale on                          "
+    #print  >>trackdb, "alwaysZero on                         "
+    #print  >>trackdb, "maxHeightPixels 256:100:32              "
+    print  >>trackdb, "\n"
+    
+    
+    for currrep in sampledata.allreplicates():
+        for currstrand in ['Plus','Minus']:
+            print  >>trackdb, "\ttrack "+currrep+'_'+currstrand+"tracks"
+            print  >>trackdb, "\tcontainer multiWig"
+            print  >>trackdb, "\tshortLabel "+currrep+" "+currstrand+" Strand"
+            print  >>trackdb, "\tlongLabel Data from "+currrep+" "+currstrand+" Strand"
+            print  >>trackdb, "\ttype bigWig"
+            print  >>trackdb, "\tparent "+expname+"tracks on"
+            print  >>trackdb, "\tdragAndDrop on"
+            print  >>trackdb, "\taggregate transparentOverlay"
+            print  >>trackdb, "\tshowSubtrackColorOnUi on"
+            print  >>trackdb, "\tautoScale on"
+            print  >>trackdb, "\talwaysZero on"
+            print  >>trackdb, "\tpriority "+str(currpriority + .1)+"  "
+            print  >>trackdb, "\tmaxHeightPixels 256:100:32"
+            print  >>trackdb, "\n"
+            currpriority += .2
+            repsamples = sampledata.getrepsamples(currrep)
+            for i, currsample in enumerate(repsamples):
+                print  >>trackdb, "\t\ttrack "+currsample+'_'+currstrand+"track"
+                print  >>trackdb, "\t\ttype bigWig"
+                print  >>trackdb, "\t\tparent "+currrep+'_'+currstrand+"tracks"
+                print  >>trackdb, "\t\tcolor "+trackcolors[i % len(trackcolors)]+""
+                print  >>trackdb, "\t\tbigDataUrl "+currsample+"."+currstrand+".bw"
+                print  >>trackdb, "\t\tvisibility full"
+                
+                print  >>trackdb, "\n"
+
+
     
 def createtrackdb(allreps, expname):
 
@@ -105,10 +157,12 @@ def createtrackdb(allreps, expname):
         print  >>trackdb, "\n\n\n"
 
         currpriority += .2
-def makebigwigs(bamfile, repname, faifile, directory):
+def makebigwigs(bamfile, repname, faifile, directory, scalefactor = 1):
     #print >>sys.stderr, 'zsh -c "bedGraphToBigWig =(samtools view -b -F 0x10 '+bamfile+' | /projects/lowelab/users/holmes/bedtools/BEDTools/bin/genomeCoverageBed -bg -ibam stdin -g '+faifile+') '+faifile+' '+directory+"/"+repname+'.Plus.bw"'
-    plusjob = subprocess.Popen('zsh -c "bedGraphToBigWig =(samtools view -b -F 0x10 '+bamfile+' | genomeCoverageBed -bg -ibam stdin -g '+faifile+') '+faifile+' '+directory+"/"+repname+'.Plus.bw"', shell = True)
-    minusjob = subprocess.Popen('zsh -c "bedGraphToBigWig =(samtools view -b -f 0x10 '+bamfile+' | genomeCoverageBed -bg -ibam stdin -g '+faifile+') '+faifile+' '+directory+"/"+repname+'.Minus.bw"', shell = True)
+    
+    #print >>sys.stderr, 'zsh -c "bedGraphToBigWig =(samtools view -b -F 0x10 '+bamfile+' | genomeCoverageBed -scale '+' -bg -ibam stdin -g '+faifile+') ' +faifile+' '+directory+"/"+repname+'.Plus.bw"'
+    plusjob = subprocess.Popen('zsh -c "bedGraphToBigWig =(samtools view -b -F 0x10 '+bamfile+' | genomeCoverageBed -scale '+str(1./scalefactor)+' -bg -ibam stdin -g '+faifile+') '+faifile+' '+directory+"/"+repname+'.Plus.bw"', shell = True)
+    minusjob = subprocess.Popen('zsh -c "bedGraphToBigWig =(samtools view -b -f 0x10 '+bamfile+' | genomeCoverageBed -scale '+str(1./scalefactor)+' -bg -ibam stdin -g '+faifile+') '+faifile+' '+directory+"/"+repname+'.Minus.bw"', shell = True)
     plusjob.wait()
     minusjob.wait()
     pass
@@ -120,17 +174,21 @@ def main(**args):
     expname = args["expname"]
     trackdir = expname+"/trackhub"
     scriptdir = os.path.dirname(os.path.realpath(sys.argv[0]))+"/"
-
+    sizefactors = getsizefactors( expname+"/"+expname+"-SizeFactors.txt")
     if not os.path.exists(trackdir):
         os.makedirs(trackdir)
     allsamples = sampledata.getsamples()
     for currsample in allsamples:
         currbam = sampledata.getbam(currsample)
         genomebam = currsample+"-genome.bam"
-        convertbam(dbname, currbam, genomebam, scriptdir, force = True)
-    
+        #convertbam(dbname, currbam, genomebam, scriptdir, force = True)
+        #makebigwigs(genomebam, currsample, dbname+"-tRNAgenome.fa.fai",trackdir, scalefactor =  sizefactors[currsample])
+
+    createmultiwigtrackdb(sampledata,expname)
+    '''
     faidxjob = subprocess.Popen("samtools faidx "+dbname+"-tRNAgenome.fa",shell = True)
     faidxjob.wait()
+
     for currrep in sampledata.allreplicates():
         repsamples = sampledata.getrepsamples(currrep)
         samtoolsmerge(list(curr+"-genome.bam" for curr in repsamples), currrep+"-mergegenome.bam", True)
@@ -138,7 +196,7 @@ def main(**args):
         makebigwigs(currrep+"-mergegenome.bam", currrep, dbname+"-tRNAgenome.fa.fai",trackdir)
     
     createtrackdb(sampledata.allreplicates(),expname)
-        
+    '''
         
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Convert TRAX bam file into genome bam file.')

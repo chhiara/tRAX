@@ -59,6 +59,8 @@ parser.add_argument('--paironly', action="store_true", default=False,
                    help='Generate only pair files (for adding a pair file after initial processing)')
 parser.add_argument('--makehub', action="store_true", default=False,
                    help='make a track hub')
+parser.add_argument('--hubonly', action="store_true", default=False,
+                   help='make only the track hub')
 parser.add_argument('--maketdr', action="store_true", default=False,
                    help='create tdrs')
 parser.add_argument('--makeall', action="store_true", default=False,
@@ -178,12 +180,12 @@ def gettrnacoverage(samplefile, trnainfo,expinfo, ignoresizefactors = False):
 
 def getendscoverage(samplefile, trnainfo,expinfo, ignoresizefactors = False):
     if not ignoresizefactors:
-        getends.main(samplefile=samplefile,bedfile=[trnainfo.maturetrnas],sizefactors=expinfo.sizefactors,stkfile=trnainfo.trnaalign,uniquename=expname+"/"+expname, allmismatch=expinfo.trnamismatchfile,trnafasta = trnainfo.trnafasta,mismatchfile=expinfo.trnamismatchfile,mismatchreport=expinfo.trnamismatchreport )
-        runrscript(scriptdir+"/endplots.R","--cov="+expinfo.trnamismatchfile,"--mismatchcov="+expinfo.trnamismatchfile,"--trna="+trnainfo.trnatable,"--samples="+samplefile,"--allcov="+expinfo.trnamismatchplot,"--uniquename="+expname+"/"+expname,"--modomics="+trnainfo.modomics,"--directory="+expname+"/mismatch/")
+        getends.main(samplefile=samplefile,bedfile=[trnainfo.maturetrnas],sizefactors=expinfo.sizefactors,stkfile=trnainfo.trnaalign,uniquename=expname+"/mismatch/"+expname, allmismatch=expinfo.trnamismatchfile,trnafasta = trnainfo.trnafasta,mismatchfile=expinfo.trnamismatchfile,mismatchreport=expinfo.trnamismatchreport )
+        runrscript(scriptdir+"/endplots.R","--cov="+expinfo.trnamismatchfile,"--mismatchcov="+expinfo.trnamismatchfile,"--trna="+trnainfo.trnatable,"--samples="+samplefile,"--allcov="+expinfo.trnamismatchplot,"--uniquename="+expname+"/mismatch/"+expname,"--modomics="+trnainfo.modomics,"--directory="+expname+"/mismatch/")
         runrscript(scriptdir+"/boxplotmismatches.R","--mismatch="+expinfo.trnamismatchreport,"--trna="+trnainfo.trnatable,"--samples="+samplefile,"--directory="+expname+"/mismatch/")
     else:
-        getends.main(samplefile=samplefile,bedfile=[trnainfo.maturetrnas],stkfile=trnainfo.trnaalign,uniquename=expname+"/"+expname, allmismatch=expinfo.trnamismatchfile,trnafasta = trnainfo.trnafasta,mismatchfile=expinfo.trnamismatchfile,mismatchreport=expinfo.trnamismatchreport )
-        runrscript(scriptdir+"/endplots.R","--cov="+expinfo.trnamismatchfile,"--mismatchcov="+expinfo.trnamismatchfile,"--trna="+trnainfo.trnatable,"--samples="+samplefile,"--allcov="+expinfo.trnamismatchplot,"--uniquename="+expname+"/mismatch/"+expname,"--modomics="+trnainfo.modomics,"--directory="+expname+"/mismatch/")
+        getends.main(samplefile=samplefile,bedfile=[trnainfo.maturetrnas],stkfile=trnainfo.trnaalign,uniquename=expname+"/mismatch/"+expname, allmismatch=expinfo.trnamismatchfile,trnafasta = trnainfo.trnafasta,mismatchfile=expinfo.trnamismatchfile,mismatchreport=expinfo.trnamismatchreport )
+        runrscript(scriptdir+"/endplots.R","--cov="+expinfo.trnamismatchfile,"--mismatchcov="+expinfo.trnamismatchfile,"--trna="+trnainfo.trnatable,"--samples="+samplefile,"--allcov="+expinfo.trnamismatchplot,"--uniquename="+expname+"/mismatch/mismatch/"+expname,"--modomics="+trnainfo.modomics,"--directory="+expname+"/mismatch/")
         runrscript(scriptdir+"/boxplotmismatches.R","--mismatch="+expinfo.trnamismatchreport,"--trna="+trnainfo.trnatable,"--samples="+samplefile,"--directory="+expname+"/mismatch/")
 
 def getlocuscoverage(samplefile, trnainfo,expinfo, ignoresizefactors = False):
@@ -219,6 +221,8 @@ olddeseq = args.olddeseq
 mismatch = args.mismatch 
 paironly= args.paironly
 splittypecounts = args.splittypecounts
+
+hubonly = args.hubonly
 
 makehubs = args.makehub 
 maketdrs= args.maketdr
@@ -274,10 +278,6 @@ def testrstats():
         print >>sys.stderr, "Could not find R version number"
 
 
-
-
-
-        
         
 testrstats()
 get_location("Rscript")
@@ -369,7 +369,11 @@ elif paironly:
     print >>sys.stderr, "pair only mode used but no --pairfile used"
     sys.exit(1)
 
+if hubonly:
+    print >>sys.stderr, "Creating trackhub"      
 
+    createtrackhub(samplefilename, dbname,expname)
+    sys.exit(0)
 #getendscoverage(samplefilename, trnainfo,expinfo, nosizefactors)
 #
 #

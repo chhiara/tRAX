@@ -18,10 +18,12 @@ class readcoverage:
         self.coverage = list()
         self.length = region.length()
         self.totalreads = 0
+        self.strand = self.region.strand
         for i in range(0,region.length()):
             self.coverage.append(0)
     def addread(self, read):
         self.totalreads += 1
+        #maxes and mins here cover reads that are just outside the bounds of the transcript
         if self.region.strand == "+":
             start = max([0, read.start - self.region.start])
             end = min([self.length, read.end - self.region.start])
@@ -29,10 +31,23 @@ class readcoverage:
         else:
             start = max([0, self.region.end - read.end])
             end = min([self.length, self.region.end - read.start])
-        
+         
         for currpos in range(self.length):
             if start <= currpos <= end - 1:
                 self.coverage[currpos] += 1
+    def testbase(self, base):
+        #print >>sys.stderr, "***"
+        pass
+    def addbase(self, base):
+        #self.totalreads += 1
+        posbase = max([0, base - self.region.start])
+        if 0 < posbase < len(self.coverage) - 1:
+            self.coverage[posbase] += 1
+        else:
+            pass
+            
+
+               
                 
     def coveragelist(self):
         return self.coverage
@@ -215,6 +230,7 @@ def main(**argdict):
     
         
     allcoverages = dict()
+    readstarts = dict()
     multaminocoverages = dict()
     multaccoverages = dict()
     multtrnacoverages = dict()
@@ -226,12 +242,15 @@ def main(**argdict):
     adeninemismatches = dict()
     thyminemismatches = dict()
     cytosinemismatches = dict()
-    guanosinemismatches = dict()        
+    guanosinemismatches = dict()     
+    readstarts = dict()
     
     
     for currsample in samples:
         currbam = sampledata.getbam(currsample)
         allcoverages[currsample] = dict()
+        readstarts[currsample] = dict()
+        
         multaminocoverages[currsample] = dict()
         multaccoverages[currsample] = dict()
         multtrnacoverages[currsample] = dict()
@@ -258,6 +277,7 @@ def main(**argdict):
         for i, currfeat in enumerate(basetrnas):
             #print >>sys.stderr, currfeat.name
             allcoverages[currsample][currfeat.name] = readcoverage(trnalist[i])
+            readstarts[currsample][currfeat.name] = readcoverage(trnalist[i])
             multaminocoverages[currsample][currfeat.name] = readcoverage(trnalist[i])
             multaccoverages[currsample][currfeat.name] = readcoverage(trnalist[i])
             multtrnacoverages[currsample][currfeat.name] = readcoverage(trnalist[i])
@@ -273,14 +293,19 @@ def main(**argdict):
         
         
             for currread in getbamrange(bamfile, currfeat,maxmismatches = maxmismatches,allowindels = False):
+                
                 if  basetrnas[i].coverage(currread) > 10:
-
+                    #print >>sys.stderr, "**"
+                    #continue
                     if minextend is not None and not (currread.start + minextend <= currfeat.start or currread.end - minextend >= currfeat.end):
                         continue
                     readcounts[currsample][trnalist[i].name] += 1
                     readcounts[sampledata.getreplicatename(currsample)][trnalist[i].name] += 1  
                     readstart = currread.getfirst(1)
-                    #allcoverages[currsample][trnalist[i].name].addread(readstart)
+                    trnaname = trnalist[i].name
+                    allcoverages[currsample][trnaname].addread(currread)
+                    readstarts[currsample][trnaname].addread(readstart)
+                    
                     if not isuniqueaminomapping(currread):
                         multaminocoverages[currsample][trnalist[i].name].addread(readstart)
                     elif not isuniqueacmapping(currread):
@@ -293,29 +318,44 @@ def main(**argdict):
                         uniquegenomecoverages[currsample][trnalist[i].name].addread(readstart)
                     else:
                         multigenomecoverages[currsample][trnalist[i].name].addread(readstart)
-                    for currpos in range(len(currread.data["seq"])):
-
-                        if trnaseqs[currfeat.name][currread.start+ currpos] != currread.data["seq"][currpos]:
-                            #print >>sys.stderr, readmismatches[currsample].keys()
-                            #print >>sys.stderr, allcoverages[currsample].keys()
-                            readmismatches[currsample][trnalist[i].name].addread(currread.getbase(currpos))
-                            if 10 < currpos < 30:
-                                pass
-                                #print >>sys.stderr, trnaseqs[currfeat.name][currread.start+ currpos-5:currread.start+ currpos+5]
-                                #print >>sys.stderr, currread.data["seq"][currpos-5:currpos+5]
-                                #print >>sys.stderr, currpos
-                        allcoverages[currsample][trnalist[i].name].addread(currread.getbase(currpos))
-                        if currread.data["seq"][currpos] == "A":
-                            adeninemismatches[currsample][trnalist[i].name].addread(currread.getbase(currpos))
-                        elif currread.data["seq"][currpos] == "T":
-                            thyminemismatches[currsample][trnalist[i].name].addread(currread.getbase(currpos))
-                        elif currread.data["seq"][currpos] == "C":
-                            cytosinemismatches[currsample][trnalist[i].name].addread(currread.getbase(currpos))
-                        elif currread.data["seq"][currpos] == "G":
-                            guanosinemismatches[currsample][trnalist[i].name].addread(currread.getbase(currpos))
+                    
+                    currseq = currread.data["seq"]
+                    #allcoverages[currsample][trnaname].addread(currread)
+                    for currpos in range(len(currseq)): #30
+                        #the first position is often weird, so I'm ignoring it
+                        #if currpos == 0:
+                            
+                        
+                        currbase = currseq[currpos]
+                        #baserange = currread.getbase(currpos) #here
+                        
+                        
+                        #continue #23 minutes
+                        #allcoverages[currsample][trnaname].testbase(currpos) # 18m45.822s for testbase
+                        #continue
+                        #allcoverages[currsample][trnaname].addbase(currpos)
+                        #if currfeat.name == "tRNA-Ala-AGC-1" and currsample == 'MCF7_Truseq_1' and trnaseqs[currfeat.name][currread.start+ currpos] != currbase:
+                            #print >>sys.stderr, currpos
+                            #print >>sys.stderr, currread.start
+                            #print >>sys.stderr, currread.start + currpos
+                            #print >>sys.stderr, trnaseqs[currfeat.name][currread.start+ currpos - 3:currread.start+ currpos + 3]
+                            #print >>sys.stderr, currbase
+                            
+                        if trnaseqs[currfeat.name][currread.start+ currpos] != currbase:
+                            readmismatches[currsample][trnaname].addbase(currread.start + currpos)
+                        
+                        if currbase == "A":
+                            adeninemismatches[currsample][trnaname].addbase(currread.start + currpos)
+                        elif currbase == "T":
+                            thyminemismatches[currsample][trnaname].addbase(currread.start + currpos)
+                        elif currbase == "C":
+                            cytosinemismatches[currsample][trnaname].addbase(currread.start + currpos)
+                        elif currbase == "G":
+                            guanosinemismatches[currsample][trnaname].addbase(currread.start + currpos)
                 else:
                     pass
                     #print >>sys.stderr, "***"
+    #sys.exit(1) #6 mins
     replicates = sampledata.allreplicates()
     covfiles = dict()
     for currpair in pairfiles:
@@ -341,7 +381,11 @@ def main(**argdict):
                     #print currpair[0]+":"+currpair[1]
                     #print currfeat.name+":"+currpos+":"+str(modpos)+","+str(modpos)
                     pass
-    print >>mismatchreport, "tRNA_name\tsample\tposition\tpercentmismatch\tcoverage\tends\ttRNAreadstotal\tactualbase\tmismatchedbases\tadenines\tthymines\tcytosines\tguanines"                            
+    #sys.exit(1) #6 mins
+    print >>mismatchreport, "tRNA_name\tsample\tposition\tpercentmismatch\tcoverage\tends\ttRNAreadstotal\tactualbase\tmismatchedbases\tadenines\tthymines\tcytosines\tguanines"
+    mismatchfile = open(mismatchfilename, "w")
+    #print >>allcoveragefile, "Feature"+"\t"+"Sample"+"\t"+"\t".join(positionnums)
+    print >>mismatchfile, "Feature"+"\t"+"Sample"+"\t"+"\t".join(positionnums)
     for currfeat in trnalist:
         
         totalreads = sum(allcoverages[currsample][currfeat.name].totalreads for currsample in samples)
@@ -357,7 +401,7 @@ def main(**argdict):
             #covcounts = list(curr/(1.*readcounts[currsample][currfeat.name]) if curr is not None else "NA" for curr in allcoverages[currsample][currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
             mismatches =  list(curr if curr is not None else 0 for curr in readmismatches[currsample][currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
             
-            allstarts  = list(curr if curr is not None else 0 for curr in allcoverages[currsample][currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
+            allstarts  = list(curr if curr is not None else 0 for curr in readstarts[currsample][currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
             allcovcount  = list(curr if curr is not None else 0 for curr in allcoverages[currsample][currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
             #covcounts = list(curr/(1.*readcounts[currrep][currfeat.name]) if curr is not None else 1 for curr in sumsamples(readmismatches,sampledata,currrep,currfeat))
             #mismatchfractions = list(curr  if curr is not None else 0 for curr in sumsamples(currcoverage,sampledata,currrep,currfeat))
@@ -377,62 +421,85 @@ def main(**argdict):
                 if True: #currcount > mismatchthreshold and allcovcount[i] > 20:
                     #print >>mismatchreport, currfeat.name+"\t"+currsample+"\t"+str(positionnums[i])+"\t"+str(currcount) 
                     print >>mismatchreport, "\t".join([currfeat.name,currsample,str(positionnums[i]),str(currcount),str(allcovcount[i]),str(allstarts[i]),str(1.*readcounts[currsample][currfeat.name]),trnastk.aligns[currfeat.name][i],str(mismatches[i]),str(adeninecount[i]),str(thyminecount[i]),str(cytosinecount[i]),str(guanosinecount[i]) ])
-            
-    mismatchfile = open(mismatchfilename, "w")
-    #print >>allcoveragefile, "Feature"+"\t"+"Sample"+"\t"+"\t".join(positionnums)
-    print >>mismatchfile, "Feature"+"\t"+"Sample"+"\t"+"\t".join(positionnums)
+    #sys.exit(1)        
 
 
-    for currfeat in trnalist:
+
         totalreads = sum(allcoverages[currsample][currfeat.name].totalreads for currsample in samples)
         if totalreads < mincoverage:
             continue
         if combinereps:
     
             replicates = sampledata.allreplicates()
-            for currrep in replicates:
+            for currrep in replicates:  
                 covcounts = list(curr/(1.*readcounts[currrep][currfeat.name] + 20.0) if curr is not None else 0 for curr in sumsamples(readmismatches,sampledata,currrep,currfeat))
                 #print >>mismatchfile, currfeat.name+"\t"+currrep+"\t"+"\t".join(str(curr) for curr in covcounts)
                 #print >>allcoveragefile, currfeat.name+"\t"+currrep+"\t"+"\t".join(str(curr/(1.*covcounts[i]+10)) if curr is not None else "NA" for i, curr in enumerate(sumsamples(allcoverages,sampledata,currrep,currfeat)))
 
         else:
+            #print >>sys.stderr, "**"
             for currsample in samples:
                 allcovcount  = list(curr if curr is not None else 0 for curr in allcoverages[currsample][currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
-                covcounts  = list(curr/(1.*allcovcount[i] + 20.0) if curr is not None else 0 for i, curr in enumerate(readmismatches[currsample][currfeat.name].coveragealign(trnastk.aligns[currfeat.name])))
+                
+                #covcounts  = list(curr/(1.*allcovcount[i] + 20.0) if curr is not None else 0 for i, curr in enumerate(readmismatches[currsample][currfeat.name].coveragealign(trnastk.aligns[currfeat.name])))
+                mismatchcount =  list(curr if curr is not None else 0 for i, curr in enumerate(readmismatches[currsample][currfeat.name].coveragealign(trnastk.aligns[currfeat.name])))
+                #covcounts  = list(str(curr)+"/"+str(1.*allcovcount[i]) for i, curr in enumerate(mismatchcount))
+                covcounts  = list(str(curr/(1.*allcovcount[i]+10)) for i, curr in enumerate(mismatchcount))
+                for i, curr in enumerate(mismatchcount): 
+                    break
+                    if curr > allcovcount[i]:
+                        #print >>sys.stderr, currfeat.name
+                        #print >>sys.stderr, currsample
+                        #print >>sys.stderr, str(curr)+"/"+str(allcovcount[i])
+                        #print >>sys.stderr,",".join(str(curr) for curr in mismatchcount)
+                        #print >>sys.stderr,",".join(str(curr) for curr in allcovcount)
+                        #print >>sys.stderr,",".join(str(curr) for curr in trnastk.aligns[currfeat.name])
+                        
+                        #sys.exit(1)
+                        pass
+                #covcounts  = list(curr/(1.*allcovcount[i]) for i, curr in enumerate(mismatchcount))
+                #covcounts  = list(str(curr)+"/"+str(1.*allcovcount[i] + 20.0) if curr is not None else 0 for i, curr in enumerate(readmismatches[currsample][currfeat.name].coveragealign(trnastk.aligns[currfeat.name])))
 
                 #covcounts = list(curr/(1.*readcounts[currsample][currfeat.name]) if curr is not None else "NA" for curr in readmismatches[currsample][currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
                 print >>mismatchfile, currfeat.name+"\t"+currsample+"\t"+"\t".join(str(curr) for curr in covcounts)
                 #print >>allcoveragefile, currfeat.name+"\t"+currsample+"\t"+"\t".join(str(curr/(1.*covcounts[i]+10)) if curr is not None else "NA" for i, curr in enumerate(allcoverages[currsample][currfeat.name].coveragealign(trnastk.aligns[currfeat.name])))
 
                 
-                        
+    #sys.exit(1)                    
     if uniquename:
         #multaminocoverages[currsample][currfeat.name] = readcoverage(trnalist[i])
         #multaccoverages[currsample][currfeat.name] = readcoverage(trnalist[i])
         #multtrnacoverages[currsample][currfeat.name] = readcoverage(trnalist[i])
         #uniquecoverages[currsample][currfeat.name] = readcoverage(trnalist[i])
         covfiles = {uniquename + '-uniqueends.txt':uniquecoverages,uniquename + '-multacends.txt':multaccoverages,uniquename + '-multtrnaends.txt':multtrnacoverages,uniquename + '-multaminoends.txt':multaminocoverages}
+        #print >>sys.stderr, uniquename
+        #print >>sys.stderr, covfiles.keys()
+        #sys.exit(1)
         
         for filename, currcoverage in covfiles.iteritems():
             #print >>sys.stderr, "file"
             #print >>sys.stderr, filename
             #sys.exit()
-            
+            print >>sys.stderr, os.path.abspath(filename)
             covfile = open(filename, "w")
             print >>covfile,"Feature"+"\t"+"Sample"+"\t"+"\t".join(positionnums)
                 
             for currfeat in trnalist:
                 totalreads = sum(allcoverages[currsample][currfeat.name].totalreads for currsample in samples)
+                #print >>sys.stderr, currfeat.name +":"+str(totalreads)
                 if totalreads < mincoverage:
                     continue
                 if combinereps:
             
                     replicates = sampledata.allreplicates()
                     for currrep in replicates:
+                        #print  >>covfile,currfeat.name+"\t"+currrep+"\t"+"\t".join(str(curr/(1.*readcounts[currrep][currfeat.name]))  if curr is not None else "NA" for curr in sumsamples(currcoverage,sampledata,currrep,currfeat))
                         print  >>covfile,currfeat.name+"\t"+currrep+"\t"+"\t".join(str(curr/(1.*readcounts[currrep][currfeat.name]))  if curr is not None else "NA" for curr in sumsamples(currcoverage,sampledata,currrep,currfeat))
                 else:
                     for currsample in samples:
+                        #print  >>covfile,currfeat.name+"\t"+currsample+"\t"+"\t".join(str(curr/(1.*readcounts[currsample][currfeat.name]))  if curr is not None else "NA" for curr in currcoverage[currsample][currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
                         print  >>covfile,currfeat.name+"\t"+currsample+"\t"+"\t".join(str(curr/(1.*readcounts[currsample][currfeat.name]))  if curr is not None else "NA" for curr in currcoverage[currsample][currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
+
             covfile.close()
         
 if __name__ == "__main__":

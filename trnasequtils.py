@@ -393,7 +393,7 @@ def getsizefactors( sizefactorfile):
 #special class that uses the read indentifier for hashing in sets
 
 class GenomeRange:
-    __slots__ = "dbname", "chrom", "strand","name", "fastafile"
+    __slots__ = "dbname", "chrom", "strand","name", "fastafile", "start", "end"
     def __eq__(self, other):
         return self.strand == other.strand and self.chrom == other.chrom and self.start == other.start and self.end == other.end
     def __hash__(self):
@@ -631,9 +631,64 @@ def ifelse(arg, trueres,falseres):
 def isprimarymapping(mapping):
     return not (mapping.flag & 0x0100 > 0)        
 def issinglemapping(mapping):
-    return mapping.mapq > 2        
+    return mapping.mapq > 2
+    
+def getbamrangeshortseq(bamfile, chromrange = None, primaryonly = False, singleonly = False, maxmismatches = None, allowindels=True, skiptags = False):
+    bamiter = None
+    try:
+        if chromrange is not None:
+            bamiter = bamfile.fetch(chromrange.chrom, chromrange.start, chromrange.end)
+        else:
+            bamiter = bamfile.fetch()
+   
+        for currline in bamiter: 
+            if primaryonly and not isprimarymapping(currline):
+                continue
 
-def getbamrange(bamfile, chromrange = None, primaryonly = False, singleonly = False, maxmismatches = None, allowindels=True):
+            if singleonly and not issinglemapping(currline):
+                continue
+            if not allowindels and len(currline.cigar) > 1:
+                continue
+            rname = bamfile.getrname(currline.rname)
+            strand = "+"
+            strand = ifelse(currline.is_reverse, '-','+')
+            yield GenomeRead( "genome",rname,currline.pos,currline.aend,strand, name = currline.qname, data = {"seq":currline.seq} )
+
+    except ValueError as err:
+        #print>>sys.stderr, err
+        #print>>sys.stderr, bamfile.name
+        if chromrange is not None:
+            #print >>sys.stderr, chromrange.chrom+":"+ str(chromrange.start)+"-"+str(chromrange.end) +" failed"
+            pass
+def getbamrangeshort(bamfile, chromrange = None, primaryonly = False, singleonly = False, maxmismatches = None, allowindels=True, skiptags = False):
+    bamiter = None
+    try:
+        if chromrange is not None:
+            bamiter = bamfile.fetch(chromrange.chrom, chromrange.start, chromrange.end)
+        else:
+            bamiter = bamfile.fetch()
+   
+        for currline in bamiter: 
+            if primaryonly and not isprimarymapping(currline):
+                continue
+
+            if singleonly and not issinglemapping(currline):
+                continue
+            if not allowindels and len(currline.cigar) > 1:
+                continue
+            rname = bamfile.getrname(currline.rname)
+            strand = "+"
+            strand = ifelse(currline.is_reverse, '-','+')
+            
+            yield GenomeRead( "genome",rname,currline.pos,currline.aend,strand, name = currline.qname)
+
+    except ValueError as err:
+        #print>>sys.stderr, err
+        #print>>sys.stderr, bamfile.name
+        if chromrange is not None:
+            #print >>sys.stderr, chromrange.chrom+":"+ str(chromrange.start)+"-"+str(chromrange.end) +" failed"
+            pass
+def getbamrange(bamfile, chromrange = None, primaryonly = False, singleonly = False, maxmismatches = None, allowindels=True, skiptags = False):
     bamiter = None
     try:
         if chromrange is not None:
@@ -642,20 +697,26 @@ def getbamrange(bamfile, chromrange = None, primaryonly = False, singleonly = Fa
             bamiter = bamfile.fetch()
    
         for currline in bamiter:
+            if primaryonly and not isprimarymapping(currline):
+                continue
+
+            if singleonly and not issinglemapping(currline):
+                continue
+                
             rname = bamfile.getrname(currline.rname)
+            strand = "+"
+            strand = ifelse(currline.is_reverse, '-','+')
+            #yield GenomeRead( "genome",rname,currline.pos,currline.aend,strand, name = currline.qname)
+            #continue
             #print rname
             #need to fix this with cigar stuff
             #len(currline.pos)
-            strand = "+"
-            strand = ifelse(currline.is_reverse, '-','+')
+
             #not giving the reverse complement for now
             seq = currline.seq
             #print currline.cigar
             #print >>sys.stderr, currline.qname
-            if primaryonly and not isprimarymapping(currline):
-                continue
-            if singleonly and not issinglemapping(currline):
-                continue
+
             #[("YA",len(anticodons))] + [("YM",len(aminos))]  + [("YR",len(trnamappings))]
             uniqueac = True
             uniqueamino = True
@@ -665,23 +726,23 @@ def getbamrange(bamfile, chromrange = None, primaryonly = False, singleonly = Fa
             alignscore = None
             secondbestscore = None
             uniquemapping = False
-            for currtag in currline.tags:
-                if currtag[0] == "YA" and currtag[1] > 1:
-                    uniqueac = False
-                if currtag[0] == "YM" and currtag[1] > 1:
-                    uniqueamino = False
-                if currtag[0] == "YR" and currtag[1] > 1:
-                    uniquetrna = False   
-                if currtag[0] == "XM":
-                    mismatches = currtag[1]
-                if currtag[0] == "XS":
-                    secondbestscore = float(currtag[1])
-                if currtag[0] == "AS":
-                    alignscore = float(currtag[1])
+            if not skiptags:
+                for currtag in currline.tags:
+                    if currtag[0] == "YA" and currtag[1] > 1:
+                        uniqueac = False
+                    if currtag[0] == "YM" and currtag[1] > 1:
+                        uniqueamino = False
+                    if currtag[0] == "YR" and currtag[1] > 1:
+                        uniquetrna = False   
+                    if currtag[0] == "XM":
+                        mismatches = currtag[1]
+                    if currtag[0] == "XS":
+                        secondbestscore = float(currtag[1])
+                    if currtag[0] == "AS":
+                        alignscore = float(currtag[1])
             if secondbestscore is None or alignscore > secondbestscore:
                 uniquemapping = True
-            if maxmismatches is not None and currtag[1] > maxmismatches:
-                continue  
+
             if not allowindels and len(currline.cigar) > 1:
                 continue
             yield GenomeRead( "genome",rname,currline.pos,currline.aend,strand, name = currline.qname , data = {"score":currline.mapq, "CIGAR":currline.cigar,"CIGARstring":currline.cigarstring, "seq":seq, "flags": currline.flag, "qual":currline.qual,"bamline":currline,'uniqueac':uniqueac,"uniqueamino":uniqueamino,"uniquetrna":uniquetrna,"uniquemapping":uniquemapping})

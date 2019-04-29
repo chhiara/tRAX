@@ -211,17 +211,9 @@ def main(**argdict):
 
                 if  trnalist[i].coverage(currread) > 10:
                     
-                    if currfeat.name == "tRNA-Glu-TTC-5-1":
-                        pass
-                        #print "**"
+
                     if minextend is not None and not (currread.start + minextend <= trnalist[i].start or currread.end - minextend >= trnalist[i].end):
                         continue
-                    if trnalist[i].name == "tRNA-Ile-AAT-5-5":
-                        pass
-                        #print >>sys.stderr, "**"
-                    if currfeat.coverage(currread) > 10:
-                        #continue
-                        pass
 
   
                     allcoverages[currsample][trnalist[i].name].addread(currread)

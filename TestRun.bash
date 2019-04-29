@@ -10,7 +10,7 @@ fastq-dump -Z SRR207111 | cutadapt -m 15 --adapter='CGTATGCCGTCT' - |  gzip -c  
 fastq-dump -Z SRR207116 | cutadapt -m 15 --adapter='CGTATGCCGTCT' - |  gzip -c  >SRR207116.fastq.gz
 
 #Download and combine hg19 chromosomes 
-wget http://hgdownload-test.cse.ucsc.edu/goldenPath/hg19/bigZips/chromFa.tar.gz
+wget http://hgdownload.soe.ucsc.edu/goldenPath/hg19/bigZips/chromFa.tar.gz
 tar xvf chromFa.tar.gz -O > hg19.fa
 
 #Download ensembl GTF, change chromosome names

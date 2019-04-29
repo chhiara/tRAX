@@ -189,13 +189,13 @@ def main(**argdict):
         except IOError as ( strerror):
             print >>sys.stderr, strerror
             sys.exit()
-        
-        for i, currread in enumerate(getbamrange(bamfile, primaryonly = True)):
+        #continue #point0
+        for i, currread in enumerate(getbamrange(bamfile, primaryonly = True, skiptags = True)):
 
             isindel = False
     
             gotread = False
-            # continue point1
+            #continue #point1
             totalsamplecounts[currsample] += 1
             if len(currread.data["CIGAR"]) > 1:
                 
@@ -210,7 +210,7 @@ def main(**argdict):
                     #indelaligns[currsample] += 1
                     pass
                 isindel = True
-                continue
+                #continue
 
             else:
                 pass
@@ -407,11 +407,7 @@ def main(**argdict):
                 
             else:
                 print  >>realcountfile, "tRNA\t"+"\t".join(str(trnacounts[currsample][currbed]) for currsample in samples)
-                
 
-            
-            
-        
         for currbed in locilist:
             if countfrags:
                 print  >>realcountfile, "pretRNA_full\t"+"\t".join(str(fulltrnalocuscounts[currsample][currbed]) for currsample in samples)
@@ -420,13 +416,14 @@ def main(**argdict):
             else:
                 print  >>realcountfile, "pretRNA\t"+"\t".join(str(trnalocuscounts[currsample][currbed]) for currsample in samples)
         for currbiotype in emblbiotypes:
-            print  >>realcountfile, currbiotype+"\t"+"\t".join(str(emblcounts[currsample][currbed]) for currsample in samples)
+            #print >>sys.stderr, emblcounts[currsample]
+            print  >>realcountfile, currbiotype+"\t"+"\t".join(str(emblcounts[currsample][currbiotype]) for currsample in samples)
         for currbed in bedlist:
             print  >>realcountfile, os.path.basename(currbed)+"\t"+"\t".join(str(counts[currsample][currbed]) for currsample in samples)
         print  >>realcountfile, "other"+"\t"+"\t".join(str(othercounts[currsample]) for currsample in samples)
         
         
-        
+    realcountfile.close()
     
     #print >>sys.stderr, trnaaminocounts
     if trnaaminofilename is not None:
