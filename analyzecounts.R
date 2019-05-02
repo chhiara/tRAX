@@ -61,8 +61,6 @@ pairtable = read.table(args[4], stringsAsFactors = FALSE)
 pairreduce = pairtable[pairtable[,1] %in% samplenames & pairtable[,2] %in% samplenames,]
 comparisons <- apply(pairreduce, 1, list)
 comparisons <- lapply(comparisons,unlist)
-
-
 }else{
 comparisons = combn(unique(sampleinfo),2,simplify = FALSE)
 }
@@ -96,18 +94,30 @@ resavglist = lapply(compareresults, function(currresult){colgetlogname(currresul
 dds = cds
 
 
+
+
 #print adjusted p-values
 allprobs = Reduce(function(x,y) cbind(x,y), reslist)
 write.table(allprobs,paste(experimentname,"/",experimentname,"-padjs.txt", sep = ""),sep="	")
 #stop("Message")                                                              
 #Print log values
+
+
 alllogvals = Reduce(function(x,y) cbind(x,y), resloglist)
 write.table(alllogvals,paste(experimentname,"/",experimentname,"-logvals.txt", sep = ""),sep="	")
+
 #stop("Message")
 #Print log values
+#print("***")
+#head(pairtable)
+#head(samplenames)
+#head(pairreduce)
 colnames(alllogvals) <- paste("log2", colnames(alllogvals), sep = "_")
+#print("***||")
+
 colnames(allprobs) <- paste("pval", colnames(allprobs), sep = "_")
 allcombinevals = cbind(alllogvals,allprobs)
+
 write.table(allcombinevals,paste(experimentname,"/",experimentname,"-combine.txt", sep = ""),sep="	", col.names=NA,quote=FALSE) 
 
 

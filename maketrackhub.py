@@ -157,12 +157,22 @@ def createtrackdb(allreps, expname):
         print  >>trackdb, "\n\n\n"
 
         currpriority += .2
+        
+'''
+chr9
+  37244 chr1_KI270762v1_alt     141679  141702  1.1772
+  37245 chr1_KI270766v1_alt     92568   92634   1.1772
+  sort -k1,1 -k2,2n" with LC_COLLATE=C
+'''
+
 def makebigwigs(bamfile, repname, faifile, directory, scalefactor = 1):
     #print >>sys.stderr, 'zsh -c "bedGraphToBigWig =(samtools view -b -F 0x10 '+bamfile+' | /projects/lowelab/users/holmes/bedtools/BEDTools/bin/genomeCoverageBed -bg -ibam stdin -g '+faifile+') '+faifile+' '+directory+"/"+repname+'.Plus.bw"'
     
     #print >>sys.stderr, 'zsh -c "bedGraphToBigWig =(samtools view -b -F 0x10 '+bamfile+' | genomeCoverageBed -scale '+' -bg -ibam stdin -g '+faifile+') ' +faifile+' '+directory+"/"+repname+'.Plus.bw"'
-    plusjob = subprocess.Popen('zsh -c "bedGraphToBigWig =(samtools view -b -F 0x10 '+bamfile+' | genomeCoverageBed -scale '+str(1./scalefactor)+' -bg -ibam stdin -g '+faifile+') '+faifile+' '+directory+"/"+repname+'.Plus.bw"', shell = True)
-    minusjob = subprocess.Popen('zsh -c "bedGraphToBigWig =(samtools view -b -f 0x10 '+bamfile+' | genomeCoverageBed -scale '+str(1./scalefactor)+' -bg -ibam stdin -g '+faifile+') '+faifile+' '+directory+"/"+repname+'.Minus.bw"', shell = True)
+    print >>sys.stderr, 'zsh -c "bedGraphToBigWig =(samtools view -b -F 0x10 '+bamfile+' | genomeCoverageBed -scale '+str(1./scalefactor)+' -bg -ibam stdin -g '+faifile+') '+faifile+' '+directory+"/"+repname+'.Plus.bw"'
+
+    plusjob = subprocess.Popen('zsh -c "bedGraphToBigWig =(samtools view -b -F 0x10 '+bamfile+' | genomeCoverageBed -scale '+str(1./scalefactor)+' -bg -ibam stdin -g '+faifile+' | sort -k1,1 -k2,2n) '+faifile+' '+directory+"/"+repname+'.Plus.bw"', shell = True)
+    minusjob = subprocess.Popen('zsh -c "bedGraphToBigWig =(samtools view -b -f 0x10 '+bamfile+' | genomeCoverageBed -scale '+str(1./scalefactor)+' -bg -ibam stdin -g '+faifile+' | sort -k1,1 -k2,2n) '+faifile+' '+directory+"/"+repname+'.Minus.bw"', shell = True)
     plusjob.wait()
     minusjob.wait()
     pass
@@ -178,16 +188,17 @@ def main(**args):
     if not os.path.exists(trackdir):
         os.makedirs(trackdir)
     allsamples = sampledata.getsamples()
+    faidxjob = subprocess.Popen("samtools faidx "+dbname+"-tRNAgenome.fa",shell = True)
+    faidxjob.wait()
     for currsample in allsamples:
         currbam = sampledata.getbam(currsample)
         genomebam = currsample+"-genome.bam"
-        #convertbam(dbname, currbam, genomebam, scriptdir, force = True)
-        #makebigwigs(genomebam, currsample, dbname+"-tRNAgenome.fa.fai",trackdir, scalefactor =  sizefactors[currsample])
+        convertbam(dbname, currbam, genomebam, scriptdir, force = True)
+        makebigwigs(genomebam, currsample, dbname+"-tRNAgenome.fa.fai",trackdir, scalefactor =  sizefactors[currsample])
 
     createmultiwigtrackdb(sampledata,expname)
     '''
-    faidxjob = subprocess.Popen("samtools faidx "+dbname+"-tRNAgenome.fa",shell = True)
-    faidxjob.wait()
+
 
     for currrep in sampledata.allreplicates():
         repsamples = sampledata.getrepsamples(currrep)
