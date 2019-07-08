@@ -34,7 +34,7 @@ def convertbam(dbname,inputbam, outputbam, scriptdir, force = False, logfile = s
         #print >>sys.stderr, bamconvertcommand
         #sys.exit(1)
         if logfile:
-            print >>logfile,  bamconvertcommand
+            #print >>logfile,  bamconvertcommand
             pass
         bamconvertrun = None
         logfile.flush()
@@ -66,18 +66,18 @@ def samtoolsmerge(bamfiles, outbam, force = False):
 
 	
 	
-def createmultiwigtrackdb(sampledata, expname):
+def createmultiwigtrackdb(sampledata, expname,trackfile, shortlabel = "", longlabel = "",suffix = '', startpriority = 3.0, stacked = False):
     trackcolors = list(['0,217,47','47,142,248','220,21,235','264,115,6','95,238,230'])
     #trackcolors = list(['55,128,128','204,0,0','0,204,0'])    #'120,235,204'
-    currpriority = 2.3
-    trackdb = open (expname+"/trackhub/trackdb.txt", "w")
+    currpriority = startpriority
+    trackdb = trackfile
     
-    print  >>trackdb, "track "+expname+"tracks            "
+    print  >>trackdb, "track "+expname+suffix+"tracks            "
     #print  >>trackdb, "compositeTrack on                     "
     print  >>trackdb, "superTrack on show"
     
-    print  >>trackdb, "shortLabel "+expname+"   "
-    print  >>trackdb, "longLabel Data from "+expname+"    "
+    print  >>trackdb, "shortLabel "+expname+" "+shortlabel
+    print  >>trackdb, "longLabel Data from "+expname+" "+longlabel
     #print  >>trackdb, "type bigWig                           "
     #print  >>trackdb, "dragAndDrop on                        "
     #print  >>trackdb, "autoScale on                          "
@@ -85,31 +85,39 @@ def createmultiwigtrackdb(sampledata, expname):
     #print  >>trackdb, "maxHeightPixels 256:100:32              "
     print  >>trackdb, "\n"
     
-    
+    #print >>sys.stderr, sampledata.samplelist
     for currrep in sampledata.allreplicates():
+        #print >>sys.stderr, sampledata.getrepsamples(currrep)
         for currstrand in ['Plus','Minus']:
-            print  >>trackdb, "\ttrack "+currrep+'_'+currstrand+"tracks"
+            print  >>trackdb, "\ttrack "+currrep+suffix+'_'+currstrand+"tracks"
             print  >>trackdb, "\tcontainer multiWig"
-            print  >>trackdb, "\tshortLabel "+currrep+" "+currstrand+" Strand"
-            print  >>trackdb, "\tlongLabel Data from "+currrep+" "+currstrand+" Strand"
+            print  >>trackdb, "\tshortLabel "+currrep+suffix+" "+currstrand+" Strand"
+            print  >>trackdb, "\tlongLabel Data from "+currrep+suffix+" "+currstrand+" Strand"
             print  >>trackdb, "\ttype bigWig"
-            print  >>trackdb, "\tparent "+expname+"tracks on"
+            print  >>trackdb, "\tparent "+expname+suffix+"tracks on"
             print  >>trackdb, "\tdragAndDrop on"
-            print  >>trackdb, "\taggregate transparentOverlay"
+            if stacked:
+                print  >>trackdb, "\taggregate solidOverlay"
+                
+            else:
+                print  >>trackdb, "\taggregate transparentOverlay"
             print  >>trackdb, "\tshowSubtrackColorOnUi on"
             print  >>trackdb, "\tautoScale on"
             print  >>trackdb, "\talwaysZero on"
             print  >>trackdb, "\tpriority "+str(currpriority + .1)+"  "
             print  >>trackdb, "\tmaxHeightPixels 256:100:32"
+            print  >>trackdb, "\tvisibility full"
             print  >>trackdb, "\n"
             currpriority += .2
             repsamples = sampledata.getrepsamples(currrep)
             for i, currsample in enumerate(repsamples):
-                print  >>trackdb, "\t\ttrack "+currsample+'_'+currstrand+"track"
+                print  >>trackdb, "\t\ttrack "+currsample+suffix+'_'+currstrand+"track"
                 print  >>trackdb, "\t\ttype bigWig"
-                print  >>trackdb, "\t\tparent "+currrep+'_'+currstrand+"tracks"
+                print  >>trackdb, "\t\tparent "+currrep+suffix+'_'+currstrand+"tracks"
+                print  >>trackdb, "\t\tshortLabel "+currsample+suffix+" "+currstrand+" Strand"
+                print  >>trackdb, "\t\tlongLabel Data from "+currsample+suffix+" "+currstrand+" Strand"
                 print  >>trackdb, "\t\tcolor "+trackcolors[i % len(trackcolors)]+""
-                print  >>trackdb, "\t\tbigDataUrl "+currsample+"."+currstrand+".bw"
+                print  >>trackdb, "\t\tbigDataUrl "+currsample+suffix+"."+currstrand+".bw"
                 print  >>trackdb, "\t\tvisibility full"
                 
                 print  >>trackdb, "\n"
@@ -165,16 +173,22 @@ chr9
   sort -k1,1 -k2,2n" with LC_COLLATE=C
 '''
 
-def makebigwigs(bamfile, repname, faifile, directory, scalefactor = 1):
+def makebigwigs(bamfile, repname, faifile, directory,scriptdir,filterloci = False, suffix = '',scalefactor = 1):
     #print >>sys.stderr, 'zsh -c "bedGraphToBigWig =(samtools view -b -F 0x10 '+bamfile+' | /projects/lowelab/users/holmes/bedtools/BEDTools/bin/genomeCoverageBed -bg -ibam stdin -g '+faifile+') '+faifile+' '+directory+"/"+repname+'.Plus.bw"'
     
     #print >>sys.stderr, 'zsh -c "bedGraphToBigWig =(samtools view -b -F 0x10 '+bamfile+' | genomeCoverageBed -scale '+' -bg -ibam stdin -g '+faifile+') ' +faifile+' '+directory+"/"+repname+'.Plus.bw"'
-    print >>sys.stderr, 'zsh -c "bedGraphToBigWig =(samtools view -b -F 0x10 '+bamfile+' | genomeCoverageBed -scale '+str(1./scalefactor)+' -bg -ibam stdin -g '+faifile+') '+faifile+' '+directory+"/"+repname+'.Plus.bw"'
-
-    plusjob = subprocess.Popen('zsh -c "bedGraphToBigWig =(samtools view -b -F 0x10 '+bamfile+' | genomeCoverageBed -scale '+str(1./scalefactor)+' -bg -ibam stdin -g '+faifile+' | sort -k1,1 -k2,2n) '+faifile+' '+directory+"/"+repname+'.Plus.bw"', shell = True)
-    minusjob = subprocess.Popen('zsh -c "bedGraphToBigWig =(samtools view -b -f 0x10 '+bamfile+' | genomeCoverageBed -scale '+str(1./scalefactor)+' -bg -ibam stdin -g '+faifile+' | sort -k1,1 -k2,2n) '+faifile+' '+directory+"/"+repname+'.Minus.bw"', shell = True)
+    filtercommand = ''
+    if filterloci:
+        filtercommand = scriptdir+'/filterunique.py --uniqloci | '
+    #print >>sys.stderr, 'zsh -c "bedGraphToBigWig =(samtools view -b -F 0x10 ' +bamfile+' | '+filtercommand+' genomeCoverageBed -scale '+str(1./scalefactor)+' -bg -ibam stdin -g '+faifile+' | sort -k1,1 -k2,2n) '+faifile+' '+directory+"/"+repname+suffix+'.Plus.bw"'
+ 
+    plusjob = subprocess.Popen('zsh -c "bedGraphToBigWig =(samtools view -b -F 0x10 ' +bamfile+' | '+filtercommand+' genomeCoverageBed -scale '+str(1./scalefactor)+' -bg -ibam stdin -g '+faifile+' | sort -k1,1 -k2,2n) '+faifile+' '+directory+"/"+repname+suffix+'.Plus.bw"', shell = True)
+    minusjob = subprocess.Popen('zsh -c "bedGraphToBigWig =(samtools view -b -f 0x10 '+bamfile+' | '+filtercommand+' genomeCoverageBed -scale '+str(1./scalefactor)+' -bg -ibam stdin -g '+faifile+' | sort -k1,1 -k2,2n) '+faifile+' '+directory+"/"+repname+suffix+'.Minus.bw"', shell = True)
     plusjob.wait()
     minusjob.wait()
+    if plusjob.returncode != 0 or minusjob.returncode != 0:
+        print >>sys.stderr, "conversion to bigwig failed"
+        sys.exit(1)
     pass
 	
 def main(**args):
@@ -194,9 +208,12 @@ def main(**args):
         currbam = sampledata.getbam(currsample)
         genomebam = currsample+"-genome.bam"
         convertbam(dbname, currbam, genomebam, scriptdir, force = True)
-        makebigwigs(genomebam, currsample, dbname+"-tRNAgenome.fa.fai",trackdir, scalefactor =  sizefactors[currsample])
-
-    createmultiwigtrackdb(sampledata,expname)
+        makebigwigs(genomebam, currsample, dbname+"-tRNAgenome.fa.fai",trackdir,scriptdir, scalefactor =  sizefactors[currsample])
+        makebigwigs(genomebam, currsample, dbname+"-tRNAgenome.fa.fai",trackdir,scriptdir, filterloci = True, suffix = 'uniqloci', scalefactor =  sizefactors[currsample])
+        
+    trackfile = open(expname+"/trackhub/trackdb.txt", "w")
+    createmultiwigtrackdb(sampledata,expname, trackfile, shortlabel = "all", longlabel = "all")
+    createmultiwigtrackdb(sampledata,expname,trackfile, shortlabel = "unique mapping only", longlabel = "uniquely mapping only", suffix = 'uniqloci', startpriority = 8.0)
     '''
 
 

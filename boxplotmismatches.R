@@ -44,7 +44,23 @@ posmism = aggregate(totalmism$x,  by=list(position = totalmism$position),FUN=fun
 #head(posmism)
 colnames(posmism) = c("tRNA_position","Mismatched_Transcripts")
 write.table(posmism,file = "positionmismatches.txt",row.names = TRUE )
-positions = posmism[posmism$Mismatched_Transcripts > 5,"tRNA_position"]
+mismatchpositions = posmism[posmism$Mismatched_Transcripts > 5,"tRNA_position"]
+
+
+
+
+totaldelete = aggregate(mismatches$deletions/(mismatches$deletions + mismatches$coverage + 30),  by=list(position = mismatches$position, tRNA_name =  mismatches$tRNA_name),FUN=max)
+#head(totalmism)
+posdelete= aggregate(totaldelete$x,  by=list(position = totaldelete$position),FUN=function(mism) {sum(mism > .1)})
+#head(posmism)
+colnames(posdelete) = c("tRNA_position","Deleted_Transcripts")
+write.table(posdelete,file = "positiondeletions.txt",row.names = TRUE )
+deletepositions = posdelete[posdelete$Deleted_Transcripts > 5,"tRNA_position"]
+
+print(mismatchpositions)
+print(deletepositions)
+positions = union(mismatchpositions,deletepositions )
+print ("|*|")
 
 #positions = unique(totalmism[totalmism$x > 10,"position"])
 
@@ -67,10 +83,22 @@ colnames(relevantmismatches) = c("Samples", "position", "tRNA","first","second",
 currlistpos = 1
 
 
+dotsize = .4
 
 for (currpos in positions){
+#print(currpos)
+
 mismatchmelt = mismatches[mismatches$position == currpos,c("tRNA_name","sample","percentmismatch")]
-#print(head(mismatchmelt))
+deletionmelt = mismatches[mismatches$position == currpos,c("tRNA_name","sample","deletions","coverage")]
+#print(head(deletionmelt))
+deletionmelt$deletepercent = deletionmelt$deletions/(deletionmelt$deletions + deletionmelt$coverage + 30)
+#deletionmelt$deletepercent = deletionmelt$deletions 
+
+#print(deletionmelt$deletions / (deletionmelt$deletions+deletionmelt$coverage))
+#print(deletionmelt$deletions / (deletionmelt$deletions+deletionmelt$coverage))
+
+
+#print(head(deletionmelt))
 
 #head(sampletable[match(mismatchmelt$variable,sampletable[,1]),2])
 
@@ -85,7 +113,10 @@ colnames(mismatchmeltagg) <- c("Feature","sample","percentmismatch")
 posname = paste(directory,"/",currpos,"-possamplemismatches",outputformat, sep = "")
 
 
-ggplot(data = mismatchmeltagg, aes(x=sample, y=percentmismatch)) + geom_boxplot(aes(fill=sample)) + geom_jitter(aes(fill=sample), size = .1) +  theme(axis.text.x = element_text(angle = 90, hjust = 1))+  ylim(0, 1)
+
+
+
+ggplot(data = mismatchmeltagg, aes(x=sample, y=percentmismatch)) + geom_boxplot(aes(fill=sample), outlier.shape=NA) + geom_jitter(aes(fill=sample), size = dotsize) +  theme(axis.text.x = element_text(angle = 90, hjust = 1))+  ylim(0, 1)
 ggsave(filename=posname,width=7, height=7)
 
 mismatchmeltaminoagg <- aggregate(mismatchmelt$percentmismatch, by=list(sample = mismatchmelt$sample, amino = trnatable[match(mismatchmelt$tRNA_name,trnatable[,1]),3]), FUN=mean)
@@ -98,7 +129,7 @@ posname = paste(directory,"/",currpos,"-posaminomismatches",outputformat, sep = 
 
 
 
-ggplot(data = mismatchmeltaminoagg, aes(x=amino, y=percentmismatch)) + geom_boxplot(aes(fill=amino)) + geom_jitter(aes(fill=amino), size = .5) +  theme(axis.text.x = element_text(angle = 90, hjust = 1))+  ylim(0, 1)
+ggplot(data = mismatchmeltaminoagg, aes(x=amino, y=percentmismatch)) + geom_boxplot(aes(fill=amino), outlier.shape=NA) + geom_jitter(aes(fill=amino), size = dotsize) +  theme(axis.text.x = element_text(angle = 90, hjust = 1))+  ylim(0, 1)
 ggsave(filename=posname, width=7, height=7)
 
 
@@ -106,92 +137,32 @@ mismatchbase = mismatches[mismatches$position == currpos,c("tRNA_name","sample")
 mismatchbase$attotal = (mismatches[mismatches$position == currpos,"adenines"]) / mismatches[mismatches$position == currpos,"coverage"]
 mismatchbase$cgtotal = (mismatches[mismatches$position == currpos,"cytosines"] ) / mismatches[mismatches$position == currpos,"coverage"]
 
+
 posname = paste(currpos,"-posbasedistribution",outputformat, sep = "")
 
-#currplot <- qplot(data=mismatchbase,x=mismatchbase$attotal,y=mismatchbase$cgtotal,xlab = "Adenines",ylab = "Cytosines", asp=1)+ theme_bw()
-#ggsave(filename=posname)
 
-#print(head(mismatchmeltagg$Feature ))
-for (currfeat in features){
-#print(currfeat)
-comparisons = combn(unique(mismatchmeltagg$sample),2,simplify = FALSE)
+deletemeltaminoagg <- aggregate(deletionmelt$deletepercent, by=list(sample = deletionmelt$sample, amino = trnatable[match(deletionmelt$tRNA_name,trnatable[,1]),3]), FUN=mean)
 
-mismatchmeltfeat = mismatchmeltagg[mismatchmeltagg$Feature == currfeat,]
-#print( comparisons[[1]][1])
-#print( comparisons[[1]][2])
-#firline = 
-#secline = 
-
-#secline = mismatchmeltfeat[mismatchmeltfeat$sample == comparisons[[2]] & mismatchmeltfeat$tRNA_name == currfeat,]
-#secline = mismatchmeltfeat
+colnames(deletemeltaminoagg) <- c("Feature","amino","percentdeletions")
+posname = paste(directory,"/",currpos,"-posaminodeletions",outputformat, sep = "")
+ggplot(data = deletemeltaminoagg, aes(x=amino, y=percentdeletions)) + geom_boxplot(aes(fill=amino), outlier.shape=NA) + geom_jitter(aes(fill=amino), size = dotsize) +  theme(axis.text.x = element_text(angle = 90, hjust = 1))+  ylim(0, 1)  
+ggsave(filename=posname,width=7, height=7)
 
 
 
-#print(firline)
-#print(secline)
-#print("***")
-for (currcompare in comparisons){
-#print(head(mismatchmeltfeat))
-#print(unique(mismatchmeltfeat$sample))
-#print(currcompare[[1]])
-#print(currcompare[[2]])
+deletemeltsampleagg <- aggregate(deletionmelt$deletepercent, by=list(Feature = deletionmelt$tRNA_name, sample = sampletable[match(deletionmelt$sample,sampletable[,1]),2]), FUN=mean)
+colnames(deletemeltsampleagg) <- c("Feature","sample","percentdeletions")
+posname = paste(directory,"/",currpos,"-possampledeletions",outputformat, sep = "")
+ggplot(data = deletemeltsampleagg, aes(x=sample, y=percentdeletions)) + geom_boxplot(aes(fill=sample), outlier.shape=NA) + geom_jitter(aes(fill=sample), size = dotsize) +  theme(axis.text.x = element_text(angle = 90, hjust = 1))+  ylim(0, 1)
+ggsave(filename=posname,width=7, height=7)
 
-
-resultname =  paste(currcompare[[1]],currcompare[[2]] ,sep= ":")
-firline = mismatchmeltfeat[mismatchmeltfeat$sample == currcompare[[1]],]
-secline = mismatchmeltfeat[mismatchmeltfeat$sample == currcompare[[2]],]
-
-
-#resultname = sapply(comparisons, function(currcompare){ paste(currcompare[[1]],currcompare[[2]] ,sep= ":")})
-#firnum = sapply(comparisons, function(currcompare){ mismatchmeltfeat[mismatchmeltfeat$sample == currcompare[[1]]]})
-#secnum = sapply(comparisons, function(currcompare){ mismatchmeltfeat[mismatchmeltfeat$sample == currcompare[[2]]]})
-#
-#cbind(resultname)
-
-
-#print(resultname)
-#print(currpos)
-#print(firline)
-#print(secline)
-#
-#
-if(sum(abs(firline$percentmismatch - secline$percentmismatch)) > .1){
-
-#print (c(resultname,currpos,currfeat,firline$percentmismatch,secline$percentmismatch,abs(firline$percentmismatch - secline$percentmismatch)))
-
-
-#x <- c("Samples", "position", "tRNA","first","second","difference")
-#colnames(relevantmismatches) <- x
-
-
-#relevantmismatches[[currlistpos]] <- t(c(resultname,currpos,currfeat,firline$percentmismatch,secline$percentmismatch,abs(firline$percentmismatch - secline$percentmismatch)))
-#currlistpos = currlistpos + 1
-#relevantmismatches
-
-currlist <- list(Samples = resultname,position = currpos,tRNA = currfeat,first = firline$percentmismatch,second = secline$percentmismatch,difference =abs(firline$percentmismatch - secline$percentmismatch))
-
-#print(colnames(relevantmismatches))
-relevantmismatches = rbind(relevantmismatches,currlist, stringsAsFactors=FALSE)
-#print(currlist)
-#print(resultname)
-#print(currpos)
-#print(firline)
-#print(secline)
-#print("******")
 }
 
+print("***||")
+deletionmelt = mismatches[,c("tRNA_name","position","sample","coverage","deletions")]
+maxskips <- aggregate(deletionmelt$deletions/(deletionmelt$deletions + deletionmelt$coverage + 30), by=list(position = deletionmelt$position, Feature = deletionmelt$tRNA_name,Sample = deletionmelt$sample), FUN=max)
+#maxskips <- aggregate(deletionmelt$deletions/deletionmelt$coverage, by=list(position = deletionmelt$position, Feature = deletionmelt$tRNA_name), FUN=max)
 
-
-#diffrows = lapply(comparisons, function(currresult){mismatchmeltfeat[mismatchmeltfeat$sample[currresult[[2]],] > mismatchmeltfeat$sample[currresult[[2]]] | currresult[[2]]] > mismatchmeltfeat$sample[currresult[[2]]]})
-#mismatchmeltfeat$sample['',]
-}
-}
-}
-#mismatchmelt = mismatches[,c("tRNA_name","sample","percentmismatch","position")]
-
-#head(mismatchmelt$sample)
-#head(mismatchmelt)
-#mismatchmelt[mismatchmelt$position == "58" & mismatchmelt$sample == "M_dm_Heart_M5_minusAlkB" & mismatchmelt$tRNA_name == "tRNA-Val-TAC-1",]
-
-mismatchresults <- do.call("rbind",relevantmismatches)
-#print (head(mismatchresults))
+print (maxskips[order(-maxskips$x),])
+#head(maxskips)
+#head()

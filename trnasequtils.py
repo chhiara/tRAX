@@ -373,7 +373,7 @@ class samplefile:
     def allreplicates(self):
         return self.replicatelist
     def getrepsamples(self, replicate):
-        return set(currsample for currsample in self.replicatename.iterkeys() if self.replicatename[currsample] == replicate)
+        return list(currsample for currsample in self.samplelist if self.replicatename[currsample] == replicate)
         
 def getsizefactors( sizefactorfile):
     sizefactorfile = open(sizefactorfile)

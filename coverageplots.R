@@ -266,7 +266,7 @@ uniquetable <- read.table(paste(opt$unique, "-uniquecoverages.txt",sep= ""), hea
 
 uniquetable$maptype = "Transcript specific"
 multactable$maptype = "Isotype Specific"
-multamino$maptype = "Nonspecific"
+multamino$maptype = "Not Amino Specific"
 multtrnas$maptype = "Isodecoder Specific" 
 #allmulttables <- rbind(uniquetable,multactable,multamino,multtrnas)
 
@@ -285,7 +285,7 @@ colnames(allmultmeltagg)[colnames(allmultmeltagg) == "x"]  <- "value"
 allmultmeltagg$Sample <- factor(allmultmeltagg$Sample,levels = unique(sampletable[,2]), ordered = TRUE)
 allmultmelt <- allmultmeltagg
 
-allmultmelt$maptype <- factor(allmultmelt$maptype, levels=c("Nonspecific","Isotype Specific","Isodecoder Specific","Transcript specific"))
+allmultmelt$maptype <- factor(allmultmelt$maptype, levels=c("Not Amino Specific","Isotype Specific","Isodecoder Specific","Transcript specific"))
 
 
 allmultmelt <- allmultmelt[order(-as.numeric(allmultmelt$maptype)),]
@@ -312,6 +312,12 @@ aminomodomicstable = modomicstable[modomicstable$Feature %in% unique(aminodata$F
 
 aminonamesec = paste(opt$unique, "-",curramino,"_cov",outputformat,sep= "")
 makecovplot(aminodata,aminonamesec)
+
+aminonameunique = paste(opt$unique, "-",curramino,"_uniqueonlycov",outputformat,sep= "")
+
+makecovplot(aminodata[aminodata$maptype == "Transcript specific",],aminonameunique)
+
+
 
 }
 for (currtranscript in unique(allmultmelt$Feature)){

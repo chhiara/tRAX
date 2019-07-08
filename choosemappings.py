@@ -156,7 +156,8 @@ def getbesttrnamappings(trnafile, bamout = True, logfile = sys.stderr, progname 
             anticodons = frozenset(trnadata.getanticodon(bamfile.getrname(curr.tid)) for curr in newset if bamfile.getrname(curr.tid) in trnatranscripts)
             aminos = frozenset(trnadata.getamino(bamfile.getrname(curr.tid)) for curr in newset if bamfile.getrname(curr.tid) in trnatranscripts)
             trnamappings = list(curr for curr in newset if bamfile.getrname(curr.tid) in trnatranscripts)
-            
+            locusmaps = list(itertools.chain.from_iterable(trnadata.transcriptdict[bamfile.getrname(curr.tid)] for curr in trnamappings))
+
             readanticodon = "NNN"
             readamino = "Xxx"
             if len(anticodons - frozenset(['NNN'])) > 1:
@@ -172,9 +173,9 @@ def getbesttrnamappings(trnafile, bamout = True, logfile = sys.stderr, progname 
             #finalset = trnareads
             if len(trnamappings) > 1:
                 ambtrna += 1
-            tags = [("YA",len(anticodons))] + [("YM",len(aminos))]  + [("YR",len(trnamappings))]
+            #tags = [("YA",len(anticodons))] + [("YM",len(aminos))]  + [("YR",len(trnamappings))]
             for currtrnamap in trnamappings:
-                currtrnamap.tags = currtrnamap.tags + [("YA",len(anticodons))] + [("YM",len(aminos))]  + [("YR",len(trnamappings))]
+                currtrnamap.tags = currtrnamap.tags + [("YA",len(anticodons))] + [("YM",len(aminos))]  + [("YR",len(trnamappings))] +  [("YL",len(locusmaps))]
             finalset = trnamappings
             for curr in newset:
                 if bamfile.getrname(curr.tid) in trnatranscripts:

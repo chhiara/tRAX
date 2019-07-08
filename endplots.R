@@ -310,4 +310,59 @@ ggsave(filename=paste(opt$unique, "-mismatches2.pdf",sep= ""), uniqcoverage,heig
 
 
 
+if(!is.null(opt$indelcov))
+{
+indelcovs <- read.table(paste(opt$indelcov), header = TRUE)
+
+
+
+
+indelcovs <- indelcovs[ , colSums(is.na(mismatchcovs)) < nrow(mismatchcovs)/8]
+
+indelmelt = melt(indelcovs, id.vars = c("Feature", "Sample"))
+indelmelt[is.na(indelmelt)] <- 0
+
+
+indelmeltagg <- aggregate(indelmelt$value, by=list(Feature = indelmelt$Feature, Sample = sampletable[match(indelmelt$Sample,sampletable[,1]),2],variable = indelmelt$variable), FUN=mean)
+colnames(indelmeltagg)[colnames(indelmeltagg) == "x"]  <- "value"
+indelmeltagg$Sample <- factor(indelmeltagg$Sample,levels = unique(sampletable[,2]), ordered = TRUE)
+indelmelt <- indelmeltagg
+
+
+
+indelcoverage <- ggplot(indelmelt,aes(x=variable,y=value, size = 2)) + theme_bw()+facet_grid(Feature ~ Sample, scales="free") + geom_bar(stat="identity") +  geom_vline(aes(xintercept = dist, col = Modification),data = modomicstable,show.legend=TRUE,size=.2,linetype = "longdash")+theme(axis.text.y=element_text(colour="black",size=6),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8), strip.text.y = element_text(angle=0),strip.text.x = element_text(size = 8,angle=0)) + ylab("Normalized Read Count") +   xlab("tRNA position") + scale_y_continuous(limits = c(0, 1),breaks=c(0,1),labels=c("0%","100%")) +scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon","tail")) + labs(fill="Mappability", vline="RNA\nModification") 
+
+
+
+
+smallindelall <- configurecov(indelcoverage)
+ggsave(filename=paste(opt$unique, "-indels.pdf",sep= ""), smallindelall,height=scalefactor*(2 + 1.5*length(unique(mismatchmelt$Feature))),width=scalefactor*(2+5*length(unique(mismatchmelt$Sample))), limitsize=FALSE, dpi = 600)
+
+
+
+
+for (curramino in unique(acceptorType)){
+
+aminodata = indelmelt[acceptorType == curramino,]
+aminomodomicstable = modomicstable[modomicstable$Feature %in% unique(aminodata$Feature),]
+
+
+aminocoverage   <- ggplot(aminodata,aes(x=variable,y=value), size = 2) + theme_bw()+facet_grid(Feature ~ Sample, scales="free") + geom_bar(stat="identity") +  geom_vline(aes(xintercept = dist, col = Modification),data = aminomodomicstable,show.legend=TRUE,size=.2,linetype = "longdash")+theme(axis.text.y=element_text(colour="black",size=6),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8)) + ylab("Normalized Read Count") + xlab("tRNA position") + scale_y_continuous(limits = c(0, 1),breaks=c(0,1),labels=c("0%","100%")) +scale_x_discrete(breaks=c("X1","X13","X22","X31","X39","X53","X61","X73"), labels=c("Start","D-loop start","D-loop end","AC-loop start","AC-loop end","T-loop start","T-loop end","tail")) + labs(fill="Mappability", vline="RNA\nModification") #+ scale_color_hue("mod")+labs(fill="RNA\nModification")#+scale_fill_manual(name="RNA\nmodifications")#+scale_colour_manual(data = aminomodomicstable, name="RNA\nModification") #+scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon", "tail"))
+
+aminocoverage <- configurecov(aminocoverage)
+
+aminoname = paste(opt$directory,"/",curramino,"-indels",outputformat, sep = "")
+#print(aminoname)
+ggsave(filename=aminoname, aminocoverage,height=scalefactor*(2 + 1.5*length(unique(aminodata$Feature))),width=scalefactor*(2+5*length(unique(aminodata$Sample))), limitsize=FALSE, dpi = 600)
+
+
+}
+}
+
+
+}
+
+
+
+
 

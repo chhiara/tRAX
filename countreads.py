@@ -20,6 +20,7 @@ def getdupes(namelist):
 
 
 def main(**argdict):
+    trnauniquefilename = None
     argdict = defaultdict(lambda: None, argdict)
     includebase = argdict["nofrag"]
     fullpretrnasonly = argdict["onlyfullpretrnas"]
@@ -31,6 +32,8 @@ def main(**argdict):
     typefile = None
     sampledata = samplefile(argdict["samplefile"])
     bedfiles = list()
+    if "trnauniquecounts" in argdict:
+        trnauniquefilename = argdict["trnauniquecounts"]
     if "bedfile"  in argdict:
         bedfiles = argdict["bedfile"]
     trnalocifiles = list()
@@ -112,6 +115,7 @@ def main(**argdict):
     trnalocustrailercounts = defaultdict(lambda: defaultdict(int))
     partialtrnalocuscounts = defaultdict(lambda: defaultdict(int))
     fulltrnalocuscounts  = defaultdict(lambda: defaultdict(int))
+    trnauniquecounts = defaultdict(lambda: defaultdict(int))
     
     
     aminocounts  = defaultdict(lambda: defaultdict(int))
@@ -207,7 +211,8 @@ def main(**argdict):
                     trnafivecounts[currsample][currfeat.name] += 1
                 elif fragtype == "Threeprime":
                     trnathreecounts[currsample][currfeat.name] += 1
-                    
+                if isuniqueaminomapping(currread):
+                    trnauniquecounts[currsample][currfeat.name] += 1
                 if not isuniqueaminomapping(currread):
                     pass
                 elif not isuniqueacmapping(currread):
@@ -298,7 +303,7 @@ def main(**argdict):
             
     if trnacountfilename is not None:
         trnacountfile = open(trnacountfilename, "w")
-        
+        print >>trnacountfile, "\t".join(currsample for currsample in samples)
         for currfeat in trnaloci:
             if max(trnalocuscounts[currsample][currfeat.name] for currsample in samples) < minreads:
                 continue
@@ -307,8 +312,17 @@ def main(**argdict):
             if max(trnacounts[currsample][currfeat.name] for currsample in samples) < minreads:
                 continue
             print  >>trnacountfile, currfeat.name+"\t"+"\t".join(str(trnacounts[currsample][currfeat.name]) for currsample in samples)
-        trnacountfile.close()            
+        trnacountfile.close()           
         
+        
+    if trnauniquefilename is not None:
+        trnauniquefile = open(trnauniquefilename, "w")
+        print >>trnauniquefile, "\t".join(currsample for currsample in samples)
+        for currfeat in trnalist:
+            if max(trnacounts[currsample][currfeat.name] for currsample in samples) < minreads:
+                continue
+            print  >>trnauniquefile, currfeat.name+"\t"+"\t".join(str(trnacounts[currsample][currfeat.name]) for currsample in samples)
+        trnauniquefile.close()          
 
 if __name__ == "__main__":
 

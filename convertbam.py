@@ -14,6 +14,9 @@ import subprocess
 inputbam = sys.argv[1]
 dbname = sys.argv[2]
 
+
+    
+
 bamfile = pysam.Samfile(inputbam, "rb" )
 
 outfile = pysam.Samfile( "-", "w", template = bamfile )
@@ -64,11 +67,12 @@ def reverseintrons(introns, length):
         yield tuple([length - currint[0] + 1, currint[1]])
 
 cigarset = set()
-
+uniquemode = False
 for currmap in bamfile:
     chromname = bamfile.getrname(currmap.tid)
     readquals = currmap.query_qualities
     readseq = currmap.query_sequence
+    readtags = currmap.get_tags() 
     origcigar = currmap.cigartuples
     if chromname in trnatranscripts:
 
@@ -173,7 +177,7 @@ for currmap in bamfile:
                     pass
                 currmap.cigartuples = newcigar
                 
-
+            currmap.set_tags(readtags)
             outfile.write(currmap)
         
     else:

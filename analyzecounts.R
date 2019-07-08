@@ -40,9 +40,13 @@ sampledata = read.table(samplefile,check.names=FALSE)
 #print(colnames(readcounts))
 #print(gsub("-", ".", sampledata[,1])
 #sampleinfo = as.character(sampledata[colnames(readcounts) == sampledata[,1],2])
+
+
+
+
 sampleinfo = as.character(sampledata[colnames(readcounts) == gsub("-", ".", sampledata[,1]) ,2])
 
-#print(sampleinfo)
+
 
 #gsub("-", ".", sampledata[,1]) 
 #sampledata[,2]
@@ -70,13 +74,13 @@ coldata = data.frame(condition=factor(sampleinfo))
 
 #print(ncol(readcounts))
 #print(nrow(coldata))
-#print(sampleinfo)
+#print(head(readcounts))
 
 cds = DESeqDataSetFromMatrix(countData = readcounts,coldata  ,design = ~ condition)
 cds = DESeq(cds,betaPrior=TRUE)
 
 
-
+print(head(cds))
 
 
 names = lapply(comparisons, function(currcompare){ })
@@ -108,12 +112,12 @@ write.table(alllogvals,paste(experimentname,"/",experimentname,"-logvals.txt", s
 
 #stop("Message")
 #Print log values
-#print("***")
+#print(head(alllogvals))
 #head(pairtable)
 #head(samplenames)
 #head(pairreduce)
 colnames(alllogvals) <- paste("log2", colnames(alllogvals), sep = "_")
-#print("***||")
+print("***||")
 
 colnames(allprobs) <- paste("pval", colnames(allprobs), sep = "_")
 allcombinevals = cbind(alllogvals,allprobs)
