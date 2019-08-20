@@ -29,7 +29,7 @@ maxmaps = 50
 def isprimarymapping(mapping):
     return not (mapping.flag & 0x0100 > 0)
 
-def getbesttrnamappings(trnafile, bamout = True, logfile = sys.stderr, progname = None, fqname = None, libname = None):
+def getbesttrnamappings(trnafile, bamout = True, logfile = sys.stderr, progname = None, fqname = None, libname = None,setcountfile = None):
     
     trnadata = transcriptfile(trnafile)
     trnatranscripts = set(trnadata.gettranscripts())
@@ -67,10 +67,13 @@ def getbesttrnamappings(trnafile, bamout = True, logfile = sys.stderr, progname 
     ambtrna = 0
     acsets = defaultdict(int)
     aminosets = defaultdict(int)
+    trnasetcounts = defaultdict(int)
     newheader = bamfile.header.to_dict()
     #print >>sys.stderr, newheader
     newheader["RG"] = list()
     newheader["RG"].append(dict())
+    imperfect = 0
+    extraimperfect = 0
     if  progname is  not None:
         newheader["PG"].append({"PN" :progname, "ID": progname,"VN":gitversion})
     if fqname is not None:
@@ -157,7 +160,11 @@ def getbesttrnamappings(trnafile, bamout = True, logfile = sys.stderr, progname 
             aminos = frozenset(trnadata.getamino(bamfile.getrname(curr.tid)) for curr in newset if bamfile.getrname(curr.tid) in trnatranscripts)
             trnamappings = list(curr for curr in newset if bamfile.getrname(curr.tid) in trnatranscripts)
             locusmaps = list(itertools.chain.from_iterable(trnadata.transcriptdict[bamfile.getrname(curr.tid)] for curr in trnamappings))
-
+            
+            if trnamappings[0].get_tag("XM")+trnamappings[0].get_tag("XO") > 0:
+                imperfect += 1
+            if trnamappings[0].get_tag("XM")+trnamappings[0].get_tag("XO") > 2:
+                extraimperfect += 1
             readanticodon = "NNN"
             readamino = "Xxx"
             if len(anticodons - frozenset(['NNN'])) > 1:
@@ -173,10 +180,14 @@ def getbesttrnamappings(trnafile, bamout = True, logfile = sys.stderr, progname 
             #finalset = trnareads
             if len(trnamappings) > 1:
                 ambtrna += 1
+            if setcountfile is not None:
+                trnasetcounts[frozenset(bamfile.getrname(curr.tid) for curr in trnamappings)] += 1
             #tags = [("YA",len(anticodons))] + [("YM",len(aminos))]  + [("YR",len(trnamappings))]
             for currtrnamap in trnamappings:
                 currtrnamap.tags = currtrnamap.tags + [("YA",len(anticodons))] + [("YM",len(aminos))]  + [("YR",len(trnamappings))] +  [("YL",len(locusmaps))]
             finalset = trnamappings
+            
+            
             for curr in newset:
                 if bamfile.getrname(curr.tid) in trnatranscripts:
                     pass
@@ -232,11 +243,17 @@ def getbesttrnamappings(trnafile, bamout = True, logfile = sys.stderr, progname 
         if ((1.*aminosets[curr])/ambamino) > .1:
             print >>logfile, ",".join(curr) + ":"+str(aminosets[curr])
         
-
+    if setcountfile is not None:
+        setcounts = open(setcountfile, "w")
+        for currset in trnasetcounts:
+            print ",".join(currset) +"\t"+str(trnasetcounts[currset])
     #print >>logfile, str(diffreads)+"/"+str(trnareads)
     print >>logfile, "tRNA Reads with multiple transcripts:"+str(ambtrna)+"/"+str(trnareads)
     print >>logfile, "tRNA Reads with multiple anticodons:"+str(ambanticodon)+"/"+str(trnareads)
     print >>logfile, "tRNA Reads with multiple aminos:"+str(ambamino)+"/"+str(trnareads)
+    print >>logfile, "Imperfect matches:"+str(imperfect)+"/"+str(trnareads)
+    print >>logfile, "Extra Imperfect matches:"+str(extraimperfect)+"/"+str(trnareads)
+    
     #print >>logfile, str(trnareads)+"/"+str(totalreads)
     #print >>logfile, str(maxreads)+"/"+str(totalreads)
     #print >>logfile, str(multimaps)+"/"+str(totalreads)
@@ -254,8 +271,10 @@ if __name__ == "__main__":
                        help='fastq file name')
     parser.add_argument('--expname',
                        help='library name')
+    parser.add_argument('--trnasetcounts',
+                       help='Counts for all sets of tRNAs')
 
     
     args = parser.parse_args()
-    getbesttrnamappings(args.trnaname, progname = args.progname, fqname = args.fqname, libname = args.expname)
+    getbesttrnamappings(args.trnaname, progname = args.progname, fqname = args.fqname, libname = args.expname, setcountfile = args.trnasetcounts)
 

@@ -8,6 +8,8 @@ import os
 import os.path
 import re
 from trnasequtils import *
+from multiprocessing import Pool, cpu_count
+import time
 
 MAXMAPS = 100
 
@@ -16,9 +18,10 @@ numcores = 4
 
 
 
-def wrapbowtie2(bowtiedb, unpaired, outfile, scriptdir, trnafile, maxmaps = MAXMAPS,program = 'bowtie2', logfile = None, mapfile = None, expname = None):
+
+def wrapbowtie2(bowtiedb, unpaired, outfile, scriptdir, trnafile, maxmaps = MAXMAPS,program = 'bowtie2', logfile = None, mapfile = None, expname = None, samplename = None):
     '''
-    I think the quals are irrelevant, and N should be scored as only slightly better than a mismatch
+    I think the quals are irrelevant due to the RT step, and N should be scored as only slightly better than a mismatch
     this does both
     ignoring quals forces the mismatches to have a single score, which is necessary for precise N weighting
     
@@ -35,15 +38,16 @@ def wrapbowtie2(bowtiedb, unpaired, outfile, scriptdir, trnafile, maxmaps = MAXM
     #print >>sys.stderr,  bowtiecommand
     if logfile:
         print >>logfile,  bowtiecommand
+        logfile.flush()
     bowtierun = None
-    logfile.flush()
+    
     bowtierun = subprocess.Popen(bowtiecommand, shell = True, stderr = subprocess.PIPE)
 
     output = bowtierun.communicate()
     errinfo = output[1]
     if logfile is not None:
         print >>logfile, errinfo 
-    logfile.flush()
+        logfile.flush()
     if bowtierun.returncode:
         print >>sys.stderr, "Failure to Bowtie2 map"
         print >>sys.stderr, "check mapstats file"
@@ -59,7 +63,7 @@ def wrapbowtie2(bowtiedb, unpaired, outfile, scriptdir, trnafile, maxmaps = MAXM
         unmappedreads = rereadunmap.group(1)
         singlemaps = rereadsingle.group(1)
         multmaps = rereadmult.group(1)
-        return [unmappedreads,singlemaps,multmaps,totalreads]
+        return mapinfo(singlemaps,multmaps,unmappedreads,totalreads, errinfo, samplename)
         
     else:
         print >>sys.stderr, "Could not map "+unpaired +", check mapstats file"
@@ -85,6 +89,171 @@ def checkheaders(bamname, fqname):
 
 #print >>sys.stderr, os.path.dirname(os.path.realpath(sys.argv[0]))
 #print >>sys.stderr, os.path.abspath(__file__)
+
+    
+class mapinfo:
+    def __init__(self, singlemap, multimap, unmap, totalreads, bowtietext, samplename):
+        self.unmaps = unmap
+        self.singlemaps = singlemap
+        self.multimaps = multimap
+        self.totalreads = totalreads
+        self.bowtietext = bowtietext
+        self.samplename = samplename
+        self.unmap = int(self.totalreads) - (int(self.multimaps) + int(self.singlemaps))
+    def printbowtie(self, logfile = sys.stderr):
+        print >>logfile, self.bowtietext
+def mapreads(*args, **kwargs):
+    return wrapbowtie2(*args, **kwargs)
+def mapreadspool(args):
+    return mapreads(*args[0], **args[1])
+    
+def compressargs( *args, **kwargs):
+    return tuple([args, kwargs])
+def testmain(**argdict):
+    argdict = defaultdict(lambda: None, argdict)
+    scriptdir = os.path.dirname(os.path.realpath(sys.argv[0]))+"/"
+    samplefilename = argdict["samplefile"]
+    
+    sampledata = samplefile(argdict["samplefile"])
+    trnafile = argdict["trnafile"]
+    logfile = argdict["logfile"]
+    mapfile = argdict["mapfile"]
+    bowtiedb = argdict["bowtiedb"]
+    lazycreate = argdict["lazy"]
+    if "cores" in argdict:
+        cores = int(argdict["cores"])
+    else:
+        cores = min(8,cpu_count())
+    #sys.exit()
+    print >>sys.stderr,"cores: "+str(cores) 
+    workingdir = './'
+    #samplefile = open(args.samplefile)
+    
+    samples = sampledata.getsamples()
+    
+    trnafile = trnafile
+    print >>sys.stderr, "logging to "+logfile
+    if logfile and lazycreate:
+        logfile = open(logfile,'a')
+        print >>logfile, "New mapping"
+    elif logfile:
+        logfile = open(logfile,'w')
+    else:
+        logfile = sys.stderr
+
+    unmaps = defaultdict(int)
+    singlemaps = defaultdict(int)
+    multimaps = defaultdict(int)
+    totalreads = defaultdict(int)
+    
+    if not os.path.isfile(bowtiedb+".fa"):
+        print >>sys.stderr, "No bowtie2 database "+bowtiedb
+        sys.exit(1)
+    badsamples = list()
+    for samplename in samples:
+        bamfile = workingdir+samplename
+        
+        if lazycreate and os.path.isfile(bamfile+".bam"):   
+            if not checkheaders(bamfile+".bam", sampledata.getfastq(samplename)):
+                badsamples.append(bamfile+".bam")
+
+                
+            
+        else:
+            if os.path.isfile(bamfile+".bam"):
+
+                if not checkheaders(bamfile+".bam", sampledata.getfastq(samplename)):
+                    badsamples.append(bamfile+".bam")
+    
+    if len(badsamples) > 0:
+        print >>sys.stderr, "Bam files "+",".join(badsamples)+" does not match fq files"
+        print >>sys.stderr, "Aborting"
+        sys.exit(1)               
+    #'samtools sort -T '+tempfile.gettempdir()+"/"+outfile+'temp - -o '+outfile+'.bam'
+    tempfilesover = list()
+    missingfqfiles = list()
+    for samplename in samples:
+        #redundant but ensures compatibility
+        bamfile = workingdir+samplename
+        temploc = os.path.basename(bamfile)
+        #print >>sys.stderr, "***"
+        #print >>sys.stderr, samplename+'temp'
+        
+        for currfile in os.listdir(tempfile.gettempdir()):
+            #
+            if currfile.startswith(samplename+'temp'):
+                tempfilesover.append(currfile)
+        fqfile = sampledata.getfastq(samplename)
+        if not os.path.isfile(fqfile):
+            missingfqfiles.append(fqfile)
+    if len(tempfilesover) > 0:
+        for currfile in tempfilesover:
+            print >>sys.stderr, tempfile.gettempdir() +"/"+ currfile + " temp bam files exists"
+        print >>sys.stderr, "these files must be deleted to proceed"
+        sys.exit(1)
+    if len(missingfqfiles) > 0:
+        print >>sys.stderr, ",".join(missingfqfiles) + " fastq files missing"
+        sys.exit(1)
+    mapresults = dict()
+    multithreaded = True
+    if multithreaded:
+        mapargs = list()
+        mappool = Pool(processes=cores)
+        mapsamples = list()
+        for samplename in samples:
+            bamfile = workingdir+samplename
+            
+            if lazycreate and os.path.isfile(bamfile+".bam"):
+                pass
+
+                print >>sys.stderr, "Skipping "+samplename
+
+            else:
+                mapargs.append(compressargs(bowtiedb, sampledata.getfastq(samplename),bamfile,scriptdir, trnafile, expname = samplefilename, samplename = samplename))
+                
+                
+                #mapresults[samplename] = mapreads(bowtiedb, sampledata.getfastq(samplename),bamfile,scriptdir, trnafile,  logfile=logfile, expname = samplefilename)
+                mapsamples.append(samplename)
+        #results = mappool.map(mapreadspool, mapargs)
+        starttime = time.time()
+        for currresult in mappool.imap_unordered(mapreadspool, mapargs):
+            print >>sys.stderr, "time "+currresult.samplename+": "+str(time.time() - starttime)
+            mapresults[currresult.samplename] = currresult
+            currresult.printbowtie(logfile)
+                
+    else:
+        for samplename in samples:
+            bamfile = workingdir+samplename
+            
+            if lazycreate and os.path.isfile(bamfile+".bam"):
+                pass
+                    
+                print >>sys.stderr, "Skipping "+samplename
+                
+            else:
+        
+                mapresults[samplename] = mapreads(bowtiedb, sampledata.getfastq(samplename),bamfile,scriptdir, trnafile,  logfile=logfile, expname = samplefilename)
+
+    if lazycreate:
+        #here is where I might add stuff to read old files in lazy mode
+        pass
+    if mapfile is not None and not lazycreate:
+        mapinfo = open(mapfile,'w')                
+        print >>mapinfo, "\t".join(samples)
+        print >>mapinfo, "unmap\t"+"\t".join(mapresults[currsample].unmaps for currsample in samples)
+        print >>mapinfo, "single\t"+"\t".join(mapresults[currsample].singlemaps for currsample in samples)
+        print >>mapinfo, "multi\t"+"\t".join(mapresults[currsample].multimaps for currsample in samples)
+        #print >>mapinfo, "total\t"+"\t".join(totalreads[currsample] for currsample in samples)
+        mapinfo.close()
+    
+        
+        
+        #print >>logfile, "Processing "+samplename +" mappings"
+    logfile.close()
+    
+        
+        
+        #result = subprocess.call(scriptdir+'choosemappings.py '+trnafile+' <'+bamfile +' | samtools view -F 4 -b - | samtools sort - '+workingdir+samplename+'_sort', shell = True)
 def main(**argdict):
     argdict = defaultdict(lambda: None, argdict)
     scriptdir = os.path.dirname(os.path.realpath(sys.argv[0]))+"/"
@@ -166,7 +335,7 @@ def main(**argdict):
     if len(missingfqfiles) > 0:
         print >>sys.stderr, ",".join(missingfqfiles) + " fastq files missing"
         sys.exit(1)
-            
+    mapresults = dict()    
     for samplename in samples:
         bamfile = workingdir+samplename
         
@@ -182,27 +351,22 @@ def main(**argdict):
             print >>logfile, "Mapping "+samplename
             print >>sys.stderr, "Mapping "+samplename
             logfile.flush()
-            mapresults = wrapbowtie2(bowtiedb, sampledata.getfastq(samplename),bamfile,scriptdir, trnafile,  logfile=logfile, expname = samplefilename)
+            mapresults[samplename] = wrapbowtie2(bowtiedb, sampledata.getfastq(samplename),bamfile,scriptdir, trnafile,  logfile=logfile, expname = samplefilename, samplename = samplename)
 
-            
-            if mapresults is not None:
-                unmaps[samplename] = mapresults[0]
-                singlemaps[samplename] = mapresults[1]
-                multimaps[samplename] = mapresults[2]
-                totalreads[samplename] = mapresults[3]
-    
+
     if lazycreate:
         #here is where I might add stuff to read old files in lazy mode
         pass
     if mapfile is not None and not lazycreate:
         mapinfo = open(mapfile,'w')                
         print >>mapinfo, "\t".join(samples)
-        print >>mapinfo, "unmap\t"+"\t".join(unmaps[currsample] for currsample in samples)
-        print >>mapinfo, "single\t"+"\t".join(singlemaps[currsample] for currsample in samples)
-        print >>mapinfo, "multi\t"+"\t".join(multimaps[currsample] for currsample in samples)
+        print >>mapinfo, "unmap\t"+"\t".join(mapresults[currsample].unmaps for currsample in samples)
+        print >>mapinfo, "single\t"+"\t".join(mapresults[currsample].singlemaps for currsample in samples)
+        print >>mapinfo, "multi\t"+"\t".join(mapresults[currsample].multimaps for currsample in samples)
         #print >>mapinfo, "total\t"+"\t".join(totalreads[currsample] for currsample in samples)
         mapinfo.close()
     
+        
         
         
         #print >>logfile, "Processing "+samplename +" mappings"

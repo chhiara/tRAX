@@ -6,8 +6,531 @@ import argparse
 import os.path
 from collections import defaultdict
 from trnasequtils import *
+import itertools
+from multiprocessing import Process, Queue, Pool
+import time
+
+class counttypes:
+    def __init__(self, samplename, bamfile, trnas = list(), trnaloci = list(), emblgenes = list(), otherfeats = list()):
+        self.samplename = samplename
+        self.bamfile = bamfile
+        self.trnas = trnas
+        self.trnaloci = trnaloci
+        self.emblgenes = emblgenes
+        self.otherfeats = otherfeats
+        self.emblbiotypes = set()
+        self.aminos = set()
+        self.bedtypes = set()
+        
+        self.embltypecounts =defaultdict(int)
+        self.bedtypecounts =defaultdict(int)
+        self.trnafragtypes =defaultdict(int)
+        self.trnafragtypes =defaultdict(int)
+        self.totalreads = 0
+        self.trnareads = 0
+        self.otherreads = 0
+        self.readlengths = defaultdict(int)
+        self.trnareadlengths = defaultdict(int)
+        self.trnacounts = defaultdict(int)
+        self.aminocounts = defaultdict(int)
+        self.indelreads = defaultdict(int)
+        self.trnaanticounts = defaultdict(int)
+        self.trnaemblcounts = defaultdict(int)
+        self.pretrnareadlengths = defaultdict(int)
+        self.trnalocuscounts = defaultdict(int)
+        self.partiallocuscounts = defaultdict(int)
+        self.fulllocuscounts = defaultdict(int)
+        
+
+    def addsamplecounts(self):
+        self.totalreads += 1
+    def addreadlengths(self, length):
+        self.readlengths[length] += 1
+    def addtrnareadlengths(self, length):
+        self.trnareadlengths[length] += 1
+    def addpretrnareadlengths(self, length):
+        self.pretrnareadlengths[length] += 1
+    def addpartiallocuscounts(self, currbed):
+        self.partiallocuscounts[currbed] += 1     
+    def addtrnasamplecounts(self):
+        self.trnareads += 1
+    def addtrnacounts(self, currbed):
+        self.trnacounts[currbed] += 1
+    def addtrnalocuscounts(self, currbed):
+        self.trnalocuscounts[currbed] += 1
+    def addfulllocuscounts(self, currbed):
+        self.fulllocuscounts[currbed] += 1
+    def addaminocounts(self, curramino):
+        self.aminos.add(curramino)
+        self.aminocounts[curramino] += 1
+    def addindelreads(self, curramino):
+        self.indelreads[curramino] += 1
+    def addotherreads(self):
+        self.otherreads += 1
+    def addtrnaantisense(self, currbed):
+        self.trnaanticounts[currbed] += 1
+    def addemblcounts(self, currtype):
+        self.emblbiotypes.add(currtype)
+        self.embltypecounts[currtype] += 1     
+    def addbedcounts(self, genetype):
+        self.bedtypes.add(genetype)
+        self.bedtypecounts[genetype] += 1
 
 
+
+def counttypereads(bamfile, samplename,trnainfo, trnaloci, trnalist,maturenames,featurelist = list(), embllist = list(), bedlist = list(),nomultimap = False, allowindels = True, maxmismatches = None, bamnofeature = False, countfrags = False):
+    
+    readtypecounts = counttypes(samplename, bamfile, trnas = trnalist, trnaloci = trnaloci, emblgenes = embllist, otherfeats = featurelist)
+    mitochrom = None
+    fullpretrnathreshold = 2
+    minpretrnaextend = 5
+    ncrnaorder = defaultdict(int)
+    currbam = bamfile
+    for i, curr in enumerate(reversed(list(["snoRNA","miRNA", "rRNA","snRNA","misc_RNA","lincRNA", "protein_coding"]))):
+        ncrnaorder[curr] = i + 1
+
+        
+    try:
+        #print >>sys.stderr, currbam
+        
+        
+        if not os.path.isfile(currbam+".bai") or  os.path.getmtime(currbam+".bai") < os.path.getmtime(currbam):
+            pysam.index(""+currbam)
+        bamfile = pysam.Samfile(""+currbam, "rb" )
+        if bamnofeature:
+            outname = os.path.splitext(currbam)[0]+"_nofeat.bam"
+            outbamnofeature =  pysam.Samfile( outname, "wb", template =  bamfile)
+    except IOError as ( strerror):
+        print >>sys.stderr, strerror
+        sys.exit()
+    #continue #point0
+    for i, currread in enumerate(getbam(bamfile, primaryonly = True, skiptags = True)):
+
+        isindel = False
+        readlength = currread.getlength()
+        gotread = False
+        #continue #point1
+        readtypecounts.addsamplecounts()
+        if currread.hasindel():
+            readtypecounts.addindelreads(readlength)
+            isindel = True
+            #continue
+
+        else:
+            pass
+            #continue
+        readtypecounts.addreadlengths(readlength)
+        #readlengths[currsample][readlength] += 1
+        #continue #point2
+        for currbed in trnaloci:
+            for currfeat in trnaloci[currbed].getbin(currread):
+                expandfeat = currfeat.addmargin(30)
+                if currfeat.coverage(currread) > 10 and (currread.start + minpretrnaextend <= currfeat.start or currread.end - minpretrnaextend >= currfeat.end):
+
+                    
+                    readtypecounts.addpretrnareadlengths(readlength)
+                    readtypecounts.addtrnalocuscounts(currbed)
+                    if currread.start + fullpretrnathreshold <  currfeat.start and currread.end - fullpretrnathreshold + 3 >  currfeat.end:
+                        #fulltrnalocuscounts[currsample][currbed] += 1
+                        readtypecounts.addfulllocuscounts(currbed)
+                    else:# currread.start + fullpretrnathreshold <  currfeat.start or currread.end - fullpretrnathreshold +3 >  currfeat.end:
+                        #partialtrnalocuscounts[currsample][currbed] += 1
+                        readtypecounts.addpartiallocuscounts(currbed)
+                        #print >>sys.stderr, "***"
+                    gotread = True
+                    break
+                if currfeat.getdownstream(30).coverage(currread) > 10:
+                    readtypecounts.addtrnaantisense(currbed)
+                    #readtypecounts.addpretrnareadlengths(readlength)
+                    #print >>sys.stderr, currfeat.bedstring()
+                    gotread = True
+                    break
+                elif expandfeat.antisense().coverage(currread) > 5:
+                    #trnaantisense[currsample][currbed] += 1
+                    readtypecounts.addtrnaantisense(currbed)
+                    gotread = True
+                    break
+        if gotread: 
+            continue
+        #continue #point3
+
+        for currbed in trnalist:
+            if currread.chrom in maturenames[currbed]:
+                currfeat = maturenames[currbed][currread.chrom]
+                if currread.strand == "+":
+                    readtypecounts.addtrnareadlengths(readlength)
+                    readtypecounts.addtrnasamplecounts()
+                    readtypecounts.addtrnacounts(currbed)
+                    readtypecounts.addaminocounts(trnainfo.getamino(currfeat.name))
+                    
+
+                    #aminos.add(trnainfo.getamino(currfeat.name))
+                    if countfrags:
+                        fragtype = getfragtype(currfeat, currread)
+                        
+                        if fragtype == "Whole":
+                            
+                            trnawholecounts[currsample][currbed] += 1
+                        elif fragtype == "Fiveprime":
+                            trnafivecounts[currsample][currbed] += 1
+                        elif fragtype == "Threeprime":
+                            trnathreecounts[currsample][currbed] += 1
+                        elif fragtype == "Trailer":
+                            trnatrailercounts[currsample][currbed] += 1
+                    gotread = True
+                    break
+                        #print >>sys.stderr, str(currread.start - currfeat.start)+"-"+str(currread.end - currfeat.start)  
+                        #print >>sys.stderr, str(currfeat.start - currfeat.start)+"-"+str(currfeat.end - currfeat.start)
+                        #print >>sys.stderr, "****"
+                elif currfeat.antisense().coverage(currread) > 10:
+                    readtypecounts.addtrnaantisense(currbed)
+                    #trnaantisense[currsample][currbed] += 1
+                    gotread = True
+                    break
+        if gotread: 
+            continue
+        #continue #point4
+        if embllist is not None:
+            currtype = None
+            for currfeat in embllist.getbin(currread):
+                if currfeat.coverage(currread) > 10: 
+                    if currfeat.data["biotype"] == "processed_transcript":
+                        #print >>sys.stderr, currfeat.bedstring()
+                        
+                        pass
+
+                    if currtype is None or ncrnaorder[currfeat.data["source"]] > ncrnaorder[currtype]:
+                        currtype= currfeat.data["source"]
+                        if mitochrom == currread.chrom:
+                            currtype = "mito"+currtype
+                    
+                    
+                    
+            if currtype is not None:
+                readtypecounts.addemblcounts(currtype)
+                #emblcounts[currsample][currtype] += 1
+                #emblbiotypes.add(currtype)
+                gotread = True
+                    #print >>sys.stderr, currbam +":"+ currbed
+        if gotread: 
+            continue
+        #continue #point5
+
+        for currbed in bedlist:
+            for currfeat in featurelist[currbed].getbin(currread):
+                if currfeat.coverage(currread) > 10:
+                    counts[currsample][currbed] += 1
+                    gotread = True
+                    break
+                    #print >>sys.stderr, currbam +":"+ currbed
+
+        readtypecounts.addotherreads()
+        if not gotread and embllist is not None and mitochrom == currread.chrom:
+            currtype = "Mitochondrial_other"
+            readtypecounts.addemblcounts(currtype)
+            #emblbiotypes.add(currtype)
+        if not gotread and bamnofeature:
+            outbamnofeature.write(currread.data["bamline"])
+    return readtypecounts
+
+
+
+def printtypefile(countfile,samples, sampledata,allcounts,trnalist, trnaloci, bedtypes, emblbiotypes, sizefactor,countfrags = False, combinereps = True):
+
+    def sumsamples(countdict,sampledata, repname, currfeat = None, sizefactors = defaultdict(lambda: 1)):
+        if currfeat is None: #To account for the "other" counts, which don't have a feature
+            return sum(countdict[currsample]/sizefactors[currsample] for currsample in sampledata.getrepsamples(repname))
+        else:
+            return sum(countdict[currsample][currfeat]/sizefactors[currsample] for currsample in sampledata.getrepsamples(repname))
+  
+        
+    if combinereps:
+        replicates = list(sampledata.allreplicates())
+        print >>countfile, "\t".join(replicates)
+        for currbed in trnalist:
+            
+            if countfrags:
+                print  >>countfile, "tRNA_wholecounts\t"+"\t".join(str(sumsamples(trnawholecounts,sampledata,currrep, currbed, sizefactors = sizefactor)) for currrep in replicates)
+                print  >>countfile, "tRNA_fiveprime\t"+"\t".join(str(sumsamples(trnafivecounts,sampledata,currrep, currbed, sizefactors = sizefactor)) for currrep in replicates)
+                print  >>countfile, "tRNA_threeprime\t"+"\t".join(str(sumsamples(trnathreecounts,sampledata,currrep, currbed, sizefactors = sizefactor)) for currrep in replicates)
+                print  >>countfile, "tRNA_other\t"+"\t".join(str(sumsamples(trnacounts,sampledata,currrep, currbed, sizefactors = sizefactor) - (sumsamples(trnafivecounts,sampledata,currrep, currbed, sizefactors = sizefactor) + sumsamples(trnathreecounts,sampledata,currrep, currbed, sizefactors = sizefactor) + sumsamples(trnawholecounts,sampledata,currrep, currbed, sizefactors = sizefactor))) for currrep in replicates)
+                print  >>countfile, "tRNA_antisense\t"+"\t".join(str(sumsamples(trnaantisense,sampledata,currrep, currbed, sizefactors = sizefactor)) for currrep in replicates)
+            else:
+                
+                print  >>countfile, "tRNA\t"+"\t".join(str(sum(allcounts[currsample].trnacounts[currbed]/sizefactor[currsample] for currsample in sampledata.getrepsamples(currrep))) for currrep in replicates)
+                #print  >>countfile, "tRNA\t"+"\t".join(str(sumsamples(allcounts,sampledata,currrep, currbed, sizefactors = sizefactor)) for currrep in replicates)
+            
+        for currbed in trnaloci:
+            if countfrags:
+                print  >>countfile, "pretRNA_full\t"+"\t".join(str(sumsamples(fulltrnalocuscounts,sampledata,currrep, currbed, sizefactors = sizefactor)) for currrep in replicates)
+                print  >>countfile, "pretRNA_partial\t"+"\t".join(str(sumsamples(partialtrnalocuscounts,sampledata,currrep, currbed, sizefactors = sizefactor)) for currrep in replicates)
+                print  >>countfile, "pretRNA_trailer\t"+"\t".join(str(sumsamples(trnalocustrailercounts,sampledata,currrep, currbed, sizefactors = sizefactor)) for currrep in replicates)
+            else:
+                print  >>countfile, "pretRNA\t"+"\t".join(str(sum(allcounts[currsample].trnalocuscounts[currbed]/sizefactor[currsample] for currsample in sampledata.getrepsamples(currrep))) for currrep in replicates)
+        #print >>sys.stderr, allcounts[sampledata.getrepsamples(replicates[0])[0]].embltypecounts 
+        for currbiotype in emblbiotypes:
+            #print  >>countfile, currbiotype+"\t"+"\t".join(str(sumsamples(emblcounts,sampledata,currrep, currbiotype, sizefactors = sizefactor)) for currrep in replicates)
+            print  >>countfile, currbiotype+"\t"+"\t".join(str(sum(allcounts[currsample].embltypecounts[currbiotype]/sizefactor[currsample] for currsample in sampledata.getrepsamples(currrep))) for currrep in replicates)
+            
+        for currbed in bedtypes:
+            print  >>countfile, os.path.basename(currbed)+"\t"+"\t".join(str(sum(allcounts[currsample].bedtypecounts[currbed]/sizefactor[currsample] for currsample in sampledata.getrepsamples(currrep))) for currrep in replicates)
+        #print  >>countfile, "other"+"\t"+"\t".join(str(sumsamples(othercounts,sampledata,currrep, sizefactors = sizefactor)) for currrep in replicates)
+        print  >>countfile, "other"+"\t"+"\t".join(str(sum(allcounts[currsample].otherreads/sizefactor[currsample] for currsample in sampledata.getrepsamples(currrep))) for currrep in replicates)
+        
+    else:
+        print  >>countfile, "\t".join(samples)
+        
+        for currbed in trnalist:
+            
+            if countfrags:
+                print  >>countfile, "tRNA_wholecounts\t"+"\t".join(str(trnawholecounts[currsample][currbed]/sizefactor[currsample]) for currsample in samples)
+                print  >>countfile, "tRNA_fiveprime\t"+"\t".join(str(trnafivecounts[currsample][currbed]/sizefactor[currsample]) for currsample in samples)
+                print  >>countfile, "tRNA_threeprime\t"+"\t".join(str(trnathreecounts[currsample][currbed]/sizefactor[currsample]) for currsample in samples)
+                print  >>countfile, "tRNA_other\t"+"\t".join(str((trnacounts[currsample][currbed] - (trnathreecounts[currsample][currbed] + trnafivecounts[currsample][currbed] + trnawholecounts[currsample][currbed]))/sizefactor[currsample]) for currsample in samples)
+                print  >>countfile, "tRNA_antisense\t"+"\t".join(str(trnaantisense[currsample][currbed]/sizefactor[currsample]) for currsample in samples)
+
+                
+                
+            else:
+                print  >>countfile, "tRNA\t"+"\t".join(str(trnacounts[currsample][currbed]/sizefactor[currsample]) for currsample in samples)
+        for currbed in locilist:
+            if countfrags:
+                print  >>countfile, "pretRNA_full\t"+"\t".join(str(fulltrnalocuscounts[currsample][currbed]/sizefactor[currsample]) for currsample in samples)
+                print  >>countfile, "pretRNA_partial\t"+"\t".join(str(partialtrnalocuscounts[currsample][currbed]/sizefactor[currsample]) for currsample in samples)
+                print  >>countfile, "pretRNA_trailer\t"+"\t".join(str(trnalocustrailercounts[currsample][currbed]/sizefactor[currsample]) for currsample in samples)
+            else:
+                print  >>countfile, "pretRNA\t"+"\t".join(str(trnalocuscounts[currsample][currbed]/sizefactor[currsample]) for currsample in samples)
+        for currbiotype in sampledata.emblbiotypes:
+            print  >>countfile, currbiotype+"\t"+"\t".join(str(emblcounts[currsample][currbed]/sizefactor[currsample]) for currsample in samples)
+        for currbed in bedlist:
+            print  >>countfile, os.path.basename(currbed)+"\t"+"\t".join(str(counts[currsample][currbed]/sizefactor[currsample]) for currsample in samples)
+        print  >>countfile, "other"+"\t"+"\t".join(str(othercounts[currsample]/sizefactor[currsample]) for currsample in samples)
+
+def printrealcounts(samples, allcounts):
+    print  >>realcountfile, "\t".join(samples)
+    
+    for currbed in trnalist:
+        
+        if countfrags:
+            print  >>realcountfile, "tRNA_wholecounts\t"+"\t".join(str(trnawholecounts[currsample][currbed]) for currsample in samples)
+            print  >>realcountfile, "tRNA_fiveprime\t"+"\t".join(str(trnafivecounts[currsample][currbed]) for currsample in samples)
+            print  >>realcountfile, "tRNA_threeprime\t"+"\t".join(str(trnathreecounts[currsample][currbed]) for currsample in samples)
+            print  >>realcountfile, "tRNA_other\t"+"\t".join(str((trnacounts[currsample][currbed] - (trnathreecounts[currsample][currbed] + trnafivecounts[currsample][currbed] + trnawholecounts[currsample][currbed]))) for currsample in samples)
+            print  >>realcountfile, "tRNA_antisense\t"+"\t".join(str(trnaantisense[currsample][currbed]) for currsample in samples)
+    
+            
+            
+        else:
+            print  >>realcountfile, "tRNA\t"+"\t".join(str(trnacounts[currsample][currbed]) for currsample in samples)
+    
+    for currbed in locilist:
+        if countfrags:
+            print  >>realcountfile, "pretRNA_full\t"+"\t".join(str(fulltrnalocuscounts[currsample][currbed]) for currsample in samples)
+            print  >>realcountfile, "pretRNA_partial\t"+"\t".join(str(partialtrnalocuscounts[currsample][currbed]) for currsample in samples)
+            print  >>realcountfile, "pretRNA_trailer\t"+"\t".join(str(trnalocustrailercounts[currsample][currbed]) for currsample in samples)
+        else:
+            print  >>realcountfile, "pretRNA\t"+"\t".join(str(trnalocuscounts[currsample][currbed]) for currsample in samples)
+    for currbiotype in emblbiotypes:
+        #print >>sys.stderr, emblcounts[currsample]
+        print  >>realcountfile, currbiotype+"\t"+"\t".join(str(emblcounts[currsample][currbiotype]) for currsample in samples)
+    for currbed in bedlist:
+        print  >>realcountfile, os.path.basename(currbed)+"\t"+"\t".join(str(counts[currsample][currbed]) for currsample in samples)
+    print  >>realcountfile, "other"+"\t"+"\t".join(str(othercounts[currsample]) for currsample in samples)
+    
+    
+    realcountfile.close()
+def printaminocounts(trnaaminofilename, sampledata,allcounts, sizefactor):
+    #print >>sys.stderr, trnaaminocounts
+    replicates = list(sampledata.allreplicates())
+    trnaaminofile = open(trnaaminofilename, "w")
+    aminos = set(itertools.chain.from_iterable(allcounts[currsample].aminos for currsample in sampledata.getsamples()))
+    #print >>sys.stderr, aminos
+    print  >>trnaaminofile, "\t".join(replicates)
+    for curramino in aminos:
+        #print >>sys.stderr, curramino
+        print >>trnaaminofile, curramino+"\t"+"\t".join(str(sum(allcounts[currsample].aminocounts[curramino]/sizefactor[currsample] for currsample in sampledata.getrepsamples(currrep))) for currrep in replicates)
+
+def printtrnanormfile(samples, allcounts):         
+    #samples trnasamplecounts.keys()
+    trnanormfile = open(trnanormfile, "w")
+    mean = 1.*sum(trnasamplecounts.values())/len(trnasamplecounts.values())
+    print >>trnanormfile, "\t".join(samples)
+    print >>trnanormfile, "\t".join(str(trnasamplecounts[currsample]/mean) for currsample in samples)
+def printallreadsnormfile(samples, allcounts):
+    allreadsnormfile = open(allreadsnormfile, "w")
+    mean = 1.*sum(totalsamplecounts.values())/len(totalsamplecounts.values())
+    print >>allreadsnormfile,"\t".join(samples)
+    print >>allreadsnormfile,"\t".join(str(totalsamplecounts[currsample]/mean) for currsample in samples)
+def printlengthfile(readlengthfile, samples,allcounts):
+    readlengthfile = open(readlengthfile, "w")
+    print >>readlengthfile, "Length\tSample\tother\ttrnas\tpretrnas"
+    for currsample in samples:
+        for curr in range(0,max(allcounts[currsample].readlengths.keys())+1):
+            othercount = allcounts[currsample].trnareadlengths[curr] + allcounts[currsample].pretrnareadlengths[curr]
+            print >>readlengthfile, str(curr)+"\t"+currsample+"\t"+str(allcounts[currsample].readlengths[curr] - othercount)+"\t"+str(allcounts[currsample].trnareadlengths[curr]) +"\t"+str(allcounts[currsample].pretrnareadlengths[curr])
+        
+def counttypereadsqueue(countqueue,currsample, *args, **kwargs):
+    countqueue.put([currsample,counttypereads(*args, **kwargs)])
+
+def counttypereadspool(args):
+    return counttypereads(*args[0], **args[1])
+    
+def compressargs( *args, **kwargs):
+    return tuple([args, kwargs])
+    
+def testmain(**argdict):
+    argdict = defaultdict(lambda: None, argdict)
+    countfrags = argdict["countfrags"]
+    combinereps = argdict["combinereps"]
+    ensemblgtf = argdict["ensemblgtf"]
+    bamnofeature = argdict["bamnofeature"]
+    trnatable = argdict["trnatable"]
+    trnaaminofile = argdict["trnaaminofile"]
+    sampledata = samplefile(argdict["samplefile"])
+    minpretrnaextend = 5
+    mitochrom = None
+    if argdict["mitochrom"]:
+        mitochrom = argdict["mitochrom"]
+    sizefactor = defaultdict(lambda: 1)
+    if argdict["sizefactors"]:
+        sizefactor = getsizefactors(argdict["sizefactors"]) 
+        for currsample in sampledata.getsamples():
+            if currsample not in sizefactor:
+                print >>sys.stderr, "Size factor file "+argdict["sizefactors"]+" missing "+currsample
+                sys.exit(1)
+        
+    bedfiles = list()
+    
+    if argdict["bedfile"]  is not None:
+        bedfiles = argdict["bedfile"]
+    trnalocifiles = list()
+    if argdict["trnaloci"] is not None:
+        trnalocifiles = argdict["trnaloci"]
+    maturetrnas = list()
+    if argdict["maturetrnas"] is not None:
+        maturetrnas = argdict["bedfile"]
+        
+    #trnalocifiles = argdict["trnaloci"]
+    #maturetrnas=argdict["maturetrnas"]
+    
+    genetypefile = argdict["genetypefile"]
+    locifiles = argdict["trnaloci"]
+    maturetrnafiles = argdict["maturetrnas"]    
+    trnaaminofilename = argdict["trnaaminofile"]
+    trnanormfile = argdict["trnanormfile"]
+    allreadsnormfile = argdict["allreadsnormfile"]
+    readlengthfile = argdict["readlengthfile"]    
+    
+    if argdict["realcountfile"] == "stdout":
+        realcountfile = sys.stdout
+    else:
+        realcountfile = open(argdict["realcountfile"],"w")
+    
+    
+    if argdict["countfile"] == "stdout":
+        countfile = sys.stdout
+    else:
+        countfile = open(argdict["countfile"],"w")
+    
+
+    
+    
+    wholetrnas = dict()
+    fivefrags = dict()
+    threefrags = dict()
+    trailerfrags = dict()
+    otherfrags = dict()
+    allfrags = dict()
+    alltrnas = list()
+    maturenames = dict()
+    
+    
+
+
+    
+    trnainfo = transcriptfile(trnatable)
+    samplefiles = dict()
+    
+    samples = list(sampledata.getsamples())
+    
+        
+
+    #print >>sys.stderr, "**READCOUNT**"
+    try:
+        featurelist = dict()
+        trnaloci = dict()
+        trnalist = dict()
+        ensembllist = dict()
+        for currfile in bedfiles:
+            featurelist[currfile] = RangeBin(readfeatures(currfile))
+        
+        for currfile in locifiles:
+            trnaloci[currfile] = RangeBin(readbed(currfile), binfactor = 10000)
+        for currfile in maturetrnafiles:
+            matlist = list(readbed(currfile))
+            trnalist[currfile] = list(matlist)
+            maturenames[currfile] = {curr.name:curr for curr in matlist}
+        if ensemblgtf is not None:    
+            embllist = RangeBin(readgtf(ensemblgtf, filtertypes = set()))
+        else:
+            embllist = None
+    
+    except IOError as e:
+        print >>sys.stderr, e
+        sys.exit()
+    
+    
+
+    featcount = defaultdict(int)
+    bedlist = list(featurelist.iterkeys())
+    maxmismatches = None
+    allcounts = dict()
+    multithreaded = True
+    poolmode = True
+    starttime = time.time()
+    if multithreaded:
+        countqueue = Queue()
+        threads = dict()
+        if poolmode:
+            countpool = Pool(processes=8)
+            arglist = list()
+            for currsample in samples:
+                currbam = sampledata.getbam(currsample)
+                arglist.append(compressargs(currbam,currsample, trnainfo, trnaloci, trnalist,maturenames, embllist = embllist, featurelist = featurelist, maxmismatches = maxmismatches, bamnofeature = bamnofeature))
+            #arglist = list((tuple([currsample, sampledata.getbam(currsample)]) for currsample in samples))
+            results = countpool.map(counttypereadspool, arglist)
+            for i, curr in enumerate(samples):
+                allcounts[curr] = results[i]
+        else:
+            for currsample in samples:
+                currbam = sampledata.getbam(currsample)
+            
+                threads[currsample] = Process(target=counttypereadsqueue,args = (countqueue,currsample,currbam, currsample,trnainfo, trnaloci, trnalist,maturenames), kwargs = { "embllist" : embllist, "featurelist" : featurelist, "maxmismatches" : maxmismatches, "bamnofeature" : bamnofeature})
+                
+                #threads[currsample] = Process(target=testqueue,args =  (countqueue,currsample,currbam, currsample,trnainfo, trnaloci, trnalist,maturenames), kwargs = { "embllist" : embllist, "featurelist" : featurelist, "maxmismatches" : maxmismatches, "bamnofeature" : bamnofeature})
+                threads[currsample].start()
+            for sample in threads.iterkeys():
+                
+                currsample, counts = countqueue.get()
+                allcounts[currsample] = counts
+                print >>sys.stderr, currsample+":" +str(time.time()-starttime)
+            
+            
+            pass
+    else:
+        for currsample in samples:
+            currbam = sampledata.getbam(currsample)
+            allcounts[currsample] = counttypereads(currbam, currsample,trnainfo, trnaloci, trnalist,maturenames, embllist = embllist, featurelist = featurelist, maxmismatches = maxmismatches, bamnofeature = bamnofeature)
+        
+        
+    emblbiotypes  = set(itertools.chain.from_iterable(curr.emblbiotypes for curr in allcounts.values()))        
+    bedtypes  = set(itertools.chain.from_iterable(curr.bedtypes for curr in allcounts.values()))       
+    printtypefile(countfile, samples, sampledata,allcounts,trnalist, trnaloci, bedtypes, emblbiotypes,sizefactor, countfrags = countfrags )
+    if readlengthfile is not None:
+        printlengthfile(readlengthfile, samples, allcounts)
+
+    if trnaaminofilename is not None:
+        printaminocounts(trnaaminofilename, sampledata, allcounts, sizefactor)
 
 def main(**argdict):
     argdict = defaultdict(lambda: None, argdict)
@@ -453,7 +976,7 @@ def main(**argdict):
         print >>allreadsnormfile,"\t".join(str(totalsamplecounts[currsample]/mean) for currsample in samples)
     if readlengthfile is not None:    
         readlengthfile = open(readlengthfile, "w")
-        print >>readlengthfile, "Length\tSample\tall\ttrnas\tpretrnas"
+        print >>readlengthfile, "Length\tSample\tother\ttrnas\tpretrnas"
         for currsample in readlengths.keys():
             for curr in range(0,max(readlengths[currsample].keys())+1):
                 othercount = trnareadlengths[currsample][curr] + pretrnareadlengths[currsample][curr]

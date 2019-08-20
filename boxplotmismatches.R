@@ -116,7 +116,7 @@ posname = paste(directory,"/",currpos,"-possamplemismatches",outputformat, sep =
 
 
 
-ggplot(data = mismatchmeltagg, aes(x=sample, y=percentmismatch)) + geom_boxplot(aes(fill=sample), outlier.shape=NA) + geom_jitter(aes(fill=sample), size = dotsize) +  theme(axis.text.x = element_text(angle = 90, hjust = 1))+  ylim(0, 1)
+ggplot(data = mismatchmeltagg, aes(x=sample, y=percentmismatch)) + geom_boxplot(aes(fill=sample), outlier.shape=NA) + geom_jitter(aes(fill=sample), size = dotsize) +  theme(axis.text.x = element_text(angle = 90, hjust = 1))+  ylim(0, 1) + xlab("Sample")+ylab("Percent Misincorporation")
 ggsave(filename=posname,width=7, height=7)
 
 mismatchmeltaminoagg <- aggregate(mismatchmelt$percentmismatch, by=list(sample = mismatchmelt$sample, amino = trnatable[match(mismatchmelt$tRNA_name,trnatable[,1]),3]), FUN=mean)
@@ -129,7 +129,7 @@ posname = paste(directory,"/",currpos,"-posaminomismatches",outputformat, sep = 
 
 
 
-ggplot(data = mismatchmeltaminoagg, aes(x=amino, y=percentmismatch)) + geom_boxplot(aes(fill=amino), outlier.shape=NA) + geom_jitter(aes(fill=amino), size = dotsize) +  theme(axis.text.x = element_text(angle = 90, hjust = 1))+  ylim(0, 1)
+ggplot(data = mismatchmeltaminoagg, aes(x=amino, y=percentmismatch)) + geom_boxplot(aes(fill=amino), outlier.shape=NA) + geom_jitter(aes(fill=amino), size = dotsize) +  theme(axis.text.x = element_text(angle = 90, hjust = 1))+  ylim(0, 1) + xlab("Isotype")+ylab("Percent Misincorporation")
 ggsave(filename=posname, width=7, height=7)
 
 
@@ -145,7 +145,7 @@ deletemeltaminoagg <- aggregate(deletionmelt$deletepercent, by=list(sample = del
 
 colnames(deletemeltaminoagg) <- c("Feature","amino","percentdeletions")
 posname = paste(directory,"/",currpos,"-posaminodeletions",outputformat, sep = "")
-ggplot(data = deletemeltaminoagg, aes(x=amino, y=percentdeletions)) + geom_boxplot(aes(fill=amino), outlier.shape=NA) + geom_jitter(aes(fill=amino), size = dotsize) +  theme(axis.text.x = element_text(angle = 90, hjust = 1))+  ylim(0, 1)  
+ggplot(data = deletemeltaminoagg, aes(x=amino, y=percentdeletions)) + geom_boxplot(aes(fill=amino), outlier.shape=NA) + geom_jitter(aes(fill=amino), size = dotsize) +  theme(axis.text.x = element_text(angle = 90, hjust = 1))+  ylim(0, 1)   + xlab("Isotype")+ylab("Percent Skipped")
 ggsave(filename=posname,width=7, height=7)
 
 
@@ -153,16 +153,16 @@ ggsave(filename=posname,width=7, height=7)
 deletemeltsampleagg <- aggregate(deletionmelt$deletepercent, by=list(Feature = deletionmelt$tRNA_name, sample = sampletable[match(deletionmelt$sample,sampletable[,1]),2]), FUN=mean)
 colnames(deletemeltsampleagg) <- c("Feature","sample","percentdeletions")
 posname = paste(directory,"/",currpos,"-possampledeletions",outputformat, sep = "")
-ggplot(data = deletemeltsampleagg, aes(x=sample, y=percentdeletions)) + geom_boxplot(aes(fill=sample), outlier.shape=NA) + geom_jitter(aes(fill=sample), size = dotsize) +  theme(axis.text.x = element_text(angle = 90, hjust = 1))+  ylim(0, 1)
+ggplot(data = deletemeltsampleagg, aes(x=sample, y=percentdeletions)) + geom_boxplot(aes(fill=sample), outlier.shape=NA) + geom_jitter(aes(fill=sample), size = dotsize) +  theme(axis.text.x = element_text(angle = 90, hjust = 1))+  ylim(0, 1) + xlab("Sample")+ylab("Percent Skipped")
 ggsave(filename=posname,width=7, height=7)
 
 }
 
-print("***||")
+#print("***||")
 deletionmelt = mismatches[,c("tRNA_name","position","sample","coverage","deletions")]
 maxskips <- aggregate(deletionmelt$deletions/(deletionmelt$deletions + deletionmelt$coverage + 30), by=list(position = deletionmelt$position, Feature = deletionmelt$tRNA_name,Sample = deletionmelt$sample), FUN=max)
 #maxskips <- aggregate(deletionmelt$deletions/deletionmelt$coverage, by=list(position = deletionmelt$position, Feature = deletionmelt$tRNA_name), FUN=max)
 
-print (maxskips[order(-maxskips$x),])
+#print (maxskips[order(-maxskips$x),])
 #head(maxskips)
 #head()
