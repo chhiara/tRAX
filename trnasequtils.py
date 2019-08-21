@@ -768,7 +768,7 @@ def getbamrange(bamfile, chromrange = None, primaryonly = False, singleonly = Fa
             alignscore = None
             secondbestscore = None
             uniquemapping = False
-            '''
+
             if not skiptags:
                 if currline.has_tag("YA") and currline.get_tag("YA") > 1:
                     uniqueac = False
@@ -782,7 +782,7 @@ def getbamrange(bamfile, chromrange = None, primaryonly = False, singleonly = Fa
                     secondbestscore = float(currline.get_tag("XS"))
                 if currline.has_tag("AS"):
                     alignscore = float(currline.get_tag("AS"))
-            '''    
+
                 
 
                     

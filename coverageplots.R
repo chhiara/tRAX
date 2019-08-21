@@ -156,7 +156,6 @@ covplot
 
 #remove columns with too many NAs
 coverages <- coverages[ , colSums(is.na(coverages)) < nrow(coverages)/8]
-
 coveragemelt = melt(coverages, id.vars = c("Feature", "Sample"))
 
 
@@ -171,8 +170,6 @@ coveragemelt <- coveragemeltagg
 write.table(coveragemelt,"aggtables.txt" ,sep = "\t")
 
 
-
-
 acceptorType = trnatable[match(coveragemelt$Feature, trnatable[,1]),3]
 acceptorType <- factor(acceptorType, levels = sort(unique(acceptorType)))
 
@@ -180,19 +177,12 @@ featnames = unique(as.character(coveragemelt$Feature))
 tails = as.numeric(unlist(lapply(strsplit(featnames, "-", fixed = TRUE), tail, 1)))
 
 
-
-
 anticodonname = as.character(unlist(lapply(strsplit(featnames, "-", fixed = TRUE), function(x) { return( x[length(x) - 1] ) })))
 aminoname = as.character(unlist(lapply(strsplit(featnames, "-", fixed = TRUE), function(x) { return( x[length(x) - 2] ) })))
-
-
 
 coveragemelt$Feature = factor(as.character(coveragemelt$Feature), levels = featnames)
 
 sortacceptor <- acceptorType[order(coveragemelt$variable, coveragemelt$Sample,-as.numeric(coveragemelt$Feature))]
-
-
-#1:30
 
 
 makecombplot(coveragemelt,filename=paste(opt$unique, "-combinedcoverages.pdf",sep= ""))
@@ -314,10 +304,7 @@ aminonamesec = paste(opt$unique, "-",curramino,"_cov",outputformat,sep= "")
 makecovplot(aminodata,aminonamesec)
 
 aminonameunique = paste(opt$unique, "-",curramino,"_uniqueonlycov",outputformat,sep= "")
-
 makecovplot(aminodata[aminodata$maptype == "Transcript specific",],aminonameunique)
-
-
 
 }
 for (currtranscript in unique(allmultmelt$Feature)){
