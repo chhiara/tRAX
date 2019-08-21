@@ -49,10 +49,8 @@ def wrapbowtie2(bowtiedb, unpaired, outfile, scriptdir, trnafile, maxmaps = MAXM
         print >>logfile, errinfo 
         logfile.flush()
     if bowtierun.returncode:
-        print >>sys.stderr, "Failure to Bowtie2 map"
-        print >>sys.stderr, output[1]
-        logfile.close()
-        sys.exit(1)
+        return mapinfo(0,0,0,0, errinfo, samplename, failedrun = True, bowtiecommand = bowtiecommand)
+
 
     rereadtotal = re.search(r'(\d+).*reads',errinfo )
     rereadunmap = re.search(r'\s*(\d+).*0 times',errinfo )
@@ -63,7 +61,7 @@ def wrapbowtie2(bowtiedb, unpaired, outfile, scriptdir, trnafile, maxmaps = MAXM
         unmappedreads = rereadunmap.group(1)
         singlemaps = rereadsingle.group(1)
         multmaps = rereadmult.group(1)
-        return mapinfo(singlemaps,multmaps,unmappedreads,totalreads, errinfo, samplename)
+        return mapinfo(singlemaps,multmaps,unmappedreads,totalreads, errinfo, samplename, bowtiecommand = bowtiecommand)
         
     else:
         print >>sys.stderr, "Could not map "+unpaired +", check mapstats file"
@@ -92,15 +90,19 @@ def checkheaders(bamname, fqname):
 
     
 class mapinfo:
-    def __init__(self, singlemap, multimap, unmap, totalreads, bowtietext, samplename):
+    def __init__(self, singlemap, multimap, unmap, totalreads, bowtietext, samplename, failedrun = False, bowtiecommand = None):
         self.unmaps = unmap
         self.singlemaps = singlemap
         self.multimaps = multimap
         self.totalreads = totalreads
         self.bowtietext = bowtietext
         self.samplename = samplename
+        self.failedrun = failedrun
+        self.bowtiecommand = bowtiecommand
         self.unmap = int(self.totalreads) - (int(self.multimaps) + int(self.singlemaps))
     def printbowtie(self, logfile = sys.stderr):
+        print >>logfile, "******************************************************************"
+        print >>logfile, self.command
         print >>logfile, self.bowtietext
 def mapreads(*args, **kwargs):
     return wrapbowtie2(*args, **kwargs)
@@ -217,7 +219,12 @@ def testmain(**argdict):
         #results = mappool.map(mapreadspool, mapargs)
         starttime = time.time()
         for currresult in mappool.imap_unordered(mapreadspool, mapargs):
-            print >>sys.stderr, "time "+currresult.samplename+": "+str(time.time() - starttime)
+            #print >>sys.stderr, "time "+currresult.samplename+": "+str(time.time() - starttime)
+            if currresult.failedrun == True:
+                print >>sys.stderr, "Failure to Bowtie2 map"
+                print >>sys.stderr, output[1]
+                currresult.printbowtie(logfile)
+                sys.exit(1)
             mapresults[currresult.samplename] = currresult
             currresult.printbowtie(logfile)
                 
