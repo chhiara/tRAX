@@ -50,7 +50,7 @@ def wrapbowtie2(bowtiedb, unpaired, outfile, scriptdir, trnafile, maxmaps = MAXM
         logfile.flush()
     if bowtierun.returncode:
         print >>sys.stderr, "Failure to Bowtie2 map"
-        print >>sys.stderr, "check mapstats file"
+        print >>sys.stderr, output[1]
         logfile.close()
         sys.exit(1)
 
