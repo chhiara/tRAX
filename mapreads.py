@@ -102,7 +102,7 @@ class mapinfo:
         self.unmap = int(self.totalreads) - (int(self.multimaps) + int(self.singlemaps))
     def printbowtie(self, logfile = sys.stderr):
         print >>logfile, "******************************************************************"
-        print >>logfile, self.command
+        print >>logfile, self.bowtiecommand
         print >>logfile, self.bowtietext
 def mapreads(*args, **kwargs):
     return wrapbowtie2(*args, **kwargs)
