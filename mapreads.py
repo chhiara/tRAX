@@ -67,8 +67,7 @@ def wrapbowtie2(bowtiedb, unpaired, outfile, scriptdir, trnafile, maxmaps = MAXM
         print >>sys.stderr, "Could not map "+unpaired +", check mapstats file"
         print >>sys.stderr, "Exiting..."
         print >>sys.stderr, errinfo
-        sys.exit(1)
-        return None
+        return mapinfo(0,0,0,0, errinfo, samplename, failedrun = True, bowtiecommand = bowtiecommand)
     
 
 def checkheaders(bamname, fqname):
