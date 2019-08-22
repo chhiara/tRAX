@@ -808,7 +808,7 @@ class BamRead(GenomeRange):
         self.bamline = bamline
     def getmismatches(self):
         if self.bamline.has_tag("XM"):
-            return self.bamline.get_tag("XM")
+            return int(self.bamline.get_tag("XM"))
         else:
             return None
     def isuniqueaminomapping(self):
@@ -830,9 +830,17 @@ class BamRead(GenomeRange):
         return len(self.bamline.cigar) > 1
     def getlength(self):
         return len(self.bamline.seq)
- 
+    def getseq(self):
+        if self.strand == '-':
+            return revcom(self.bamline.seq)
+        else:
+            return self.bamline.seq
+    def issinglemapped(self):
+        return self.bamline.mapq >= 2
+    def getcigar(self):
+        return self.bamline.cigar
 
-def getbam(bamfile, chromrange = None, primaryonly = False, singleonly = False, maxmismatches = None, allowindels=True, skiptags = False):
+def getbam(bamfile, chromrange = None, primaryonly = False, singleonly = False, allowindels=True):
     bamiter = None
     try:
         if chromrange is not None:
@@ -872,7 +880,8 @@ def isuniqueaminomapping(read):
 def isuniqueacmapping(read):
     return read.data["uniqueac"]
 def issinglemapped(read):
-    return (read.data["score"] >= 2)        
+    return (read.data["score"] >= 2)  
+    
 def getpileuprange(bamfile, chromrange = None):
     bamiter = None
     if chromrange is not None:

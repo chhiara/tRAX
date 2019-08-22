@@ -9,6 +9,35 @@ from collections import defaultdict
 import os.path
 from trnasequtils import *
 
+bam_match = 0
+bam_cins = 1
+bam_cdel = 2
+
+#pseudocount = 30
+
+
+def cigarreflength(cigar):
+    return sum(curr[1] for curr in cigar if curr[0] in set([0,bam_cdel]))
+    
+def cigarreadlength(cigar):
+    return sum(curr[1] for curr in cigar if curr[0] in set([0,bam_cins]))
+    
+def cigarrefcoverage(cigar):
+    nextsum = 1
+    for curr in cigar:
+        if curr[0] == bam_cins:
+            pass
+        elif curr[0] == bam_cdel:
+            for i in range(curr[1]):
+                yield 0
+        elif curr[0] == bam_match:
+            for i in range(curr[1]):
+                yield nextsum
+                nextsum = 1
+                
+                
+    
+
 
 gapchars = set("-._~")
 class readcoverage:
@@ -53,6 +82,16 @@ class readcoverage:
                 lastcoverage = self.coverage[i]/sizefactor
                 yield self.coverage[i]/sizefactor
                 i += 1
+                
+    def addbase(self, base):
+        #self.totalreads += 1
+        posbase = max([0, base - self.region.start])
+        if 0 < posbase < len(self.coverage) - 1:
+            self.coverage[posbase] += 1
+        else:
+            pass
+        
+        
 def nasum(operands, naval = "NA"):
     if sum("NA"== curr for curr in operands) == len(operands):
         return "NA"
@@ -112,6 +151,317 @@ def gettnanums(trnaalign, margin = 0):
     for i in range(margin):
         trnanum.append('tail'+str(i+1))
     return trnanum
+    
+class coverageinfo:
+    def __init__(self, allcoverage, multaminocoverage, multaccoverage, multtrnacoverages,uniquecoverages, uniquegenomecoverages,multigenomecoverages, readmismatches,adeninemismatches,thyminemismatches,cytosinemismatches, guanosinemismatches  ):
+        self.allcoverages = dict()
+        self.multaminocoverages = dict()
+        self.multaccoverages = dict()
+        self.multtrnacoverages = dict()
+        self.uniquecoverages = dict()
+        self.uniquegenomecoverages = dict()
+        self.multigenomecoverages = dict()
+        
+        self.readmismatches = dict()
+        self.adeninemismatches = dict()
+        self.thyminemismatches = dict()
+        self.cytosinemismatches = dict()
+        self.guanosinemismatches = dict()    
+        
+        
+def getsamplecoverage(currsample, sampledata, trnalist, basetrnas, trnaseqs,maxmismatches = None, minextend = None): 
+    currbam = sampledata.getbam(currsample)
+    allcoverages = dict()
+    multaminocoverages = dict()
+    multaccoverages = dict()
+    multtrnacoverages = dict()
+    uniquecoverages = dict()
+    uniquegenomecoverages = dict()
+    multigenomecoverages = dict()
+    
+    readmismatches = dict()
+    
+    adeninemismatches = dict()
+    thyminemismatches = dict()
+    cytosinemismatches = dict()
+    guanosinemismatches = dict()        
+    readskips = dict()        
+    try:
+        #print >>sys.stderr, currbam
+        if not os.path.isfile(currbam+".bai"):
+            pysam.index(""+currbam)
+        bamfile = pysam.Samfile(""+currbam, "rb" )  
+    except IOError as ( strerror):
+        print >>sys.stderr, strerror
+        sys.exit()
+        
+    for i, currfeat in enumerate(basetrnas):
+        
+        allcoverages[currfeat.name] = readcoverage(trnalist[i])
+        multaminocoverages[currfeat.name] = readcoverage(trnalist[i])
+        multaccoverages[currfeat.name] = readcoverage(trnalist[i])
+        multtrnacoverages[currfeat.name] = readcoverage(trnalist[i])
+        uniquecoverages[currfeat.name] = readcoverage(trnalist[i])
+        uniquegenomecoverages[currfeat.name] = readcoverage(trnalist[i])
+        multigenomecoverages[currfeat.name] = readcoverage(trnalist[i])
+        
+        readmismatches[currfeat.name] = readcoverage(trnalist[i])
+        adeninemismatches[currfeat.name] =   readcoverage(trnalist[i])
+        thyminemismatches[currfeat.name] =   readcoverage(trnalist[i])
+        cytosinemismatches[currfeat.name] =  readcoverage(trnalist[i])
+        guanosinemismatches[currfeat.name] = readcoverage(trnalist[i])
+        readskips[currfeat.name] = readcoverage(trnalist[i])
+        for currread in getbam(bamfile, trnalist[i]):
+            
+
+            if maxmismatches is not None and currread.getmismatches() > maxmismatches:
+                continue
+            #print >>sys.stderr, "||**||"+str(currread.getmismatches())
+            if trnalist[i].coverage(currread) > 10:
+
+                if minextend is not None and not (currread.start + minextend <= trnalist[i].start or currread.end - minextend >= trnalist[i].end):
+                    continue
+
+    
+                allcoverages[trnalist[i].name].addread(currread)
+                if not currread.isuniqueaminomapping():
+                    multaminocoverages[trnalist[i].name].addread(currread)
+                elif not currread.isuniqueacmapping():
+                    multaccoverages[trnalist[i].name].addread(currread)
+                elif not currread.isuniquetrnamapping():
+                    multtrnacoverages[trnalist[i].name].addread(currread)
+                else:
+                    uniquecoverages[trnalist[i].name].addread(currread)
+                if currread.issinglemapped():
+                    uniquegenomecoverages[trnalist[i].name].addread(currread)
+                else:
+                    multigenomecoverages[trnalist[i].name].addread(currread)
+                
+                currseq = currread.getseq()
+                #allcoverages[currsample][trnaname].addread(currread)
+                cigcov = list(cigarrefcoverage(currread.getcigar()))
+                if len(currseq) != len(cigcov):
+                    #print >>sys.stderr, "**||"
+                    #print >>sys.stderr,currread.data["CIGARstring"]
+                    #print >>sys.stderr,len(currseq)
+                    #print >>sys.stderr,len(cigcov)
+                    #sys.exit(1)
+                    pass
+                if sum(cigcov) != len(list(cigarrefcoverage(currread.getcigar()))):
+                    #print >>sys.stderr, "**||||"
+                    #print >>sys.stderr,currread.data["CIGARstring"]
+                    #print >>sys.stderr,len(currseq)
+                    #print >>sys.stderr,len(cigcov)
+                    #sys.exit(1)
+                    pass
+                readcov = list(cigarrefcoverage(currread.getcigar()))
+                trnaname = trnalist[i].name
+                for currpos in range(cigarreflength(currread.getcigar())): #30
+                    readpos = sum(readcov[:currpos])
+                
+                    if readpos >= len(currseq):
+
+                        pass
+                    currbase = currseq[readpos]
+                    
+                
+                    if not readcov[currpos]:
+                        pass
+                        readskips[trnaname].addbase(currread.start + currpos)
+                    if trnaseqs[currfeat.name][currread.start+ currpos] != currbase:
+                        readmismatches[trnaname].addbase(currread.start + currpos)
+                    
+                    if currbase == "A":
+                        adeninemismatches[trnaname].addbase(currread.start + currpos)
+                    elif currbase == "T":
+                        thyminemismatches[trnaname].addbase(currread.start + currpos)
+                    elif currbase == "C":
+                        cytosinemismatches[trnaname].addbase(currread.start + currpos)
+                    elif currbase == "G":
+                        guanosinemismatches[trnaname].addbase(currread.start + currpos)
+    return coverageinfo( allcoverages, multaminocoverages, multaccoverages, multtrnacoverages,uniquecoverages, uniquegenomecoverages,multigenomecoverages, readmismatches,adeninemismatches,thyminemismatches,cytosinemismatches, guanosinemismatches  )
+
+def transcriptcoverage(samplecoverages, mismatchreport, trnalist,sampledata, mincoverage, trnastk):
+
+    print >>mismatchreport, "\t".join(["tRNA_name","sample","position","percentmismatch","coverage","ends","uniquecoverage","multitrnacoverage","multianticodoncoverage","multiaminocoverage","tRNAreadstotal","actualbase","mismatchedbases","adenines","thymines","cytosines","guanines","deletions"])
+    for currfeat in trnalist:
+      
+        totalreads = sum(samplecoverages[currsample].allcoverages[currfeat.name].totalreads for currsample in sampledata.getsamples())
+        if totalreads < mincoverage:
+            continue
+        reportpositions = set()  
+        for currsample in samples:
+            
+            covcounts = list(curr/(1.*readcounts[currsample][currfeat.name]) if curr is not None else 0 for curr in readmismatches[currsample][currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
+            mismatches =  list(curr if curr is not None else 0 for curr in samplecoverages[currsample][currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
+
+
+            uniquecounts =  list(curr if curr is not None else 0 for curr in samplecoverages[currsample].uniquecoverages[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
+            multitrna =  list(curr if curr is not None else 0 for curr in samplecoverages[currsample].multtrnacoverages[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
+            multaccounts =  list(curr if curr is not None else 0 for curr in samplecoverages[currsample].multaccoverages[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
+            multaminocounts =  list(curr if curr is not None else 0 for curr in samplecoverages[currsample].multaminocoverages[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
+
+
+
+            allstarts  = list(curr if curr is not None else 0 for curr in samplecoverages[currsample].readstarts[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
+            allcovcount  = list(curr if curr is not None else 0 for curr in samplecoverages[currsample].allcoverages[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
+            adeninecount  = list(curr if curr is not None else 0 for curr in samplecoverages[currsample].adeninemismatches[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
+            thyminecount = list(curr if curr is not None else 0 for curr in samplecoverages[currsample].thyminemismatches[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
+            cytosinecount = list(curr if curr is not None else 0 for curr in samplecoverages[currsample].cytosinemismatches[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
+            guanosinecount  = list(curr if curr is not None else 0 for curr in samplecoverages[currsample].guanosinemismatches[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
+            readskipcount  = list(curr if curr is not None else 0 for curr in samplecoverages[currsample].readskips[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
+
+            for i, currcount in enumerate(covcounts):
+                mismatchthreshold = .1
+
+                print >>mismatchreport, "\t".join([currfeat.name,currsample,str(positionnums[i]),str(currcount),str(allcovcount[i]),str(uniquecounts[i]),str(multitrna[i]),str(multaccounts[i]),str(multaminocounts[i]),str(allstarts[i]),str(1.*readcounts[currsample][currfeat.name]),trnastk.aligns[currfeat.name][i],str(mismatches[i]),str(adeninecount[i]),str(thyminecount[i]),str(cytosinecount[i]),str(guanosinecount[i]), str(readskipcount[i])])
+    #sys.exit(1)        
+
+def locuscoverage(samplecoverages, mismatchreport, trnalist,sampledata, mincoverage, trnastk):
+
+    print >>mismatchreport, "\t".join(["tRNA_name","sample","position","coverage"])
+
+    for currfeat in trnalist:
+      
+        totalreads = sum(samplecoverages[currsample].allcoverages[currfeat.name].totalreads for currsample in samples)
+        if totalreads < mincoverage:
+            continue
+        reportpositions = set()  
+        for currsample in samples:
+            
+            covcounts = list(curr/(1.*readcounts[currsample][currfeat.name]) if curr is not None else 0 for curr in readmismatches[currsample][currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
+            mismatches =  list(curr if curr is not None else 0 for curr in samplecoverages[currsample][currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
+
+
+            uniquecounts =  list(curr if curr is not None else 0 for curr in samplecoverages[currsample].uniquecoverages[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
+            multitrna =  list(curr if curr is not None else 0 for curr in samplecoverages[currsample].multtrnacoverages[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
+            multaccounts =  list(curr if curr is not None else 0 for curr in samplecoverages[currsample].multaccoverages[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
+            multaminocounts =  list(curr if curr is not None else 0 for curr in samplecoverages[currsample].multaminocoverages[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
+
+
+
+            allstarts  = list(curr if curr is not None else 0 for curr in samplecoverages[currsample].readstarts[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
+            allcovcount  = list(curr if curr is not None else 0 for curr in samplecoverages[currsample].allcoverages[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
+            adeninecount  = list(curr if curr is not None else 0 for curr in samplecoverages[currsample].adeninemismatches[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
+            thyminecount = list(curr if curr is not None else 0 for curr in samplecoverages[currsample].thyminemismatches[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
+            cytosinecount = list(curr if curr is not None else 0 for curr in samplecoverages[currsample].cytosinemismatches[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
+            guanosinecount  = list(curr if curr is not None else 0 for curr in samplecoverages[currsample].guanosinemismatches[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
+            readskipcount  = list(curr if curr is not None else 0 for curr in samplecoverages[currsample].readskips[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
+
+            for i, currcount in enumerate(covcounts):
+                mismatchthreshold = .1
+
+                print >>mismatchreport, "\t".join([currfeat.name,currsample,str(positionnums[i]),str(currcount),str(allcovcount[i]),str(uniquecounts[i]),str(multitrna[i]),str(multaccounts[i]),str(multaminocounts[i]),str(allstarts[i]),str(1.*readcounts[currsample][currfeat.name]),trnastk.aligns[currfeat.name][i],str(mismatches[i]),str(adeninecount[i]),str(thyminecount[i]),str(cytosinecount[i]),str(guanosinecount[i]), str(readskipcount[i])])
+    #sys.exit(1)        
+def genomeprint(samplecoverages, uniquegenome, trnalist,sampledata, mincoverage):
+    covfiles = {uniquegenome + '-uniquegenomecoverages.txt':uniquegenomecoverages,uniquegenome + '-multgenomecoverages.txt':multigenomecoverages}
+    
+    for filename, currcoverage in covfiles.iteritems():
+        covfile = open(filename, "w")
+        print >>covfile,"Feature"+"\t"+"Sample"+"\t"+"\t".join(positionnums)
+            
+        for currfeat in trnalist:
+            totalreads = sum(allcoverages[currsample][currfeat.name].totalreads for currsample in samples)
+            if totalreads < mincoverage:
+                continue        
+            replicates = sampledata.allreplicates()
+            for currrep in replicates:
+                print  >>covfile,currfeat.name+"\t"+currrep+"\t"+"\t".join(str(curr) for curr in sumsamples(currcoverage,sampledata,currrep,currfeat,sizefactor))
+
+        covfile.close()
+        
+def uniqcoverage(samplecoverages, uniquename, trnalist,sampledata, mincoverage):
+    covfiles = {uniquename + '-uniquecoverages.txt':uniquecoverages,uniquename + '-multaccoverages.txt':multaccoverages,uniquename + '-multtrnacoverages.txt':multtrnacoverages,uniquename + '-multaminocoverages.txt':multaminocoverages}
+    
+    for filename, currcoverage in covfiles.iteritems():
+        covfile = open(filename, "w")
+        print >>covfile,"Feature"+"\t"+"Sample"+"\t"+"\t".join(positionnums)
+            
+        for currfeat in trnalist:
+            totalreads = sum(allcoverages[currsample][currfeat.name].totalreads for currsample in samples)
+            if totalreads < mincoverage:
+                continue
+        
+            replicates = sampledata.allreplicates()
+            for currrep in replicates:
+                print  >>covfile,currfeat.name+"\t"+currrep+"\t"+"\t".join(str(curr) for curr in sumsamples(currcoverage,sampledata,currrep,currfeat,sizefactor))
+                
+                
+        covfile.close()
+        
+def testmain(**argdict):
+    #print >>sys.stderr, argdict
+    argdict = defaultdict(lambda: None, argdict)
+    if "edgemargin" not in  argdict:
+        edgemargin = 0
+    else:
+        edgemargin = int(argdict["edgemargin"])
+    #currently crashes if set to zero
+    if "mincoverage" not in  argdict:
+        mincoverage = 10
+    else:
+        mincoverage = int(argdict["mincoverage"])  
+    
+        
+    sampledata = samplefile(argdict["samplefile"])
+    trnafasta = argdict["trnafasta"]
+    trnaseqs = fastadict(trnafasta)
+    for currname in trnaseqs.keys():
+        trnaseqs[currname] = ("N"*edgemargin)+trnaseqs[currname]+("N"*edgemargin)
+        
+        
+    maxmismatches = argdict["maxmismatches"]
+    uniquename = argdict["uniquename"]
+    uniquegenome = argdict["uniquegenome"]
+    trnastk = list(readrnastk(open(argdict["stkfile"], "r")))[0]
+    bedfile = argdict["bedfile"]
+    sizefactor = defaultdict(lambda: 1)
+    if argdict["sizefactors"]:
+        sizefactor = getsizefactors(argdict["sizefactors"]) 
+        for currsample in sampledata.getsamples():
+            if currsample not in sizefactor:
+                print >>sys.stderr, "Size factor file "+argdict["sizefactors"]+" missing "+currsample
+                sys.exit(1)
+    combinereps = argdict["combinereps"]
+    allcoveragefile = None
+    if "allcoverage" not in argdict or argdict["allcoverage"] == "stdout":
+        allcoveragefile = sys.stdout
+    else:
+        allcoveragefile = open(argdict["allcoverage"],"w")
+    samples = sampledata.getsamples()
+    minextend = None
+    if argdict["minextend"]:
+        minextend = int(argdict["minextend"])
+
+    alltrnas = list()
+    #gettnanums
+    
+    positionnums = gettnanums(trnastk, margin = edgemargin)
+    trnastk = trnastk.addmargin(edgemargin)
+    
+    try:
+        basetrnas = list()
+        for currfile in bedfile:
+            basetrnas.extend(list(currbed for currbed in readbed(currfile)))       
+    except IOError as e:
+        print >>sys.stderr, e
+        sys.exit()
+    
+    trnalist = list(curr.addmargin(edgemargin) for curr in basetrnas)
+
+    featcount = defaultdict(int)
+
+    maxoffset = 10
+    samplecoverages = dict()
+    for currsample in samples:
+        samplecoverages[currsample] = getsamplecoverage(currsample, sampledata, trnalist, basetrnas,trnaseqs,  maxmismatches = maxmismatches, minextend = minextend)
+        
+    #print >>sys.stderr, samplecoverages.values()
+    coveragetable = open(argdict["allcoverage"], "w")
+    transcriptcoverage(samplecoverages, coveragetable, trnalist,sampledata, mincoverage, trnastk)
+
+
+        
 def main(**argdict):
     #print >>sys.stderr, argdict
     argdict = defaultdict(lambda: None, argdict)

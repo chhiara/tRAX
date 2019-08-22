@@ -130,8 +130,8 @@ class typecount:
         return (self.typecounts[sample]["tRNA"] + self.typecounts[sample]["pretRNA"] )/ (1.*self.gettotal(sample))
     def getrrnapercent(self, sample):
         return self.typecounts[sample]["rRNA"] / (1.*self.gettotal(sample))
-    def getcountablepercent(self, sample):
-        return (self.gettotal(sample) - self.typecounts[sample]["other"]) / (1.*self.gettotal(sample))
+    def getotherpercent(self, sample):
+        return (self.typecounts[sample]["other"]) / (1.*self.gettotal(sample))
 def gettypecounts(samplename, sampleinfo):
     typeresults = open(gettypefile(samplename))
     allsamples = sampleinfo.getsamples()
@@ -239,7 +239,7 @@ def checkreadtypes(samplename, sampleinfo):
     #print str(len(highribosamples)) +" samples have high rRNA read percentage ( > "+str(100*ribopercentcutoff)+"%) [" +",".join(currsample+":"+str(rrnapercent[currsample]) for currsample in highribosamples)+"]"
     errorline(highribosamples, "have high rRNA read percentage", " > "+str(100*ribopercentcutoff)+"%", rrnapercent)
 
-    otherpercent = {currsample : typecounts.getcountablepercent(currsample) for currsample in samples}
+    otherpercent = {currsample : typecounts.getotherpercent(currsample) for currsample in samples}
     highothersamples = list(currsample for currsample in samples if otherpercent[currsample] > unmappercentcutoff)
     #print  str(len(highothersamples)) +" samples have many reads not mapping to annotated genes ( > "+str(100*unmappercentcutoff)+"%) [" +",".join(currsample+":"+str(otherpercent[currsample]) for currsample in highothersamples)+"]"
     errorline(highothersamples, "have many reads not mapping to annotated genes", "> "+str(100*unmappercentcutoff)+"%", otherpercent)

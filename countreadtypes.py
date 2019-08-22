@@ -104,7 +104,7 @@ def counttypereads(bamfile, samplename,trnainfo, trnaloci, trnalist,maturenames,
         print >>sys.stderr, strerror
         sys.exit()
     #continue #point0
-    for i, currread in enumerate(getbam(bamfile, primaryonly = True, skiptags = True)):
+    for i, currread in enumerate(getbam(bamfile, primaryonly = True)):
 
         isindel = False
         readlength = currread.getlength()
@@ -713,7 +713,7 @@ def main(**argdict):
             print >>sys.stderr, strerror
             sys.exit()
         #continue #point0
-        for i, currread in enumerate(getbamrange(bamfile, primaryonly = True, skiptags = True)):
+        for i, currread in enumerate(getbamrange(bamfile, primaryonly = True)):
 
             isindel = False
     

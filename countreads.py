@@ -43,6 +43,12 @@ class featurecount:
         self.trnauniquecounts = defaultdict(int)
         self.aminocounts  = defaultdict(int)
         self.anticodoncounts =  defaultdict(int)    
+        
+        
+        self.genetypes = dict()
+        
+    def setgenetype(self, genename, genetype):
+        self.genetypes[genename] = genetype
     def addcount(self, genename):
        self.counts[genename] += 1
     def addlocuscount(self, genename):
@@ -104,7 +110,6 @@ def getbamcounts(bamfile, samplename,trnainfo, trnaloci, trnalist,featurelist = 
     #minimum mapq
     #nomultimap = False
     minmapq = 0
-    genetypes = dict()
     if nomultimap:
         minmapq = 2
     #minimum number of reads for a feature to be reported
@@ -155,7 +160,7 @@ def getbamcounts(bamfile, samplename,trnainfo, trnaloci, trnalist,featurelist = 
                         
                         samplecounts.addcount(genename)
                         #print >>sys.stderr, "**"+currread.name
-                        genetypes[genename] = currfeat.data["source"]
+                        samplecounts.setgenetype(genename,currfeat.data["source"])
                         #print >>sys.stderr, currfeat.bedstring()
         except ValueError:
             pass
@@ -258,8 +263,45 @@ def printcountfile(countfile, samples,  samplecounts, trnalist, trnaloci, featur
             print >>countfile, genename+"\t"+"\t".join(str(samplecounts[currsample].getgenecount(genename)) for currsample in samples)
 
 
-def printtypefile():
-    pass
+def printtypefile(genetypeout,samples, allcounts,trnalist, trnaloci, featurelist, embllist , minreads = 5):
+    trnanames = set()
+    genetypes = dict()
+    for currsample in samples:
+        genetypes.update(allcounts[currsample].genetypes)
+
+    for currfeat in featurelist :
+        if currfeat.name in trnanames:
+            continue
+        #trnanames.add(currfeat.name)
+        if max(allcounts[currsample].counts[currfeat.name] for currsample in samples) > minreads:
+            print >>genetypeout, currfeat.name+"\t"+genetypes[currfeat.name]   
+    
+        
+    for currfeat in trnaloci:
+        print >>genetypeout, currfeat.name+"_wholeprecounts"+"\t"+"trna_wholeprecounts"
+        print >>genetypeout, currfeat.name+"_partialprecounts"+"\t"+"trna_partialprecounts"
+        print >>genetypeout, currfeat.name+"_trailercounts"+"\t"+"trna_trailercounts"
+        print >>genetypeout, currfeat.name+""+"\t"+"tRNA_locus"
+    for currfeat in trnalist:
+        print >>genetypeout, currfeat.name+"_wholecounts"+"\t"+"trna_wholecounts"
+        print >>genetypeout, currfeat.name+"_fiveprime"+"\t"+"trna_fiveprime"
+        print >>genetypeout, currfeat.name+"_threeprime"+"\t"+"trna_threeprime"
+        print >>genetypeout, currfeat.name+"_other"+"\t"+"trna_other"
+        print >>genetypeout, currfeat.name+""+"\t"+"tRNA"
+    
+    for currfeat in embllist:
+        genename = currfeat.data['genename']
+        if genename in trnanames:
+            continue
+        trnanames.add(genename)
+        if genename is None:
+            #print >>sys.stderr, currfeat.name
+            continue
+        if max(allcounts[currsample].counts[genename] for currsample in samples) > minreads:
+            print >>genetypeout, genename+"\t"+genetypes[genename]          
+            
+                    
+            
     
      
 def printtrnauniquecountcountfile(trnauniquefile):
@@ -379,7 +421,6 @@ def testmain(**argdict):
     threadmode = False
     poolmode = True
     starttime = time.time()
-    print >>sys.stderr, "startthread"
     
     if poolmode:
         countpool = Pool(processes=8)
@@ -444,12 +485,13 @@ def testmain(**argdict):
     else:
         countfile = open(argdict["countfile"], "w")
     printcountfile(countfile, samples, allcounts,trnalist, trnaloci, featurelist, embllist)
-    
+    if genetypefile is not None:
+        genetypeout = open(genetypefile, "w")
+        printtypefile(genetypeout,samples, allcounts,trnalist, trnaloci, featurelist, embllist )
     
     #it's currently not used, but here is where I could count by amino acid or anticodon
     if typefile:
         trnacountfile = open(trnacountfilename, "w")
-        printtypefile()
         for curramino in trnainfo.allaminos():
                 print >>typefile, "AminoTotal_"+curramino+"\t"+"\t".join(str(aminocounts[currsample][curramino]) for currsample in samples)
         for currac in trnainfo.allanticodons():
