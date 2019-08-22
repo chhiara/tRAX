@@ -224,6 +224,7 @@ def getsamplecoverage(currsample, sampledata, trnalist, basetrnas, trnaseqs,maxm
 
     
                 allcoverages[trnalist[i].name].addread(currread)
+                print >>sys.stderr, trnalist[i].name
                 if not currread.isuniqueaminomapping():
                     multaminocoverages[trnalist[i].name].addread(currread)
                 elif not currread.isuniqueacmapping():
@@ -285,7 +286,6 @@ def transcriptcoverage(samplecoverages, mismatchreport, trnalist,sampledata, min
 
     print >>mismatchreport, "\t".join(["tRNA_name","sample","position","percentmismatch","coverage","ends","uniquecoverage","multitrnacoverage","multianticodoncoverage","multiaminocoverage","tRNAreadstotal","actualbase","mismatchedbases","adenines","thymines","cytosines","guanines","deletions"])
     for currfeat in trnalist:
-      
         totalreads = sum(samplecoverages[currsample].allcoverages[currfeat.name].totalreads for currsample in sampledata.getsamples())
         if totalreads < mincoverage:
             continue
