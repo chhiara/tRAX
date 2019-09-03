@@ -1,0 +1,452 @@
+library(ggplot2)
+library(reshape2)
+library(scales)
+library(plyr)
+library(gridExtra)
+library(getopt)
+
+library(ggplot2)
+library(reshape2)
+library(scales)
+library(getopt)
+
+expand.delimited <- function(x, col1=1, col2=2, sep=",") {
+  rnum <- 1
+  expand_row <- function(y) {
+    factr <- y[col1]
+    strng <- toString(y[col2])
+    expand <- strsplit(strng, sep)[[1]]
+    num <- length(expand)
+    factor <- rep(factr,num)
+    return(as.data.frame(cbind(factor,expand),
+          row.names=seq(rnum:(rnum+num)-1)))
+    rnum <- (rnum+num)-1
+  }
+  expanded <- apply(x,1,expand_row)
+  df <- do.call("rbind", expanded)
+  names(df) <- c(names(x)[col1],names(x)[col2])
+  return(df)
+}
+
+
+args <- commandArgs(trailingOnly = TRUE)
+
+#source("traxlib.R")
+#print(dirname(sys.frame(1)$ofile))
+#print(here())
+#print(file.path())
+
+initial.options <- commandArgs(trailingOnly = FALSE)
+file.arg.name <- "--file="
+script.name <- sub(file.arg.name, "", initial.options[grep(file.arg.name, initial.options)])
+script.dirname <- dirname(script.name)
+#print(paste(script.dirname,"traxlib.R",sep="/"))
+
+source(paste(script.dirname,"traxlib.R",sep="/"))
+
+#hcvm.i <- melt(hcvm.i, id.vars=c(grep("^readC", names(hcvm.i), value=TRUE, invert=TRUE)), variable.name="tRNA.basePosition", value.name="read.density")
+
+
+spec <- matrix(c(
+        'cov'     , 'c', 1, "character", "coverage file from getcoverage.py (required)",
+        'locicov'     , 'l', 1, "character", "coverage file from getcoverage.py (required)",
+        'trna'     , 't', 1, "character", "trna file (required)",
+        'samples'    , 's', 1, "character", "sample file (required)",
+        'runname'    , 'r', 1, "character", "name of TRAX sample",
+        'directory'    , 'f', 1, "character", "directory to place amino acid files",
+        'allcov'    , 'a', 1, "character", "output coverages for all tRNAs (optional)",
+        'multicov'    , 'm', 1, "character", "output coverages for all tRNAs on multiple pages(optional)",
+        
+        'combinecov'    , 'o', 1, "character", "output coverages for tRNAs combined",
+        'modomics'    , 'd', 2, "character", "optional modomics file",
+        'help'   , 'h', 0, "logical",   "this help"
+),ncol=5,byrow=T)
+
+
+
+trnapositions = c("0","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","43","44","45","46","47","48","49","50","51","52","53","54","55","56","57","58","59","60","61","62","63","64","65","66","67","68","69","70","71","72","73","74","75","76")
+
+locuspositions = c("head30","head29","head28","head27","head26","head25","head24","head23","head22","head21","head20","head19","head18","head17","head16","head15","head14","head13","head12","head11","head10","head9","head8","head7","head6","head5","head4","head3","head2","head1","0","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","43","44","45","46","47","48","49","50","51","52","53","54","55","56","57","58","59","60","61","62","63","64","65","66","67","68","69","70","71","72","73","74","75","76","tail1","tail2","tail3","tail4","tail5","tail6","tail7","tail8","tail9","tail10","tail11","tail12","tail13","tail14","tail15","tail16","tail17","tail18","tail19","tail20","tail21","tail22","tail23","tail24","tail25","tail26","tail27","tail28","tail29","tail30")
+
+opt = getopt(spec);
+
+coverages <- read.table(opt$cov, header = TRUE,row.names = NULL, stringsAsFactors=FALSE)
+locicoverages <- read.table(opt$locicov, header = TRUE,row.names = NULL, stringsAsFactors=FALSE)
+
+trnatable <- read.table(opt$trna)
+sampletable <- read.table(opt$samples)
+modomicstable <- data.frame()
+
+runname = opt$runname
+uniquename = paste(runname,runname,sep = "/")
+
+
+outputformat <- ".pdf"
+outputindivformat <- ".pdf"
+
+
+
+
+
+outputfile <- opt$allcov
+combinedfile <- opt$combinecov
+multipage <- opt$multicov
+#colnames(coverages)
+
+myBreaks <- function(x){
+    breaks <- c(min(0),floor(max(x)))
+    names(breaks) <- attr(breaks,"labels")
+    breaks
+}
+percentbreaks <- function(x){
+    breaks <- c(0,1)
+    names(breaks) <- attr(breaks,"labels")
+    breaks
+}
+configurecov <- function(covplot){
+covplot<- covplot+ theme_bw()
+covplot<- covplot+theme(text = element_text(size = 4))
+covplot<- covplot+theme(rect = element_rect(size=.01))
+              
+covplot<- covplot+theme(legend.key.size =  unit(.3, "cm")) # Change key size in the legend
+covplot<- covplot+theme(legend.key.height =  unit(.3, "cm")) # Change key size in the legend
+              
+covplot<- covplot+theme(legend.text = element_text(size=4)) # Change the size labels in the legend
+covplot<- covplot+theme(legend.title = element_text(size=4))             
+              
+covplot<- covplot+theme(axis.ticks = element_line(size = .1)) 
+#smallcovall< covplot+theme(axis.ticks.y=element_blank())
+              
+covplot<- covplot+theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=6))
+
+              
+covplot<- covplot+theme(axis.line = element_line(size = .1))
+covplot<- covplot+theme(panel.grid  = element_line(size = .1))
+              
+              
+covplot<- covplot+theme(axis.line = element_line(size = .1))
+covplot<- covplot+theme(panel.grid  = element_line(size = .15))
+              
+covplot<- covplot+theme(strip.switch.pad.grid = unit(.1, "cm"))
+#covplot<- covplot+theme(panel.margin = unit(.25, "lines"))
+covplot<- covplot+theme(panel.spacing = unit(.25, "lines"))
+
+#This needs to be different from the combined version for some reason
+covplot<- covplot+theme(axis.text.y=element_text(size=6))
+            
+covplot<- covplot+theme(strip.text.y = element_text(angle=0,size=10))
+#as does this  
+covplot<- covplot+theme(strip.text.x = element_text(angle=0,size=10))
+covplot<- covplot+theme(axis.text=element_text(size=8))
+covplot<- covplot+theme(axis.title=element_text(size=8))
+
+covplot
+}
+
+configurecombine <- function(covplot){
+covplot<- covplot+ theme_bw()
+covplot<- covplot+theme(text = element_text(size = 4))
+covplot<- covplot+theme(rect = element_rect(size=.01))
+              
+covplot<- covplot+theme(legend.key.size =  unit(.4, "cm")) # Change key size in the legend
+covplot<- covplot+theme(legend.key.height =  unit(.4, "cm")) # Change key size in the legend
+              
+covplot<- covplot+theme(legend.text = element_text(size=6)) # Change the size labels in the legend
+covplot<- covplot+theme(legend.title = element_text(size=8))             
+              
+covplot<- covplot+theme(axis.ticks = element_line(size = .1)) 
+#smallcovall< covplot+theme(axis.ticks.y=element_blank())
+              
+covplot<- covplot+theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=6))
+
+              
+covplot<- covplot+theme(axis.line = element_line(size = .1))
+covplot<- covplot+theme(panel.grid  = element_line(size = .1))
+              
+              
+covplot<- covplot+theme(axis.line = element_line(size = .1))
+covplot<- covplot+theme(panel.grid  = element_line(size = .15))
+              
+covplot<- covplot+theme(strip.switch.pad.grid = unit(.1, "cm"))
+#covplot<- covplot+theme(panel.margin = unit(.15, "lines"))
+covplot<- covplot+theme(panel.spacing = unit(.15, "lines"))
+
+#This needs to be different from the combined version for some reason
+covplot<- covplot+theme(axis.text.y=element_text(size=6))
+            
+covplot<- covplot+theme(strip.text.y = element_text(angle=0,size=10))
+#as does this  
+covplot<- covplot+theme(strip.text.x = element_text(angle=0,size=10))
+covplot<- covplot+theme(axis.text=element_text(size=8))
+covplot<- covplot+theme(axis.title=element_text(size=8))
+
+covplot
+}
+coverageall = coverages
+
+
+
+coveragemeltagg <- aggregate(coverageall$coverage, by=list(Feature = coverageall$Feature, Sample = sampletable[match(coverageall$Sample,sampletable[,1]),2], variable = coverageall$position), FUN=mean)
+
+
+
+
+#print(head(coveragemeltagg))
+colnames(coveragemeltagg)[colnames(coveragemeltagg) == "x"]  <- "value"
+
+coveragemeltagg$Sample <- factor(coveragemeltagg$Sample,levels = unique(sampletable[,2]), ordered = TRUE)
+coveragemelt <- coveragemeltagg
+
+#write.table(coveragemelt,"aggtables.txt" ,sep = "\t")
+
+
+acceptorType = trnatable[match(coveragemelt$Feature, trnatable[,1]),3]
+acceptorType <- factor(acceptorType, levels = sort(unique(acceptorType)))
+
+featnames = unique(as.character(coveragemelt$Feature))
+tails = as.numeric(unlist(lapply(strsplit(featnames, "-", fixed = TRUE), tail, 1)))
+
+
+anticodonname = as.character(unlist(lapply(strsplit(featnames, "-", fixed = TRUE), function(x) { return( x[length(x) - 1] ) })))
+aminoname = as.character(unlist(lapply(strsplit(featnames, "-", fixed = TRUE), function(x) { return( x[length(x) - 2] ) })))
+
+coveragemelt$Feature = factor(as.character(coveragemelt$Feature), levels = featnames)
+
+sortacceptor <- acceptorType[order(coveragemelt$variable, coveragemelt$Sample,-as.numeric(coveragemelt$Feature))]
+
+
+makecombplot(coveragemelt,filename=paste(uniquename, "-combinedcoverages.pdf",sep= ""))
+
+modomicstable <- data.frame(trna = character(), mod = character(), pos = character(),stringsAsFactors=FALSE)
+
+modomicstable <- read.table(text ="",col.names = c("trna", "mod", "pos"),colClasses = c("character", "character", "character")) #(trna = character(), mod = character(), pos = character(),stringsAsFactors=FALSE)
+if(!is.null(opt$modomics) && file.exists(opt$modomics) ){
+    modomicstable <- read.table(opt$modomics, header = TRUE)
+    modomicstable$pos <- paste("X",modomicstable$pos, sep = "")
+}
+
+
+
+modomicstable <- modomicstable[as.character(modomicstable$pos) %in% unique(as.character(coveragemelt$variable)),]
+modomicstable$dist <- match(modomicstable$pos,  levels(coveragemelt$variable)) 
+modomicstable$Feature <- factor(modomicstable$trna,levels = levels(coveragemelt$Feature) )
+
+stopmods = c("m1A","m2,2G","m1G","m1I","m3C")
+modomicstable <- modomicstable[modomicstable$mod %in% stopmods,]
+
+colnames(modomicstable)[colnames(modomicstable) == 'mod'] <- 'Modification'
+#() # 1 minute
+
+canvas = ggplot(coveragemelt,aes(x=variable,y=value), size = 2)
+if(max(coveragemelt$value) <= 1.1){
+#allcoverages <- canvas + theme_bw() + geom_bar(stat="identity") + facet_grid(Feature ~ Sample, scales="free") + geom_vline(aes(xintercept = dist, col = Modification),size=.4,linetype = "longdash",data = modomicstable,show.legend=TRUE)#+theme(axis.text.y=element_text(colour="black",size=6),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8), strip.text.y = element_text(angle=0),strip.text.x = element_text(size = ,angle=0))+ ylab("Normalized Read Count") + xlab("tRNA position") +   scale_y_continuous(breaks=percentbreaks,limits = c(0, 1.01)) +scale_x_discrete(breaks=c("X1","X9","X26","X37","X44","X58","X65","X73"), labels=c("Start","m1g","m22g","anticodon","varloop","m1a","65","tail"))   #+scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon", "tail"))
+}else{
+allcoverages <- canvas + theme_bw() + geom_bar(stat="identity") + facet_grid(Feature ~ Sample, scales="free", space = "fixed")  +  geom_vline(aes(xintercept = dist, col = Modification),size=.4,linetype = "longdash",data = modomicstable,show.legend=TRUE)#+theme(axis.text.y=element_text(colour="black",size=6),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8), strip.text.y = element_text(angle=0),strip.text.x = element_text(size = ,angle=0))+ ylab("Normalized Read Count") + xlab("tRNA position") +   scale_y_continuous(breaks=myBreaks) +scale_x_discrete(breaks=c("X1","X9","X26","X37","X44","X58","X65","X73"), labels=c("Start","m1g","m22g","anticodon","varloop","m1a","65","tail"))   #+scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon", "tail"))
+}
+
+scalefactor = .5
+scalefactor*(2 + 1*length(unique(coveragemelt$Feature)))
+scalefactor*(2+4*length(unique(coveragemelt$Sample)))
+#q()
+
+ggsave(filename=outputfile, allcoverages,height=scalefactor*(2 + 1*length(unique(coveragemelt$Feature))),width=scalefactor*(2+4*length(unique(coveragemelt$Sample))), limitsize=FALSE, dpi = 600) #real one
+
+#ggsave(filename=outputfile, allcoverages)
+
+#q() #9 mins
+
+
+
+if(!is.null(opt$directory) && FALSE){
+for (curramino in unique(acceptorType)){
+aminodata = coveragemelt[acceptorType == curramino,]
+aminomodomicstable = modomicstable[modomicstable$Feature %in% unique(aminodata$Feature),]
+
+aminocoverage <- ggplot(aminodata,aes(x=variable,y=value), size = 2) + theme_bw()+facet_grid(Feature ~ Sample, scales="free") + geom_bar(stat="identity") +  geom_vline(aes(xintercept = dist, col = Modification),data = aminomodomicstable,show.legend=TRUE)+theme(axis.text.y=element_text(colour="black",size=6),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8), strip.text.y = element_text(angle=0),strip.text.x = element_text(size = ,angle=0))+ ylab("Normalized Read Count") + xlab("tRNA position") + scale_y_continuous(breaks=myBreaks) +scale_x_discrete(breaks=c("X1","X9","X26","X37","X44","X58","X65","X73"), labels=c("Start","m1g","m22g","anticodon","varloop","m1a","65","tail")) + guide_legend(title="RNA modifications")   #+scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon", "tail"))
+
+aminoname = paste(opt$directory,"/",curramino,"-coverage",outputformat, sep = "")
+
+ggsave(filename=aminoname, aminocoverage,height=2 + scalefactor*1.5*length(unique(aminodata$Feature)),width=scalefactor*5*length(unique(aminodata$Sample)), limitsize=FALSE, dpi = 600)
+aminopngname = paste(opt$directory,"/",curramino,"-coverage",".png", sep = "")
+scalefactor = 4
+ggsave(filename=aminopngname, aminocoverage,height=2 + scalefactor*1.5*length(unique(aminodata$Feature)),width=scalefactor*5*length(unique(aminodata$Sample)), limitsize=FALSE)
+
+}
+}
+
+
+if(!is.null(uniquename)){
+
+
+#multamino <- read.table(paste(uniquename, "-multaminocoverages.txt",sep= ""), header = TRUE)
+#multactable <- read.table(paste(uniquename, "-multaccoverages.txt",sep= ""), header = TRUE)
+#multtrnas <- read.table(paste(uniquename, "-multtrnacoverages.txt",sep= ""), header = TRUE)
+#uniquetable <- read.table(paste(uniquename, "-uniquecoverages.txt",sep= ""), header = TRUE)
+
+#uniquetable$maptype = "Transcript specific"
+#multactable$maptype = "Isotype Specific"
+#multamino$maptype = "Not Amino Specific"
+#multtrnas$maptype = "Isodecoder Specific" 
+#allmulttables <- rbind(uniquetable,multactable,multamino,multtrnas)
+
+#allmulttables <- rbind(multamino,multtrnas,multactable,uniquetable)
+#allmulttables <- rbind(uniquetable, multtrnas,multactable,multamino)
+
+
+
+#allmulttables <- allmulttables[ , colSums(is.na(allmulttables)) < nrow(allmulttables)/8]
+#allmultmelt = melt(allmulttables, id.vars = c("Feature", "Sample", "maptype"))
+#allmultmelt[is.na(allmultmelt)] <- 0
+
+
+
+#print(head(coverageall))
+coverageunique = coverageall[,c("Feature", "Sample","position","uniquecoverage","multitrnacoverage","multianticodoncoverage","multiaminocoverage")]
+
+colnames(coverageunique)[colnames(coverageunique) == "uniquecoverage"]          <- "Transcript specific"
+colnames(coverageunique)[colnames(coverageunique) == "multitrnacoverage"]  <- "Isodecoder Specific"  
+colnames(coverageunique)[colnames(coverageunique) == "multianticodoncoverage"]  <- "Isotype Specific"
+colnames(coverageunique)[colnames(coverageunique) == "multiaminocoverage"]      <- "Not Amino Specific" 
+
+
+#print(head(coverageunique))
+
+allmultmelt = melt(coverageunique, id.vars = c("Feature", "Sample", "position"))
+
+#colnames(allmultmelttest)[colnames(allmultmelttest) == "position"]  <- "variable"
+
+#print(head(allmultmelt))
+
+#print(head(allmultmelttest))
+
+
+#print(head(allmultmelt))
+allmultmeltagg <- aggregate(allmultmelt$value, by=list(Feature = allmultmelt$Feature, Sample = sampletable[match(allmultmelt$Sample,sampletable[,1]),2], maptype = allmultmelt$variable,variable = allmultmelt$position), FUN=mean)
+
+#filter to positions
+#print(head(allmultmeltagg))
+
+allmultmeltagg = allmultmeltagg[allmultmeltagg$variable %in% trnapositions,]
+
+
+
+colnames(allmultmeltagg)[colnames(allmultmeltagg) == "x"]  <- "value"
+allmultmeltagg$Sample <- factor(allmultmeltagg$Sample,levels = unique(sampletable[,2]), ordered = TRUE)
+allmultmelt <- allmultmeltagg
+
+allmultmelt$maptype <- factor(allmultmelt$maptype, levels=c("Not Amino Specific","Isotype Specific","Isodecoder Specific","Transcript specific"))
+allmultmelt$variable = factor(allmultmelt$variable, levels=trnapositions)
+
+#allmultmelt <- allmultmelt[order(-as.numeric(allmultmelt$maptype)),]
+
+
+allmultmelt <- allmultmelt[order(-as.numeric(allmultmelt$maptype), match(allmultmelt$variable,trnapositions)),]
+rownames(allmultmelt) <- c()
+#print(unique(allmultmeltagg$variable))
+
+#print(allmultmelt[allmultmelt$Feature == "tRNA-Val-AAC-1" & allmultmelt$Sample == "Truseq_AlkB",])
+
+#print(head(allmultmelt))
+
+featnames = unique(as.character(allmultmelt$Feature))
+tails = as.numeric(unlist(lapply(strsplit(featnames, "-", fixed = TRUE), tail, 1)))
+anticodonname = as.character(unlist(lapply(strsplit(featnames, "-", fixed = TRUE), function(x) { return( x[length(x) - 1] ) })))
+aminoname = as.character(unlist(lapply(strsplit(featnames, "-", fixed = TRUE), function(x) { return( x[length(x) - 2] ) })))
+featnames = featnames[order(aminoname, anticodonname,tails)]
+allmultmelt$Feature = factor(as.character(allmultmelt$Feature), levels = featnames)
+
+
+#q()
+
+
+for (curramino in unique(acceptorType)){
+
+aminodata = allmultmelt[acceptorType == curramino,]
+aminomodomicstable = modomicstable[modomicstable$Feature %in% unique(aminodata$Feature),]
+
+
+
+aminonamesec = paste(uniquename, "-",curramino,"_cov",outputformat,sep= "")
+makecovplot(aminodata,aminonamesec)
+
+aminonameunique = paste(uniquename, "-",curramino,"_uniqueonlycov",outputformat,sep= "")
+makecovplot(aminodata[aminodata$maptype == "Transcript specific",],aminonameunique)
+
+}
+#change this back 
+if(TRUE){
+for (currtranscript in unique(allmultmelt$Feature)){
+
+transcriptdata = allmultmelt[allmultmelt$Feature == currtranscript,]
+transcriptmodomicstable = modomicstable[modomicstable$Feature %in% unique(transcriptdata$Feature),]
+ 
+
+
+transcriptname = paste(opt$directory,"/indiv/",currtranscript,"-uniqcoverage",outputindivformat, sep = "")
+#makecovplot(transcriptdata,transcriptname)
+
+}
+}
+
+makecovplot(allmultmelt,paste(uniquename, "-uniquecoverages.pdf",sep= ""))
+
+
+
+
+}
+
+
+
+
+
+
+
+#print(head(locicoverages))
+
+locicoveragesagg <- aggregate(locicoverages$coverage, by=list(Feature = locicoverages$tRNA_name, Sample = sampletable[match(locicoverages$sample,sampletable[,1]),2], variable = locicoverages$position), FUN=mean)
+colnames(locicoveragesagg)[colnames(locicoveragesagg) == "x"]  <- "value"
+locicoveragesagg$Sample <- factor(locicoveragesagg$Sample,levels = unique(sampletable[,2]), ordered = TRUE)
+
+locicoveragesagg = locicoveragesagg[locicoveragesagg$variable %in% locuspositions,]
+locicoveragesagg$variable = factor(locicoveragesagg$variable, levels=locuspositions)
+
+
+#print(unique(locicoveragesagg$variable))
+#factor
+
+locicoverages <- locicoveragesagg
+
+
+
+
+#vector of amino acids
+locustable = expand.delimited(trnatable,3,2)
+acceptorType = locustable[match(locicoverages$Feature, locustable[,2]),1]
+
+sortcovmelt <- coveragemelt[order(locicoverages$variable, locicoverages$Sample,as.numeric(acceptorType),locicoverages$Feature),]  
+sortacceptor <- acceptorType[order(locicoverages$variable, locicoverages$Sample,as.numeric(acceptorType),locicoverages$Feature)]
+
+
+
+covsummary <- ggplot(sortcovmelt,aes(x=variable,y=value, fill = sortacceptor, order = as.numeric(sortacceptor))) + facet_grid( ~ Sample, scales="free") +xlab("Position")+ geom_bar(stat="identity")+theme(axis.text.y=element_text(colour="black",size=8), strip.text.y = element_text(angle=0,size=4),strip.text.x = element_text(angle=0,size=8),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8))+ ylab("Read Share") +   scale_y_continuous(breaks=myBreaks, labels = c("0","1")) +scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon","tail")) +scale_fill_discrete(drop=FALSE, name="Acceptor\ntype", breaks = levels(sortacceptor))
+locuscombinedname = paste(opt$directory,"/pretRNAs/",runname,"-pretRNAcombinedcoverage.pdf", sep = "")
+
+ggsave(filename=locuscombinedname,covsummary)
+#print("***||&&")
+allmultmelt <- sortcovmelt
+
+
+
+#print(locicoverages[locicoverages$Feature == "tRNA-Ala-AGC-1-1" & locicoverages$Sample == "MCF7_Truseq_1",])
+
+#print(head(locicoverages))
+
+locusplot <- ggplot(locicoverages,aes(x=variable,y=value)) + facet_grid(Feature ~ Sample, scales="free") + geom_bar(stat="identity")+theme(axis.title.x=element_blank(), axis.text.y=element_text(colour="black",size=4),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8), strip.text.y = element_text(angle=0,size=6),strip.text.x = element_text(angle=0,size=8))+ ylab("read count") +scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon","End"))
+locusplotname = paste(opt$directory,"/pretRNAs/",runname,"-pretRNAcoverage.pdf", sep = "")
+
+ggsave(locusplot, filename=locusplotname,height=.5*length(unique(locicoverages$Feature)),width=2*length(unique(locicoverages$Sample)), limitsize=FALSE)
+
+
+
+
+
