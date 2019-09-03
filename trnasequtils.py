@@ -819,17 +819,17 @@ class BamRead(GenomeRange):
             return None
     def isuniqueaminomapping(self):
         if self.bamline.has_tag("YM"):
-            return self.bamline.get_tag("YM") > 1
+            return not self.bamline.get_tag("YM") > 1
         else:
             return None
     def isuniqueacmapping(self):
         if self.bamline.has_tag("YA"):
-            return self.bamline.get_tag("YA") > 1
+            return not self.bamline.get_tag("YA") > 1
         else:
             return None
     def isuniquetrnamapping(self):
         if self.bamline.has_tag("YR"):
-            return self.bamline.get_tag("YR") > 1
+            return not self.bamline.get_tag("YR") > 1
         else:
             return None
     def hasindel(self):
