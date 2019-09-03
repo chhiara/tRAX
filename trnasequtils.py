@@ -414,8 +414,14 @@ class samplefile:
     def getrepsamples(self, replicate):
         return list(currsample for currsample in self.samplelist if self.replicatename[currsample] == replicate)
         
-def getsizefactors( sizefactorfile):
-    sizefactorfile = open(sizefactorfile)
+def getsizefactors( sizefactorfilename):
+    sizefactorfile = None
+    try:
+        sizefactorfile = open(sizefactorfilename)
+    except IOError as err:
+        print >>sys.stderr, "Cannot read size factor file "+sizefactorfilename
+        print >>sys.stderr, "check Rlog.txt"
+        sys.exit(1)
     sizefactors = dict()
     bamheaders =list()
     sizes = list()

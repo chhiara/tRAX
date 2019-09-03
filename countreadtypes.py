@@ -387,6 +387,7 @@ def testmain(**argdict):
     trnatable = argdict["trnatable"]
     trnaaminofile = argdict["trnaaminofile"]
     sampledata = samplefile(argdict["samplefile"])
+    cores = argdict["cores"]
     minpretrnaextend = 5
     mitochrom = None
     if argdict["mitochrom"]:
@@ -492,7 +493,7 @@ def testmain(**argdict):
         countqueue = Queue()
         threads = dict()
         if poolmode:
-            countpool = Pool(processes=8)
+            countpool = Pool(processes=cores)
             arglist = list()
             for currsample in samples:
                 currbam = sampledata.getbam(currsample)

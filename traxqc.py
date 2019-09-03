@@ -29,27 +29,113 @@ check if replicates replicate
 
 
 '''
-def makehtmldoc(outputname):
-    #htmlfile = open(outputname, "w")
-    print >>sys.stderr, ""
 
+redrgb = "rgb(255, 0, 0)"
+
+yellowrgb = "rgb(255,165,0)"
+
+greenrgb = "rgb(60,170,113)"
+
+
+class seqprepinfo:
+    def __init__(self, merged, unmerged, discarded):
+        self.merged = merged
+        self.unmerged = unmerged
+        self.discarded = discarded
+    def gettotal(self, sample):
+        return self.merged[sample] + self.unmerged[sample] + self.discarded[sample]
+    def getmergedpercent(self, sample):
+        return self.merged[sample] / (1.*self.gettotal(sample))
+    def getsamples(self):
+        return tuple(self.merged.keys())
+def getreadprep(prepfilename):
+    prepfile = open(prepfilename)
+    merged = dict()
+    unmerged = dict()
+    discarded = dict()
+    for i, currline in enumerate(prepfile):
+        fields = currline.rstrip().split("\t")
+        if i == 0:
+            runsamples = list(fields)
+            continue
+            
+        if len(fields) != len(runsamples) + 1:
+            continue
+        for j in range(0, len(runsamples)):
+            if fields[0] == "merged":
+                merged[runsamples[j]] = int(fields[j + 1])
+            elif fields[0] == "unmerged":
+                unmerged[runsamples[j]] = int(fields[j + 1])
+            elif fields[0] == "discarded":
+                discarded[runsamples[j]] = int(fields[j + 1])
+                
+    return seqprepinfo(merged, unmerged, discarded)
+
+
+minmergepercent = .6
 def checkreadprep(prepinfo):
-    pass
+    prepresults = getreadprep(prepinfo+"_sp.txt")
+    samples = prepresults.getsamples()
+    prepdict = {currsample : prepresults.getmergedpercent(currsample) for currsample in samples}
+    
+    lowmergesamples = list(prepdict[currsample] < minmergepercent for currsample in samples)
+    errorline(samples, lowmergesamples, "merge only a small percentage of the reads", " < "+str(100*minmergepercent)+"%"+"", prepdict, percentformat = True, checkfile = prepinfo+"_sp.pdf")
+    
+    
     
 def percentform(innum):
     return  "{0:.2f}%".format(100 * innum)
 def countform(innum):
     return "{0:.2f}".format(innum)
 #print  str(len(missingtrnasamples)) +" samples have low tRNA read counts ( > "+str(100*minactivepercent)+"% between "+str(minsizethreshold)+" and "+str(maxsizethreshold)+") [" +",".join(currsample+":"+str(thresholdreadpercent[currsample]) for currsample in missingtrnasamples)+"]"
-def errorline(faillist, failmessage, failcriteria, faildict, percentformat = True):
+
+
+def failcolor(failed, colortrue, colorfalse):
+    if failed:
+        return colorfalse
+    else:
+        return colortrue
+
+def errorline(alllist,faillist, failmessage, failcriteria, faildict, percentformat = False, critfaillist = None, checkfile = None):
     if percentformat:
         outformat = percentform
     else:
         outformat = countform
-    print "<p>"
-    print  str(len(faillist)) +" samples " + failmessage +" ( "+failcriteria+") [" +",".join(currsample+":"+outformat(faildict[currsample]) for currsample in faillist)+"]"
-    print "</p>"
+    color = greenrgb
 
+    if sum(faillist) > 0:
+        color = yellowrgb
+    endstring = ""    
+    if checkfile is not None:
+        endstring = "("+checkfile+")"
+    failstring = ""
+
+    failstring = " [" +",".join('<b style="color:'+failcolor(faillist[i],greenrgb,yellowrgb)+';">'+currsample+"</b>"+":"+outformat(faildict[currsample]) for i, currsample in enumerate(alllist))+"]"
+        
+    print "<p>"
+    print '<text style="color:'+color+';">'+str(sum(faillist)) +" samples</text> " + failmessage +" ( "+failcriteria+") " +endstring+"<br/>"+ failstring
+    
+    if critfaillist is not None and sum(critfaillist) > 0:
+        color = redrgb
+        print '<text style="color:'+color+';">'+str(len(critfails)) +" samples</text> " + failmessage +" ( "+failcriteria+") [" +",".join(currsample+":"+outformat(faildict[currsample]) for currsample in faillist)+"]"
+    print "</p>"
+    
+def errorsingle(fail, failmessage, failcriteria,critfail = False):
+
+    color = greenrgb
+    message = "No"
+    if critfail:
+        color = redrgb
+        message = "Present"
+    elif fail:
+        color = yellowrgb
+        message = "Critical"
+    
+
+    print "<p>"
+    print '<text style="color:'+color+';">'+message +"</text> " +failmessage +" ( "+failcriteria+") "
+    print "</p>"
+    
 class mappingresults:
     def __init__(self, unmap, single, multi):
         self.unmap = unmap
@@ -65,18 +151,19 @@ class mappingresults:
 minmapreads = 200000
               
 minmappercent = .65
-def checkreadsmapping(samplename, sampleinfo):
+def checkreadsmapping(samplename, sampleinfo, tgirtmode = False):
     mapresults = getreadmapping(samplename, sampleinfo)
     samples = sampleinfo.getsamples()
     totalreads = {currsample : mapresults.totalreadscount(currsample) for currsample in samples}
     mappercent = {currsample : mapresults.getmappercent(currsample) for currsample in samples}
     
-    lowcountsamples = list(currsample for currsample in samples if totalreads[currsample] < minmapreads)
+    lowcountsamples = list(totalreads[currsample] < minmapreads for currsample in samples)
+    #print >>sys.stderr, lowcountsamples
     #print str(len(lowcountsamples)) +" contain fewer mappable reads than recommended minimum ("+str(minmapreads)+") [" +",".join(currsample+":"+str(totalreads[currsample]) for currsample in lowcountsamples)+"]"
-    errorline(lowcountsamples, "contain fewer mappable reads than recommended minimum", " < "+str(minmapreads)+"", lowcountsamples)
+    errorline(samples, lowcountsamples, "contain fewer mappable reads than recommended minimum", " < "+str(minmapreads)+"", totalreads, checkfile = samplename+"-mapinfo.pdf")
 
-    lowmapsamples = list(currsample for currsample in samples if mappercent[currsample] < minmappercent)
-    errorline(lowmapsamples, "have lower mappable read percentage than recommended minimum ", " < "+str(100*minmappercent)+"%", lowmapsamples)
+    lowmapsamples = list(mappercent[currsample] < minmappercent  for currsample in samples)
+    errorline(samples,lowmapsamples, "have lower mappable read percentage than recommended minimum ", " < "+str(100*minmappercent)+"%", mappercent, percentformat = True, checkfile = samplename+"-mapinfo.pdf")
     #print str(len(lowmapsamples)) +" have lower mappable read percentage than recommended minimum ("+str(100*minmappercent)+"%) [" +",".join(currsample+":"+str(mappercent[currsample]) for currsample in lowmapsamples)+"]"
 def getmapfile(samplename):
     return samplename+"/"+samplename+"-mapinfo.txt"
@@ -214,46 +301,67 @@ def getreadlengths(samplename,sampleinfo):
 def getfragtypes(samplefile, trnainfo):
     pass
 
-trnapercentcutoff = .05
-ribopercentcutoff = .35
-unmappercentcutoff = .35
 
-highmeanlength = 75
-minsizethreshold = 15
-maxsizethreshold = 75
-percentsizethreshold = .70
 
-def checkreadtypes(samplename, sampleinfo):
+def checkreadtypes(samplename, sampleinfo, tgirtmode = False):
+    trnapercentcutoff = .05
+    ribopercentcutoff = .35
+    unmappercentcutoff = .35
+    
+    highmeanlength = 40
+    minsizethreshold = 15
+    maxsizethreshold = 50
+    percentsizethreshold = .70
+    lowmeanlength = None
+    if tgirtmode:
+        
+        trnapercentcutoff = .5
+        ribopercentcutoff = .35
+        unmappercentcutoff = .35
+        
+        highmeanlength = 75
+        lowmeanlength = 40
+        minsizethreshold = 40
+        maxsizethreshold = 75
+        percentsizethreshold = .70
     typecounts = gettypecounts(samplename, sampleinfo)
     getfragtypes(samplename, sampleinfo)
     
     samples = sampleinfo.getsamples()
     
     trnapercent = {currsample : typecounts.gettrnapercent(currsample) for currsample in samples}
-    lowtrnasamples = list(currsample for currsample in samples if trnapercent[currsample] < trnapercentcutoff)
+    lowtrnasamples = list(trnapercent[currsample] < trnapercentcutoff for currsample in samples)
     #print  str(len(lowtrnasamples)) +" samples have low tRNA read percentage ( < "+str(100*trnapercentcutoff)+"%) [" +",".join(currsample+":"+str(trnapercent[currsample]) for currsample in lowtrnasamples)+"]"
-    errorline(lowtrnasamples, "samples have low tRNA read percentage", " < "+str(100*trnapercentcutoff)+"%", trnapercent)
+    errorline(samples, lowtrnasamples, "samples have low tRNA read percentage", " < "+str(100*trnapercentcutoff)+"%", trnapercent, percentformat = True,checkfile = samplename+"-typecounts.pdf")
 
     rrnapercent = {currsample : typecounts.getrrnapercent(currsample) for currsample in samples}
-    highribosamples = list(currsample for currsample in samples if rrnapercent[currsample] > ribopercentcutoff)
+    highribosamples = list(rrnapercent[currsample] > ribopercentcutoff  for currsample in samples)
     #print str(len(highribosamples)) +" samples have high rRNA read percentage ( > "+str(100*ribopercentcutoff)+"%) [" +",".join(currsample+":"+str(rrnapercent[currsample]) for currsample in highribosamples)+"]"
-    errorline(highribosamples, "have high rRNA read percentage", " > "+str(100*ribopercentcutoff)+"%", rrnapercent)
+    errorline(samples, highribosamples, "have high rRNA read percentage", " > "+str(100*ribopercentcutoff)+"%", rrnapercent, percentformat = True, checkfile = samplename+"-typecounts.pdf")
 
     otherpercent = {currsample : typecounts.getotherpercent(currsample) for currsample in samples}
-    highothersamples = list(currsample for currsample in samples if otherpercent[currsample] > unmappercentcutoff)
+    highothersamples = list(otherpercent[currsample] > unmappercentcutoff for currsample in samples)
     #print  str(len(highothersamples)) +" samples have many reads not mapping to annotated genes ( > "+str(100*unmappercentcutoff)+"%) [" +",".join(currsample+":"+str(otherpercent[currsample]) for currsample in highothersamples)+"]"
-    errorline(highothersamples, "have many reads not mapping to annotated genes", "> "+str(100*unmappercentcutoff)+"%", otherpercent)
+    errorline(samples, highothersamples, "have many reads not mapping to annotated genes", "> "+str(100*unmappercentcutoff)+"%", otherpercent, percentformat = True, checkfile = samplename+"-typecounts.pdf")
 
     allreadlength = getreadlengths(samplename, sampleinfo)
 
     meanreadlength = {currsample : allreadlength.getsamplemean(currsample) for currsample in samples}
-    meanreadsamples = list(currsample for currsample in samples if rrnapercent[currsample] > highmeanlength)
+    meanreadsamples = list(allreadlength.getsamplemean(currsample) > highmeanlength for currsample in samples)
     #print  str(len(meanreadsamples)) +" samples have high read length average ( > "+str(highmeanlength)+") [" +",".join(currsample+":"+str(rrnapercent[currsample]) for currsample in meanreadsamples)+"]"
-    errorline(meanreadsamples, " have high read length average", " > "+str(highmeanlength), meanreadlength, percentformat = False)
+    errorline(samples, meanreadsamples, " have high read length average", " > "+str(highmeanlength)+ " bases", meanreadlength, percentformat = False, checkfile = samplename+"-readlengths.pdf")
+    
+    if lowmeanlength is not None:
+        lowmeanreadsamples = list(allreadlength.getsamplemean(currsample) < lowmeanlength for currsample in samples)
+        errorline(samples, lowmeanreadsamples, " have low read length average", " < "+str(lowmeanlength)+ " bases", meanreadlength, percentformat = False, checkfile = samplename+"-readlengths.pdf")
+    
+    
+    
     thresholdreadpercent = {currsample : allreadlength.getthresholdpercent(currsample, minsizethreshold, maxsizethreshold) for currsample in samples}
-    badsizesamples = list(currsample for currsample in samples if thresholdreadpercent[currsample] < percentsizethreshold)
+    badsizesamples = list(thresholdreadpercent[currsample] <  percentsizethreshold for currsample in samples )
+    
     #print  str(len(badsizesamples)) +" samples have high rRNA read percentage ( > "+str(100*percentsizethreshold)+"% between "+str(minsizethreshold)+" and "+str(maxsizethreshold)+") [" +",".join(currsample+":"+str(rrnapercent[currsample]) for currsample in badsizesamples)+"]"
-    errorline(badsizesamples, "do not fit tRNA sizes", " > "+str(100*percentsizethreshold)+"% between "+str(minsizethreshold)+" and "+str(maxsizethreshold), thresholdreadpercent)
+    errorline(samples, badsizesamples, "do not fit tRNA sizes", " > "+str(100*percentsizethreshold)+"% of reads between "+str(minsizethreshold)+" and "+str(maxsizethreshold) + " bases", thresholdreadpercent, percentformat = True, checkfile = samplename+"-readlengths.pdf")
 
 
 
@@ -333,7 +441,7 @@ sizefactordiff = 3
 minactivepercent = .5
 
 minreadcount = 20
-def checkgenecounts(samplename, sampleinfo, trnainfo):
+def checkgenecounts(samplename, sampleinfo, trnainfo, tgirtmode = False):
     #print >>sys.stderr, "**"+samplename
     readcounts = gettrnacounts(samplename, sampleinfo, trnainfo)
     sizefactors = getsizefactor(samplename, sampleinfo)
@@ -342,14 +450,16 @@ def checkgenecounts(samplename, sampleinfo, trnainfo):
     thresholdreadpercent = {currsample : readcounts.gettrnaactivepercent(currsample, trnainfo, cutoff = minreadcount) for currsample in samples}
     
     
-    missingtrnasamples = list(currsample for currsample in samples if thresholdreadpercent[currsample] < minactivepercent)
+    missingtrnasamples = list(thresholdreadpercent[currsample] < minactivepercent for currsample in samples)
     #print  str(len(missingtrnasamples)) +" samples have low tRNA read counts ( > "+str(100*minactivepercent)+"% between "+str(minsizethreshold)+" and "+str(maxsizethreshold)+") [" +",".join(currsample+":"+str(thresholdreadpercent[currsample]) for currsample in missingtrnasamples)+"]"
-    errorline(missingtrnasamples, "have low tRNA read counts", " > "+str(100*minactivepercent)+"% less than "+str(minreadcount) + " reads", thresholdreadpercent)
-    #if min(sizefactors.sizefactors.values())*sizefactordiff <  min(sizefactors.sizefactors.values()):
+    errorline(samples, missingtrnasamples, "have low tRNA read counts", " > "+str(100*minactivepercent)+"% of tRNAs with more than "+str(minreadcount) + " reads", thresholdreadpercent, percentformat = True)
+    
+    
+    errorsingle(min(sizefactors.sizefactors.values())*sizefactordiff <  min(sizefactors.sizefactors.values()), "large DESeq2 sizefactor differences", " > "+str(sizefactordiff)+"x")
+    
+    #(failmessage, failcriteria, critfail = False)
     #print  "Large DESeq2 sizefactor differences ( >"+sizefactordiff+" ) [" +",".join(currsample+":"+str(sizefactors.sizefactors[currsample]) for currsample in badsizesamples)+"]"
 
-def checkreadprep(sampleinfo):
-    pass
 
 
 def checktrnamappings(sampleinfo):
@@ -365,14 +475,17 @@ def main(**args):
     sampleinfo = samplefile(os.path.expanduser(args["samplefile"]))
     trnainfo = transcriptfile(os.path.expanduser(args["databasename"] + "-trnatable.txt"))
     
-
+    tgirtmode = args["tgirt"]
     print "<html>"
     print "<body>"
-
-    checkreadprep(sampleinfo)
-    checkreadsmapping(samplename, sampleinfo)
-    checkreadtypes(samplename, sampleinfo)
-    checkgenecounts(samplename, sampleinfo, trnainfo)
+    if tgirtmode:
+        print "<p>In TGIRT mode for tRNA transcript analysis</p>"
+    else:
+        print "<p>In ARMSeq mode for tRNA fragment analysis</p>"
+    checkreadprep(samplename)
+    checkreadsmapping(samplename, sampleinfo, tgirtmode)
+    checkreadtypes(samplename, sampleinfo, tgirtmode)
+    checkgenecounts(samplename, sampleinfo, trnainfo, tgirtmode)
     print "<body>"
     print "</html>"
 
@@ -387,7 +500,8 @@ if __name__ == "__main__":
                        help='tRNA file in format')
     parser.add_argument('--experimentname',
                        help='Sample file in format')
-
+    parser.add_argument('--tgirt', action="store_true", default=False,
+                   help='tgirt mode')
     
     
 

@@ -347,6 +347,7 @@ def testmain(**argdict):
     ensemblgtf = argdict["ensemblgtf"]
     nomultimap = argdict["nomultimap"]
     maxmismatches = argdict["maxmismatches"]
+    cores = argdict["cores"]
     typefile = None
     sampledata = samplefile(argdict["samplefile"])
     bedfiles = list()
@@ -423,7 +424,7 @@ def testmain(**argdict):
     starttime = time.time()
     
     if poolmode:
-        countpool = Pool(processes=8)
+        countpool = Pool(processes=cores)
         arglist = list()
         for currsample in samples:
             currbam = sampledata.getbam(currsample)

@@ -11,6 +11,9 @@ from trnasequtils import *
 import subprocess
 import tempfile
 
+from multiprocessing import Process, Queue, Pool
+import time
+
 from distutils.spawn import find_executable
 
 
@@ -190,7 +193,22 @@ def makebigwigs(bamfile, repname, faifile, directory,scriptdir,filterloci = Fals
         print >>sys.stderr, "conversion to bigwig failed"
         sys.exit(1)
     pass
-	
+
+
+
+
+def maketracks(dbname, currbam, genomebam, currsample, scriptdir,trackdir, sizefactors = None):
+    if sizefactors is None:
+        sizefactors = defaultdict(int)
+    convertbam(dbname, currbam, genomebam, scriptdir, force = True)
+    makebigwigs(genomebam, currsample, dbname+"-tRNAgenome.fa.fai",trackdir,scriptdir, scalefactor =  sizefactors[currsample])
+    makebigwigs(genomebam, currsample, dbname+"-tRNAgenome.fa.fai",trackdir,scriptdir, filterloci = True, suffix = 'uniqloci', scalefactor =  sizefactors[currsample])	
+    return genomebam
+    
+def maketracksspool(args):
+    return maketracks(*args[0], **args[1])
+def compressargs( *args, **kwargs):
+    return tuple([args, kwargs])
 def main(**args):
     dbname = args["genomedatabase"]
     samplefilename = args["samplefile"]
@@ -204,13 +222,29 @@ def main(**args):
     allsamples = sampledata.getsamples()
     faidxjob = subprocess.Popen("samtools faidx "+dbname+"-tRNAgenome.fa",shell = True)
     faidxjob.wait()
+    convetbampool = Pool(processes=8)
+    trackargs = list()
+    starttime = time.time()
+    print >>sys.stderr, starttime
+    print >>sys.stderr, "**||"
+    threadmode = True
     for currsample in allsamples:
         currbam = sampledata.getbam(currsample)
         genomebam = currsample+"-genome.bam"
-        convertbam(dbname, currbam, genomebam, scriptdir, force = True)
-        makebigwigs(genomebam, currsample, dbname+"-tRNAgenome.fa.fai",trackdir,scriptdir, scalefactor =  sizefactors[currsample])
-        makebigwigs(genomebam, currsample, dbname+"-tRNAgenome.fa.fai",trackdir,scriptdir, filterloci = True, suffix = 'uniqloci', scalefactor =  sizefactors[currsample])
+        if not threadmode:
+            maketracks(dbname, currbam, genomebam, currsample,scriptdir,trackdir, sizefactors = sizefactors)
+        else:
+            trackargs.append(compressargs(dbname, currbam, genomebam, currsample,scriptdir,trackdir, sizefactors = sizefactors))
+            
+            #convertbam(dbname, currbam, genomebam, scriptdir, force = True)
+        #makebigwigs(genomebam, currsample, dbname+"-tRNAgenome.fa.fai",trackdir,scriptdir, scalefactor =  sizefactors[currsample])
+        #makebigwigs(genomebam, currsample, dbname+"-tRNAgenome.fa.fai",trackdir,scriptdir, filterloci = True, suffix = 'uniqloci', scalefactor =  sizefactors[currsample])
+    if threadmode:
+        for  currresult in convetbampool.imap_unordered(maketracksspool, trackargs):
+            print >>sys.stderr, currresult+":"+str(time.time() - starttime)
+            pass
         
+
     trackfile = open(expname+"/trackhub/trackdb.txt", "w")
     createmultiwigtrackdb(sampledata,expname, trackfile, shortlabel = "all", longlabel = "all")
     createmultiwigtrackdb(sampledata,expname,trackfile, shortlabel = "unique mapping only", longlabel = "uniquely mapping only", suffix = 'uniqloci', startpriority = 8.0)

@@ -122,6 +122,7 @@ def testmain(**argdict):
     mapfile = argdict["mapfile"]
     bowtiedb = argdict["bowtiedb"]
     lazycreate = argdict["lazy"]
+    
     if "cores" in argdict:
         cores = int(argdict["cores"])
     else:
