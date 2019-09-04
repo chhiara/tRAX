@@ -67,7 +67,7 @@ def getbesttrnamappings(trnafile, bamout = True, logfile = sys.stderr, progname 
     ambtrna = 0
     acsets = defaultdict(int)
     aminosets = defaultdict(int)
-    newheader = bamfile.header
+    newheader = bamfile.header.to_dict()
     #print >>sys.stderr, newheader
     newheader["RG"] = list()
     newheader["RG"].append(dict())
