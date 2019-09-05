@@ -29,6 +29,20 @@ expand.delimited <- function(x, col1=1, col2=2, sep=",") {
 }
 
 
+coverageprep <- function(coveragemeltagg, samples, trnatable) {
+
+colnames(coveragemeltagg)[colnames(coveragemeltagg) == "x"]  <- "value"
+coveragemeltagg$Sample <- factor(coveragemeltagg$Sample,levels = unique(sampletable[,2]), ordered = TRUE)
+
+
+featnames = unique(as.character(coveragemeltagg$Feature))
+#tails = as.numeric(unlist(lapply(strsplit(featnames, "-", fixed = TRUE), tail, 1)))
+#anticodonname = as.character(unlist(lapply(strsplit(featnames, "-", fixed = TRUE), function(x) { return( x[length(x) - 1] ) })))
+#aminoname = as.character(unlist(lapply(strsplit(featnames, "-", fixed = TRUE), function(x) { return( x[length(x) - 2] ) })))
+coveragemeltagg$Feature = factor(as.character(coveragemeltagg$Feature), levels = featnames)
+return (coveragemeltagg)
+}
+
 args <- commandArgs(trailingOnly = TRUE)
 
 #source("traxlib.R")
@@ -64,9 +78,15 @@ spec <- matrix(c(
 
 
 
-trnapositions = c("0","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","43","44","45","46","47","48","49","50","51","52","53","54","55","56","57","58","59","60","61","62","63","64","65","66","67","68","69","70","71","72","73","74","75","76")
+#trnapositions = c("0","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","43","44","45","46","47","48","49","50","51","52","53","54","55","56","57","58","59","60","61","62","63","64","65","66","67","68","69","70","71","72","73","74","75","76")
 
-locuspositions = c("head30","head29","head28","head27","head26","head25","head24","head23","head22","head21","head20","head19","head18","head17","head16","head15","head14","head13","head12","head11","head10","head9","head8","head7","head6","head5","head4","head3","head2","head1","0","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","43","44","45","46","47","48","49","50","51","52","53","54","55","56","57","58","59","60","61","62","63","64","65","66","67","68","69","70","71","72","73","74","75","76","tail1","tail2","tail3","tail4","tail5","tail6","tail7","tail8","tail9","tail10","tail11","tail12","tail13","tail14","tail15","tail16","tail17","tail18","tail19","tail20","tail21","tail22","tail23","tail24","tail25","tail26","tail27","tail28","tail29","tail30")
+trnapositions = c('0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','17a','18','19','20','20a','20b','21','22','23','24','25','26','27','28','29','30','31','32','33','34','35','36','37','38','39','40','41','42','43','44','45','e1','e2','e3','e4','e5','e6','e7','e8','e9','e10','e11','e12','e13','e14','e15','e16','e17','e18','e19','46','47','48','49','50','51','52','53','54','55','56','57','58','59','60','61','62','63','64','65','66','67','68','69','70','71','72','73','74','75','76')
+
+#locuspositions = c("head30","head29","head28","head27","head26","head25","head24","head23","head22","head21","head20","head19","head18","head17","head16","head15","head14","head13","head12","head11","head10","head9","head8","head7","head6","head5","head4","head3","head2","head1","0","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","43","44","45","46","47","48","49","50","51","52","53","54","55","56","57","58","59","60","61","62","63","64","65","66","67","68","69","70","71","72","73","74","75","76","tail1","tail2","tail3","tail4","tail5","tail6","tail7","tail8","tail9","tail10","tail11","tail12","tail13","tail14","tail15","tail16","tail17","tail18","tail19","tail20","tail21","tail22","tail23","tail24","tail25","tail26","tail27","tail28","tail29","tail30")
+
+
+locuspositions = c("head30","head29","head28","head27","head26","head25","head24","head23","head22","head21","head20","head19","head18","head17","head16","head15","head14","head13","head12","head11","head10","head9","head8","head7","head6","head5","head4","head3","head2","head1",'0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','17a','18','19','20','20a','20b','21','22','23','24','25','26','27','28','29','30','31','32','33','34','35','36','37','38','39','40','41','42','43','44','45','e1','e2','e3','e4','e5','e6','e7','e8','e9','e10','e11','e12','e13','e14','e15','e16','e17','e18','e19','46','47','48','49','50','51','52','53','54','55','56','57','58','59','60','61','62','63','64','65','66','67','68','69','70','71','72','73','74','75','76',"tail1","tail2","tail3","tail4","tail5","tail6","tail7","tail8","tail9","tail10","tail11","tail12","tail13","tail14","tail15","tail16","tail17","tail18","tail19","tail20","tail21","tail22","tail23","tail24","tail25","tail26","tail27","tail28","tail29","tail30")
+
 
 opt = getopt(spec);
 
@@ -188,31 +208,39 @@ coverageall = coverages
 
 coveragemeltagg <- aggregate(coverageall$coverage, by=list(Feature = coverageall$Feature, Sample = sampletable[match(coverageall$Sample,sampletable[,1]),2], variable = coverageall$position), FUN=mean)
 
-
-
-
-#print(head(coveragemeltagg))
 colnames(coveragemeltagg)[colnames(coveragemeltagg) == "x"]  <- "value"
-
 coveragemeltagg$Sample <- factor(coveragemeltagg$Sample,levels = unique(sampletable[,2]), ordered = TRUE)
-coveragemelt <- coveragemeltagg
 
-#write.table(coveragemelt,"aggtables.txt" ,sep = "\t")
 
+#acceptorType = trnatable[match(coveragemeltagg$Feature, trnatable[,1]),3]
+#acceptorType <- factor(acceptorType, levels = sort(unique(acceptorType)))
+#featnames = unique(as.character(coveragemeltagg$Feature))
+##tails = as.numeric(unlist(lapply(strsplit(featnames, "-", fixed = TRUE), tail, 1)))
+##anticodonname = as.character(unlist(lapply(strsplit(featnames, "-", fixed = TRUE), function(x) { return( x[length(x) - 1] ) })))
+##aminoname = as.character(unlist(lapply(strsplit(featnames, "-", fixed = TRUE), function(x) { return( x[length(x) - 2] ) })))
+#coveragemeltagg$Feature = factor(as.character(coveragemeltagg$Feature), levels = featnames)
+#coveragemelt <- coveragemeltagg
+
+coveragemelt <- coverageprep(coveragemeltagg, samples, trnatable)
 
 acceptorType = trnatable[match(coveragemelt$Feature, trnatable[,1]),3]
 acceptorType <- factor(acceptorType, levels = sort(unique(acceptorType)))
-
-featnames = unique(as.character(coveragemelt$Feature))
-tails = as.numeric(unlist(lapply(strsplit(featnames, "-", fixed = TRUE), tail, 1)))
-
-
-anticodonname = as.character(unlist(lapply(strsplit(featnames, "-", fixed = TRUE), function(x) { return( x[length(x) - 1] ) })))
-aminoname = as.character(unlist(lapply(strsplit(featnames, "-", fixed = TRUE), function(x) { return( x[length(x) - 2] ) })))
-
-coveragemelt$Feature = factor(as.character(coveragemelt$Feature), levels = featnames)
-
 sortacceptor <- acceptorType[order(coveragemelt$variable, coveragemelt$Sample,-as.numeric(coveragemelt$Feature))]
+
+
+endsmeltagg  <- aggregate(coverageall$ends, by=list(Feature = coverageall$Feature, Sample = sampletable[match(coverageall$Sample,sampletable[,1]),2], variable = coverageall$position), FUN=mean)
+endsmelt <- coverageprep(endsmeltagg, samples, trnatable)
+
+deletemeltagg  <- aggregate(coverageall$deletions, by=list(Feature = coverageall$Feature, Sample = sampletable[match(coverageall$Sample,sampletable[,1]),2], variable = coverageall$position), FUN=mean)
+deletemelt <- coverageprep(deletemeltagg, samples, trnatable)
+
+mismatchesmeltagg <- aggregate(coverageall$mismatchedbases / (coverageall$coverage + 10), by=list(Feature = coverageall$Feature, Sample = sampletable[match(coverageall$Sample,sampletable[,1]),2], variable = coverageall$position), FUN=mean)
+mismatchesmelt <- coverageprep(mismatchesmeltagg, samples, trnatable)
+
+
+#print(head(coveragemeltagg))
+
+
 
 
 makecombplot(coveragemelt,filename=paste(uniquename, "-combinedcoverages.pdf",sep= ""))
@@ -313,6 +341,8 @@ colnames(coverageunique)[colnames(coverageunique) == "multiaminocoverage"]      
 
 allmultmelt = melt(coverageunique, id.vars = c("Feature", "Sample", "position"))
 
+
+
 #colnames(allmultmelttest)[colnames(allmultmelttest) == "position"]  <- "variable"
 
 #print(head(allmultmelt))
@@ -358,7 +388,7 @@ allmultmelt$Feature = factor(as.character(allmultmelt$Feature), levels = featnam
 
 #q()
 
-
+#amino specific plots
 for (curramino in unique(acceptorType)){
 
 aminodata = allmultmelt[acceptorType == curramino,]
@@ -369,12 +399,27 @@ aminomodomicstable = modomicstable[modomicstable$Feature %in% unique(aminodata$F
 aminonamesec = paste(uniquename, "-",curramino,"_cov",outputformat,sep= "")
 makecovplot(aminodata,aminonamesec)
 
-aminonameunique = paste(uniquename, "-",curramino,"_uniqueonlycov",outputformat,sep= "")
-makecovplot(aminodata[aminodata$maptype == "Transcript specific",],aminonameunique)
+
+aminoendsdata = endsmelt[acceptorType == curramino,]
+aminonamesec = paste(opt$directory,"/mismatch/",runname, "-",curramino,"_ends",outputformat,sep= "")
+makebasiccovplot(aminoendsdata,aminonamesec)
+
+
+aminomismatchdata = mismatchesmelt[acceptorType == curramino,]
+aminonamemissec = paste(opt$directory,"/mismatch/",runname, "-",curramino,"_mismatch",outputformat,sep= "")
+makebasiccovplot(aminoendsdata,aminonamemissec)
+
+aminodeletedata = mismatchesmelt[acceptorType == curramino,]
+aminonamedelsec = paste(opt$directory,"/mismatch/",runname, "-",curramino,"_delete",outputformat,sep= "")
+makebasiccovplot(aminodeletedata,aminonamedelsec)
+
+#aminonameunique = paste(uniquename, "-",curramino,"_uniqueonlycov",outputformat,sep= "")
+#makecovplot(aminodata[aminodata$maptype == "Transcript specific",],aminonameunique)
 
 }
-#change this back 
-if(TRUE){
+#change this back
+#tRNA specific plots
+if(FALSE){
 for (currtranscript in unique(allmultmelt$Feature)){
 
 transcriptdata = allmultmelt[allmultmelt$Feature == currtranscript,]
