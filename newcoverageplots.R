@@ -96,6 +96,27 @@ locicoverages <- read.table(opt$locicov, header = TRUE,row.names = NULL, strings
 trnatable <- read.table(opt$trna)
 sampletable <- read.table(opt$samples)
 modomicstable <- data.frame()
+scalefactor = .5
+modomicstable <- read.table(text ="",col.names = c("trna", "mod", "pos"),colClasses = c("character", "character", "character")) #(trna = character(), mod = character(), pos = character(),stringsAsFactors=FALSE)
+if(!is.null(opt$modomics) && file.exists(opt$modomics) ){
+    modomicstable <- read.table(opt$modomics, header = TRUE)
+    #modomicstable$pos <- paste("X",modomicstable$pos, sep = "")
+}
+
+colnames(modomicstable)[colnames(modomicstable) == 'mod'] <- 'Modification'
+
+modomicstable <- modomicstable[as.character(modomicstable$pos) %in% unique(as.character(trnapositions)),]
+modomicstable$dist <- match(modomicstable$pos,  levels(trnapositions)) 
+#modomicstable$Feature <- factor(modomicstable$trna,levels = levels(coveragemelt$Feature) )
+
+stopmods = c("m1A","m2,2G","m1G","m1I","m3C")
+modomicstable <- modomicstable[modomicstable$mod %in% stopmods,]
+
+
+
+aminomodomicstable <- modomicstable
+
+
 
 runname = opt$runname
 uniquename = paste(runname,runname,sep = "/")
@@ -204,9 +225,16 @@ covplot
 }
 coverageall = coverages
 
+coverageall = coverageall[coverageall$position %in% trnapositions,]
+coverageall$position = factor(coverageall$position, levels=trnapositions)
 
 
 coveragemeltagg <- aggregate(coverageall$coverage, by=list(Feature = coverageall$Feature, Sample = sampletable[match(coverageall$Sample,sampletable[,1]),2], variable = coverageall$position), FUN=mean)
+
+coveragemeltagg = coveragemeltagg[coveragemeltagg$variable %in% trnapositions,]
+
+coveragemeltagg$variable = factor(coveragemeltagg$variable, levels=trnapositions)
+
 
 colnames(coveragemeltagg)[colnames(coveragemeltagg) == "x"]  <- "value"
 coveragemeltagg$Sample <- factor(coveragemeltagg$Sample,levels = unique(sampletable[,2]), ordered = TRUE)
@@ -231,16 +259,56 @@ sortacceptor <- acceptorType[order(coveragemelt$variable, coveragemelt$Sample,-a
 endsmeltagg  <- aggregate(coverageall$ends, by=list(Feature = coverageall$Feature, Sample = sampletable[match(coverageall$Sample,sampletable[,1]),2], variable = coverageall$position), FUN=mean)
 endsmelt <- coverageprep(endsmeltagg, samples, trnatable)
 
-deletemeltagg  <- aggregate(coverageall$deletions, by=list(Feature = coverageall$Feature, Sample = sampletable[match(coverageall$Sample,sampletable[,1]),2], variable = coverageall$position), FUN=mean)
+
+deletemeltagg  <- aggregate(coverageall$deletions / (coverageall$coverage + 10), by=list(Feature = coverageall$Feature, Sample = sampletable[match(coverageall$Sample,sampletable[,1]),2], variable = coverageall$position), FUN=mean)
 deletemelt <- coverageprep(deletemeltagg, samples, trnatable)
+#deletemelt$variable = factor(deletemelt$variable, levels=trnapositions)
+
+
+    
+    
+write.table( coverageall[coverageall$deletions / (coverageall$coverage + 10) > .5,], file = paste(opt$directory,"/mismatch/",runname, "-sigdelete.txt",sep= "")) 
+
+
 
 mismatchesmeltagg <- aggregate(coverageall$mismatchedbases / (coverageall$coverage + 10), by=list(Feature = coverageall$Feature, Sample = sampletable[match(coverageall$Sample,sampletable[,1]),2], variable = coverageall$position), FUN=mean)
 mismatchesmelt <- coverageprep(mismatchesmeltagg, samples, trnatable)
+#mismatchesmelt$variable = factor(mismatchesmelt$variable, levels=trnapositions)
+
+write.table(coverageall[coverageall$mismatchedbases / (coverageall$coverage + 10) > .5,],file = paste(opt$directory,"/mismatch/",runname, "-sigmismatch.txt",sep= ""))
+
+
+
+coverageunique = coverageall[,c("Feature", "Sample","position","uniquecoverage","multitrnacoverage","multianticodoncoverage","multiaminocoverage")]
+
+colnames(coverageunique)[colnames(coverageunique) == "uniquecoverage"]          <- "Transcript specific"
+colnames(coverageunique)[colnames(coverageunique) == "multitrnacoverage"]  <- "Isodecoder Specific"  
+colnames(coverageunique)[colnames(coverageunique) == "multianticodoncoverage"]  <- "Isotype Specific"
+colnames(coverageunique)[colnames(coverageunique) == "multiaminocoverage"]      <- "Not Amino Specific" 
+allmultmelt = melt(coverageunique, id.vars = c("Feature", "Sample", "position"))
+
+allmultmeltagg <- aggregate(allmultmelt$value, by=list(Feature = allmultmelt$Feature, Sample = sampletable[match(allmultmelt$Sample,sampletable[,1]),2], maptype = allmultmelt$variable,variable = allmultmelt$position), FUN=mean)
+colnames(allmultmeltagg)[colnames(allmultmeltagg) == "x"]  <- "value"
+allmultmeltagg$Sample <- factor(allmultmeltagg$Sample,levels = unique(sampletable[,2]), ordered = TRUE)
+allmultmelt <- allmultmeltagg
+
+
+#curramino = "Ala"
+#
+#aminodata = allmultmelt[acceptorType == curramino,]
+#aminonamesec = paste(uniquename, "-",curramino,"_cov",outputformat,sep= "")
+#makecovplot(aminodata,aminonamesec)
+#
+#
+#aminomismatchdata = mismatchesmelt[acceptorType == curramino,]
+#aminonamemissec = paste(opt$directory,"/mismatch/",runname, "-",curramino,"_mismatch",outputformat,sep= "")
+#makepercentcovplot(aminomismatchdata,aminonamemissec)
+
 
 
 #print(head(coveragemeltagg))
 
-
+#print("**||1")
 
 
 makecombplot(coveragemelt,filename=paste(uniquename, "-combinedcoverages.pdf",sep= ""))
@@ -265,6 +333,8 @@ modomicstable <- modomicstable[modomicstable$mod %in% stopmods,]
 colnames(modomicstable)[colnames(modomicstable) == 'mod'] <- 'Modification'
 #() # 1 minute
 
+
+#print("**||2")
 canvas = ggplot(coveragemelt,aes(x=variable,y=value), size = 2)
 if(max(coveragemelt$value) <= 1.1){
 #allcoverages <- canvas + theme_bw() + geom_bar(stat="identity") + facet_grid(Feature ~ Sample, scales="free") + geom_vline(aes(xintercept = dist, col = Modification),size=.4,linetype = "longdash",data = modomicstable,show.legend=TRUE)#+theme(axis.text.y=element_text(colour="black",size=6),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8), strip.text.y = element_text(angle=0),strip.text.x = element_text(size = ,angle=0))+ ylab("Normalized Read Count") + xlab("tRNA position") +   scale_y_continuous(breaks=percentbreaks,limits = c(0, 1.01)) +scale_x_discrete(breaks=c("X1","X9","X26","X37","X44","X58","X65","X73"), labels=c("Start","m1g","m22g","anticodon","varloop","m1a","65","tail"))   #+scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon", "tail"))
@@ -272,9 +342,8 @@ if(max(coveragemelt$value) <= 1.1){
 allcoverages <- canvas + theme_bw() + geom_bar(stat="identity") + facet_grid(Feature ~ Sample, scales="free", space = "fixed")  +  geom_vline(aes(xintercept = dist, col = Modification),size=.4,linetype = "longdash",data = modomicstable,show.legend=TRUE)#+theme(axis.text.y=element_text(colour="black",size=6),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8), strip.text.y = element_text(angle=0),strip.text.x = element_text(size = ,angle=0))+ ylab("Normalized Read Count") + xlab("tRNA position") +   scale_y_continuous(breaks=myBreaks) +scale_x_discrete(breaks=c("X1","X9","X26","X37","X44","X58","X65","X73"), labels=c("Start","m1g","m22g","anticodon","varloop","m1a","65","tail"))   #+scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon", "tail"))
 }
 
-scalefactor = .5
-scalefactor*(2 + 1*length(unique(coveragemelt$Feature)))
-scalefactor*(2+4*length(unique(coveragemelt$Sample)))
+#scalefactor*(2 + 1*length(unique(coveragemelt$Feature)))
+#scalefactor*(2+4*length(unique(coveragemelt$Sample)))
 #q()
 
 ggsave(filename=outputfile, allcoverages,height=scalefactor*(2 + 1*length(unique(coveragemelt$Feature))),width=scalefactor*(2+4*length(unique(coveragemelt$Sample))), limitsize=FALSE, dpi = 600) #real one
@@ -283,7 +352,7 @@ ggsave(filename=outputfile, allcoverages,height=scalefactor*(2 + 1*length(unique
 
 #q() #9 mins
 
-
+#print("**||3")
 
 if(!is.null(opt$directory) && FALSE){
 for (curramino in unique(acceptorType)){
@@ -329,17 +398,9 @@ if(!is.null(uniquename)){
 
 
 #print(head(coverageall))
-coverageunique = coverageall[,c("Feature", "Sample","position","uniquecoverage","multitrnacoverage","multianticodoncoverage","multiaminocoverage")]
-
-colnames(coverageunique)[colnames(coverageunique) == "uniquecoverage"]          <- "Transcript specific"
-colnames(coverageunique)[colnames(coverageunique) == "multitrnacoverage"]  <- "Isodecoder Specific"  
-colnames(coverageunique)[colnames(coverageunique) == "multianticodoncoverage"]  <- "Isotype Specific"
-colnames(coverageunique)[colnames(coverageunique) == "multiaminocoverage"]      <- "Not Amino Specific" 
-
 
 #print(head(coverageunique))
 
-allmultmelt = melt(coverageunique, id.vars = c("Feature", "Sample", "position"))
 
 
 
@@ -350,16 +411,8 @@ allmultmelt = melt(coverageunique, id.vars = c("Feature", "Sample", "position"))
 #print(head(allmultmelttest))
 
 
-#print(head(allmultmelt))
 allmultmeltagg <- aggregate(allmultmelt$value, by=list(Feature = allmultmelt$Feature, Sample = sampletable[match(allmultmelt$Sample,sampletable[,1]),2], maptype = allmultmelt$variable,variable = allmultmelt$position), FUN=mean)
-
-#filter to positions
-#print(head(allmultmeltagg))
-
 allmultmeltagg = allmultmeltagg[allmultmeltagg$variable %in% trnapositions,]
-
-
-
 colnames(allmultmeltagg)[colnames(allmultmeltagg) == "x"]  <- "value"
 allmultmeltagg$Sample <- factor(allmultmeltagg$Sample,levels = unique(sampletable[,2]), ordered = TRUE)
 allmultmelt <- allmultmeltagg
@@ -387,7 +440,7 @@ allmultmelt$Feature = factor(as.character(allmultmelt$Feature), levels = featnam
 
 
 #q()
-
+#print("**||2")
 #amino specific plots
 for (curramino in unique(acceptorType)){
 
@@ -407,11 +460,11 @@ makebasiccovplot(aminoendsdata,aminonamesec)
 
 aminomismatchdata = mismatchesmelt[acceptorType == curramino,]
 aminonamemissec = paste(opt$directory,"/mismatch/",runname, "-",curramino,"_mismatch",outputformat,sep= "")
-makebasiccovplot(aminoendsdata,aminonamemissec)
+makepercentcovplot(aminomismatchdata,aminonamemissec)
 
 aminodeletedata = mismatchesmelt[acceptorType == curramino,]
 aminonamedelsec = paste(opt$directory,"/mismatch/",runname, "-",curramino,"_delete",outputformat,sep= "")
-makebasiccovplot(aminodeletedata,aminonamedelsec)
+makepercentcovplot(aminodeletedata,aminonamedelsec)
 
 #aminonameunique = paste(uniquename, "-",curramino,"_uniqueonlycov",outputformat,sep= "")
 #makecovplot(aminodata[aminodata$maptype == "Transcript specific",],aminonameunique)
