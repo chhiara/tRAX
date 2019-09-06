@@ -411,14 +411,14 @@ if(!is.null(uniquename)){
 #print(head(allmultmelttest))
 
 
-allmultmeltagg <- aggregate(allmultmelt$value, by=list(Feature = allmultmelt$Feature, Sample = sampletable[match(allmultmelt$Sample,sampletable[,1]),2], maptype = allmultmelt$variable,variable = allmultmelt$position), FUN=mean)
-allmultmeltagg = allmultmeltagg[allmultmeltagg$variable %in% trnapositions,]
-colnames(allmultmeltagg)[colnames(allmultmeltagg) == "x"]  <- "value"
-allmultmeltagg$Sample <- factor(allmultmeltagg$Sample,levels = unique(sampletable[,2]), ordered = TRUE)
-allmultmelt <- allmultmeltagg
+#allmultmeltagg <- aggregate(allmultmelt$value, by=list(Feature = allmultmelt$Feature, Sample = sampletable[match(allmultmelt$Sample,sampletable[,1]),2], maptype = allmultmelt$variable,variable = allmultmelt$position), FUN=mean)
+#allmultmeltagg = allmultmeltagg[allmultmeltagg$variable %in% trnapositions,]
+#colnames(allmultmeltagg)[colnames(allmultmeltagg) == "x"]  <- "value"
+#allmultmeltagg$Sample <- factor(allmultmeltagg$Sample,levels = unique(sampletable[,2]), ordered = TRUE)
+#allmultmelt <- allmultmeltagg
 
 #allmultmelt$maptype <- factor(allmultmelt$maptype, levels=c("Not Amino Specific","Isotype Specific","Isodecoder Specific","Transcript specific"))
-allmultmelt$variable = factor(allmultmelt$variable, levels=trnapositions)
+#allmultmelt$variable = factor(allmultmelt$variable, levels=trnapositions)
 
 #allmultmelt <- allmultmelt[order(-as.numeric(allmultmelt$maptype)),]
 
