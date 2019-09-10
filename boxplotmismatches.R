@@ -121,7 +121,7 @@ posname = paste(directory,"/",currpos,"-possamplemismatches",outputformat, sep =
 
 
 
-ggplot(data = mismatchmeltagg, aes(x=Sample, y=percentmismatch)) + geom_boxplot(aes(fill=Sample), outlier.shape=NA) + geom_jitter(aes(fill=Sample), size = dotsize) +  theme(axis.text.x = element_text(angle = 90, hjust = 1))+  ylim(0, 1) + xlab("Sample")+ylab("Percent Misincorporation")
+ggplot(data = mismatchmeltagg, aes(x=Sample, y=percentmismatch)) + geom_boxplot(aes(fill=Sample), outlier.shape=NA) + theme_bw()+ geom_jitter(aes(fill=Sample), size = dotsize) +  ggtitle(paste("Position ",currpos," Mismatches", sep = ""))+ theme(axis.text.x = element_text(angle = 90, hjust = 1))+  ylim(0, 1) + xlab("Sample")+ylab("Percent Misincorporation")
 ggsave(filename=posname,width=7, height=7)
 
 mismatchmeltaminoagg <- aggregate(mismatchmelt$percentmismatch, by=list(Sample = mismatchmelt$Sample, amino = trnatable[match(mismatchmelt$Feature,trnatable[,1]),3]), FUN=mean)
@@ -134,7 +134,7 @@ posname = paste(directory,"/",currpos,"-posaminomismatches",outputformat, sep = 
 
 
 
-ggplot(data = mismatchmeltaminoagg, aes(x=amino, y=percentmismatch)) + geom_boxplot(aes(fill=amino), outlier.shape=NA) + geom_jitter(aes(fill=amino), size = dotsize) +  theme(axis.text.x = element_text(angle = 90, hjust = 1))+  ylim(0, 1) + xlab("Isotype")+ylab("Percent Misincorporation")
+ggplot(data = mismatchmeltaminoagg, aes(x=amino, y=percentmismatch)) + geom_boxplot(aes(fill=amino), outlier.shape=NA) + theme_bw()+ geom_jitter(aes(fill=amino), size = dotsize) +  ggtitle(paste("Position ",currpos," Mismatches", sep = ""))+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+  ylim(0, 1) + xlab("Isotype")+ylab("Percent Misincorporation")
 ggsave(filename=posname, width=7, height=7)
 
 
@@ -150,15 +150,15 @@ deletemeltaminoagg <- aggregate(deletionmelt$deletepercent, by=list(Sample = del
 
 colnames(deletemeltaminoagg) <- c("Feature","amino","percentdeletions")
 posname = paste(directory,"/",currpos,"-posaminodeletions",outputformat, sep = "")
-ggplot(data = deletemeltaminoagg, aes(x=amino, y=percentdeletions)) + geom_boxplot(aes(fill=amino), outlier.shape=NA) + geom_jitter(aes(fill=amino), size = dotsize) +  theme(axis.text.x = element_text(angle = 90, hjust = 1))+  ylim(0, 1)   + xlab("Isotype")+ylab("Percent Skipped")
+ggplot(data = deletemeltaminoagg, aes(x=amino, y=percentdeletions)) + geom_boxplot(aes(fill=amino), outlier.shape=NA) + theme_bw()+ geom_jitter(aes(fill=amino), size = dotsize) +  ggtitle(paste("Position ",currpos," Deletions", sep = ""))+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+  ylim(0, 1)   + xlab("Isotype")+ylab("Percent Skipped")
 ggsave(filename=posname,width=7, height=7)
 
 
 
 deletemeltSampleagg <- aggregate(deletionmelt$deletepercent, by=list(Feature = deletionmelt$Feature, Sample = Sampletable[match(deletionmelt$Sample,Sampletable[,1]),2]), FUN=mean)
 colnames(deletemeltSampleagg) <- c("Feature","Sample","percentdeletions")
-posname = paste(directory,"/",currpos,"-posSampledeletions",outputformat, sep = "")
-ggplot(data = deletemeltSampleagg, aes(x=Sample, y=percentdeletions)) + geom_boxplot(aes(fill=Sample), outlier.shape=NA) + geom_jitter(aes(fill=Sample), size = dotsize) +  theme(axis.text.x = element_text(angle = 90, hjust = 1))+  ylim(0, 1) + xlab("Sample")+ylab("Percent Skipped")
+posname = paste(directory,"/",currpos,"-possampledeletions",outputformat, sep = "")
+ggplot(data = deletemeltSampleagg, aes(x=Sample, y=percentdeletions)) + geom_boxplot(aes(fill=Sample), outlier.shape=NA) + theme_bw()+ geom_jitter(aes(fill=Sample), size = dotsize) +  ggtitle(paste("Position ",currpos," Deletions", sep = ""))+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+  ylim(0, 1) + xlab("Sample")+ylab("Percent Skipped")
 ggsave(filename=posname,width=7, height=7)
 
 }
@@ -168,6 +168,6 @@ deletionmelt = mismatches[,c("Feature","position","Sample","coverage","deletions
 maxskips <- aggregate(deletionmelt$deletions/(deletionmelt$deletions + deletionmelt$coverage + 30), by=list(position = deletionmelt$position, Feature = deletionmelt$Feature,Sample = deletionmelt$Sample), FUN=max)
 #maxskips <- aggregate(deletionmelt$deletions/deletionmelt$coverage, by=list(position = deletionmelt$position, Feature = deletionmelt$Feature), FUN=max)
 
-#print (maxskips[order(-maxskips$x),])
+print (maxskips[order(-maxskips$x),])
 #head(maxskips)
 #head()

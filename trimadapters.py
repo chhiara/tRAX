@@ -9,6 +9,8 @@ from collections import defaultdict
 import os.path
 import re
 import subprocess
+from multiprocessing import Pool, cpu_count
+
 
 
 def runrscript(*script):
@@ -40,8 +42,9 @@ parser.add_argument('--secadapter',default ='GATCGTCGGACTGTAGAACTC' ,
 parser.add_argument('--minlength',default ='15' ,
                    help='minimum length of sequence')
 parser.add_argument('--singleend', action="store_true", default=False,
-
                    help='single-end mode (uses cutadapt)')
+parser.add_argument('--cores',
+                   help='number of processors to use')
 
 args = parser.parse_args()
 
@@ -51,6 +54,9 @@ firadapter = args.firadapter
 secadapter =   args.secadapter
 minlength = args.minlength
 singleendmode = args.singleend
+cores = cpu_count()
+if args.cores is None:
+    cores = args.cores
 
 #firadapter = 'AGATCGGAAGAGCACACGTC' 
 #secadapter = 'GATCGTCGGACTGTAGAACTC'  
@@ -116,7 +122,9 @@ for currsample in samplefiles.iterkeys():
         if not os.path.isfile(currfile):
             print >>sys.stderr, currfile +" does not exist"
             sys.exit(1)
+seqprepruns = dict()
 for currsample in samplefiles.iterkeys():
+    
     if not singleendmode:
         #seqprepcommmand = program+' -x '+bowtiedb+' -k '+str(maxmaps)+' --very-sensitive --ignore-quals --np 5 --reorder -p '+str(numcores)+' -U '+unpaired
         seqprepcommmand = 'SeqPrep -L '+str(minsize)+ ' -A '+firadapter+' -B '+secadapter +' -f '+samplefiles[currsample][0]+'  -r '+samplefiles[currsample][1]+' -1 '+currsample+'_left.fastq.gz     -2 '+currsample+'_right.fastq.gz   -s '+currsample+'_merge.fastq.gz'  
@@ -124,12 +132,28 @@ for currsample in samplefiles.iterkeys():
         #print >>sys.stderr, bowtiecommand
         #bowtiecommand = bowtiecommand + ' | '+scriptdir+'choosemappings.py '+trnafile+' | samtools sort - '+outfile
         
-        seqpreprun = None
-        seqpreprun = subprocess.Popen(seqprepcommmand, shell = True, stderr = subprocess.PIPE)
+        seqprepruns[currsample] = None
+        seqprepruns[currsample] = subprocess.Popen(seqprepcommmand, shell = True, stderr = subprocess.PIPE)
+
+    else:
+        #seqprepcommmand = program+' -x '+bowtiedb+' -k '+str(maxmaps)+' --very-sensitive --ignore-quals --np 5 --reorder -p '+str(numcores)+' -U '+unpaired
+        #cutadapt -m 15 --adapter='TGGAATTCTCGGGTGCCAAGG'  Testicular_sperm/Fraction4/Fraction4_S2_L002_R1_001.fastq.gz                           | gzip -c > trimmed/Fraction4_S2_L002_R1_001_TRIM.fastq.gz                      
+
+        cutadaptcommand = 'cutadapt -m '+str(minsize)+ ' --adapter='+firadapter+' '+samplefiles[currsample][0]  +' | gzip -c >'+ currsample+'_trimmed.fastq.gz'
+        outputfiles.append(currsample+'_trimmed.fastq.gz')
+        #print >>sys.stderr, bowtiecommand
+        #bowtiecommand = bowtiecommand + ' | '+scriptdir+'choosemappings.py '+trnafile+' | samtools sort - '+outfile
         
-        output = seqpreprun.communicate()
+        cutadaptruns[currsample] = None
+        cutadaptruns[currsample] = subprocess.Popen(cutadaptcommand, shell = True, stderr = subprocess.PIPE)
+        
+
+
+for currsample in samplefiles.iterkeys():
+    if not singleendmode:
+        output = seqprepruns[currsample].communicate()
         errinfo = output[1]
-        if seqpreprun.returncode != 0:
+        if seqprepruns[currsample].returncode != 0:
             print >>sys.stderr, "seqprep failed"
             print >>sys.stderr, errinfo
         
@@ -150,22 +174,10 @@ for currsample in samplefiles.iterkeys():
         seqprepcounts[currsample]["merged"] = merged
         seqprepcounts[currsample]["unmerged"] = totalreads - (merged + discard)
         seqprepcounts[currsample]["discarded"] = discard
-
     else:
-        #seqprepcommmand = program+' -x '+bowtiedb+' -k '+str(maxmaps)+' --very-sensitive --ignore-quals --np 5 --reorder -p '+str(numcores)+' -U '+unpaired
-        #cutadapt -m 15 --adapter='TGGAATTCTCGGGTGCCAAGG'  Testicular_sperm/Fraction4/Fraction4_S2_L002_R1_001.fastq.gz                           | gzip -c > trimmed/Fraction4_S2_L002_R1_001_TRIM.fastq.gz                      
-
-        cutadaptcommand = 'cutadapt -m '+str(minsize)+ ' --adapter='+firadapter+' '+samplefiles[currsample][0]  +' | gzip -c >'+ currsample+'_trimmed.fastq.gz'
-        outputfiles.append(currsample+'_trimmed.fastq.gz')
-        #print >>sys.stderr, bowtiecommand
-        #bowtiecommand = bowtiecommand + ' | '+scriptdir+'choosemappings.py '+trnafile+' | samtools sort - '+outfile
-        
-        cutadaptrun = None
-        cutadaptrun = subprocess.Popen(cutadaptcommand, shell = True, stderr = subprocess.PIPE)
-        
-        output = cutadaptrun.communicate()
+        output = cutadaptruns[currsample].communicate()
         errinfo = output[1]
-        if cutadaptrun.returncode != 0:
+        if cutadaptruns[currsample].returncode != 0:
             print >>sys.stderr, "seqprep failed"
             print >>sys.stderr, errinfo
         #print >>sys.stderr, errinfo
@@ -189,8 +201,7 @@ for currsample in samplefiles.iterkeys():
         cutadaptcounts[currsample]["trimmed"] = trimmed
         cutadaptcounts[currsample]["untrimmed"] = totalreads - (trimmed + discard)
         cutadaptcounts[currsample]["discarded"] = discard
-            
-
+        
 #print >>sys.stderr, cutadaptcounts
 if not singleendmode:
     samplefile = open(runname+"_sp.txt", "w")
