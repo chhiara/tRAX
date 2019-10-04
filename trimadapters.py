@@ -103,6 +103,9 @@ for currline in open(seqprepfile):
         cutadaptorder.append(fields[0])
 
 
+if len(sampleorder) < 1 and len(cutadaptorder) < 1:
+    print >>sys.stderr, "failed to read "+seqprepfile
+    sys.exit(1)
 
     
 totalreads = None
@@ -123,6 +126,7 @@ for currsample in samplefiles.iterkeys():
             print >>sys.stderr, currfile +" does not exist"
             sys.exit(1)
 seqprepruns = dict()
+cutadaptruns = dict()
 for currsample in samplefiles.iterkeys():
     
     if not singleendmode:
@@ -141,7 +145,7 @@ for currsample in samplefiles.iterkeys():
 
         cutadaptcommand = 'cutadapt -m '+str(minsize)+ ' --adapter='+firadapter+' '+samplefiles[currsample][0]  +' | gzip -c >'+ currsample+'_trimmed.fastq.gz'
         outputfiles.append(currsample+'_trimmed.fastq.gz')
-        #print >>sys.stderr, bowtiecommand
+        #print >>sys.stderr, cutadaptcommand
         #bowtiecommand = bowtiecommand + ' | '+scriptdir+'choosemappings.py '+trnafile+' | samtools sort - '+outfile
         
         cutadaptruns[currsample] = None
@@ -180,7 +184,7 @@ for currsample in samplefiles.iterkeys():
         if cutadaptruns[currsample].returncode != 0:
             print >>sys.stderr, "seqprep failed"
             print >>sys.stderr, errinfo
-        #print >>sys.stderr, errinfo
+        print >>sys.stderr, errinfo
         prepout += errinfo
         for line in errinfo.split("\n"):
             totalmatch = recutadapttotal.match(line)
@@ -197,10 +201,11 @@ for currsample in samplefiles.iterkeys():
                 discard = int(discardmatch.group(1).replace(",",""))
             elif writtenmatch:
                 written = int(writtenmatch.group(1).replace(",",""))
-
+               
         cutadaptcounts[currsample]["trimmed"] = trimmed
         cutadaptcounts[currsample]["untrimmed"] = totalreads - (trimmed + discard)
         cutadaptcounts[currsample]["discarded"] = discard
+        
         
 #print >>sys.stderr, cutadaptcounts
 if not singleendmode:

@@ -485,7 +485,7 @@ def testmain(**argdict):
         countfile = sys.stdout
     else:
         countfile = open(argdict["countfile"], "w")
-    printcountfile(countfile, samples, allcounts,trnalist, trnaloci, featurelist, embllist)
+    printcountfile(countfile, samples, allcounts,trnalist, trnaloci, featurelist, embllist, includebase = includebase)
     if genetypefile is not None:
         genetypeout = open(genetypefile, "w")
         printtypefile(genetypeout,samples, allcounts,trnalist, trnaloci, featurelist, embllist )

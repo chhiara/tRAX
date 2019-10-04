@@ -380,7 +380,7 @@ if pairfile and paironly:
             print >>sys.stderr, "Deseq analysis failed, cannot continue"
             sys.exit(1)    
     else:
-        print >>sys.stderr, scriptdir+"/analyzecounts.R",expname,expinfo.genecounts,samplefilename
+        print >>sys.stderr, scriptdir+"/analyzecounts.R",expname,expinfo.genecounts,samplefilename, pairfile
 
         deseqret = runrscript(scriptdir+"/analyzecounts.R",expname,expinfo.genecounts,samplefilename, pairfile)
 
@@ -459,7 +459,7 @@ if pairfile:
             sys.exit(1)    
     else:
         deseqret = runrscript(scriptdir+"/analyzecounts.R",expname,expinfo.genecounts,samplefilename, pairfile)
-        print >>sys.stderr, scriptdir+"/analyzecounts.R",expname,expinfo.genecounts,samplefilename
+        print >>sys.stderr, scriptdir+"/analyzecounts.R",expname,expinfo.genecounts,samplefilename, pairfile
 
         if deseqret == 2:
             print >>sys.stderr, "Deseq analysis failed, cannot continue"

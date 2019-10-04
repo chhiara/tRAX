@@ -168,6 +168,6 @@ deletionmelt = mismatches[,c("Feature","position","Sample","coverage","deletions
 maxskips <- aggregate(deletionmelt$deletions/(deletionmelt$deletions + deletionmelt$coverage + 30), by=list(position = deletionmelt$position, Feature = deletionmelt$Feature,Sample = deletionmelt$Sample), FUN=max)
 #maxskips <- aggregate(deletionmelt$deletions/deletionmelt$coverage, by=list(position = deletionmelt$position, Feature = deletionmelt$Feature), FUN=max)
 
-print (maxskips[order(-maxskips$x),])
+#print (maxskips[order(-maxskips$x),])
 #head(maxskips)
 #head()

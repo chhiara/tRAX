@@ -274,9 +274,9 @@ deletemelt <- coverageprep(deletemeltagg, samples, trnatable)
 
     
     
-write.table( coverageall[coverageall$deletions / (coverageall$coverage + pcount) > .1,], file = paste(opt$directory,"/mismatch/",runname, "-sigdelete.txt",sep= "")) 
+#write.table( coverageall[coverageall$deletions / (coverageall$coverage + pcount) > .1,], file = paste(opt$directory,"/mismatch/",runname, "-sigdelete.txt",sep= "")) 
 
-write.table( deletemelt, file = paste(opt$directory,"/mismatch/",runname, "-alldelete.txt",sep= "")) 
+#write.table( deletemelt, file = paste(opt$directory,"/mismatch/",runname, "-alldelete.txt",sep= "")) 
 
 
 mismatchesmeltagg <- aggregate(coverageall$mismatchedbases / (coverageall$coverage + pcount), by=list(Feature = coverageall$Feature, Sample = sampletable[match(coverageall$Sample,sampletable[,1]),2], variable = coverageall$position), FUN=mean)
@@ -494,7 +494,7 @@ makepercentcovplot(aminomismatchdata,aminonamemissec)
 aminodeletedata = deletemelt[acceptorType == curramino,]
 aminonamedelsec = paste(opt$directory,"/mismatch/",runname, "-",curramino,"_delete",outputformat,sep= "")
 makepercentcovplot(aminodeletedata,aminonamedelsec)
-write.table(aminodeletedata[aminodeletedata$value > .5,], file = paste(opt$directory,"/mismatch/",runname, "-",curramino,"delete.txt",sep= "")) 
+#write.table(aminodeletedata[aminodeletedata$value > .5,], file = paste(opt$directory,"/mismatch/",runname, "-",curramino,"delete.txt",sep= "")) 
 
 
 

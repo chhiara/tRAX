@@ -130,33 +130,36 @@ def gettnanums(trnaalign, margin = 0):
             #special case to account for differences between loci/transcripts
             if currcount == 0 and struct == '=':
                 currcount = 1
+                gapnum = 0
             if positions[currcount] == 'e':
                 trnanum.append('e'+str(enum))
                 enum += 1
                 currcount += 1
+                gapnum = 0
             elif positions[currcount] == '-':
-                trnanum.append('gap'+str(gapnum))
+                trnanum.append(str(currcount)+'.gap'+str(gapnum))
                 gapnum += 1
                 currcount += 1
             else:
                 trnanum.append(str(positions[currcount]))
                 currcount += 1
+                gapnum = 0
         else:
             #if intron
 
             if positions[currcount] == 38:
-                trnanum.append('intron'+str(gapnum))
+                trnanum.append('intron'+str(intronnum))
                 intronnum += 1
             else:
                 
-                trnanum.append('gap'+str(gapnum))
+                trnanum.append(str(currcount)+'.gap'+str(gapnum))
                 gapnum += 1
     for i in range(margin):
         trnanum.append('tail'+str(i+1))
     return trnanum
     
 class coverageinfo:
-    def __init__(self, readcounts, allcoverage,readstarts, multaminocoverages, multaccoverages, multtrnacoverages,uniquecoverages, uniquegenomecoverages,multigenomecoverages, readmismatches,adeninemismatches,thyminemismatches,cytosinemismatches, guanosinemismatches, readskips  ):
+    def __init__(self, readcounts, allcoverage,readstarts, multaminocoverages, multaccoverages, multtrnacoverages,uniquecoverages, uniquegenomecoverages,multigenomecoverages, readmismatches,adeninemismatches,thyminemismatches,cytosinemismatches, guanosinemismatches, readskips, trimcoverage = None, trimmismatches = None  ):
         self.readcounts = readcounts
         self.allcoverages = allcoverage
         self.readstarts = readstarts
@@ -167,6 +170,11 @@ class coverageinfo:
         self.uniquecoverages = uniquecoverages
         self.uniquegenomecoverages = uniquegenomecoverages
         self.multigenomecoverages = multigenomecoverages
+        
+        
+        self.trimcoverage = trimcoverage
+        self.trimmismatches = trimmismatches
+        
         
         self.readmismatches = readmismatches
         self.adeninemismatches = adeninemismatches
@@ -229,7 +237,10 @@ def getsamplecoverage(currsample, sampledata, trnalist, trnaseqs,maxmismatches =
     cytosinemismatches = dict()
     guanosinemismatches = dict()
     readstarts = dict()
-    readskips = dict()        
+    readskips = dict()      
+    
+    trimreadcoverage =  dict()
+    trimreadmismatches =  dict()
     
     readcounts = dict()
     
@@ -259,6 +270,9 @@ def getsamplecoverage(currsample, sampledata, trnalist, trnaseqs,maxmismatches =
         cytosinemismatches[currfeat.name] =  readcoverage(trnalist[i])
         guanosinemismatches[currfeat.name] = readcoverage(trnalist[i])
         readskips[currfeat.name] = readcoverage(trnalist[i])
+        
+        trimreadcoverage[currfeat.name] =  readcoverage(trnalist[i])
+        trimreadmismatches[currfeat.name] =  readcoverage(trnalist[i])
         readcounts[currfeat.name] = 0
         
 
@@ -318,13 +332,16 @@ def getsamplecoverage(currsample, sampledata, trnalist, trnaseqs,maxmismatches =
                         pass
                     currbase = currseq[readpos]
                     
-                
+                    
                     if not readcov[currpos]:
                         pass
                         readskips[trnaname].addbase(currread.start + currpos)
                     if trnaseqs[currfeat.name][currread.start+ currpos] != currbase:
                         readmismatches[trnaname].addbase(currread.start + currpos)
-                    
+                    if currpos > 3:
+                        trimreadcoverage[trnaname].addbase(currread.start + currpos)
+                        if trnaseqs[currfeat.name][currread.start+ currpos] != currbase:
+                            trimreadmismatches[trnaname].addbase(currread.start + currpos)
                     if currbase == "A":
                         adeninemismatches[trnaname].addbase(currread.start + currpos)
                     elif currbase == "T":
@@ -334,11 +351,13 @@ def getsamplecoverage(currsample, sampledata, trnalist, trnaseqs,maxmismatches =
                     elif currbase == "G":
                         guanosinemismatches[trnaname].addbase(currread.start + currpos)
 
-    return coverageinfo( readcounts, allcoverages,readstarts, multaminocoverages, multaccoverages, multtrnacoverages,uniquecoverages, uniquegenomecoverages,multigenomecoverages, readmismatches,adeninemismatches,thyminemismatches,cytosinemismatches, guanosinemismatches,readskips  )
+    return coverageinfo( readcounts, allcoverages,readstarts, multaminocoverages, multaccoverages, multtrnacoverages,uniquecoverages, uniquegenomecoverages,multigenomecoverages, readmismatches,adeninemismatches,thyminemismatches,cytosinemismatches, guanosinemismatches,readskips,trimmismatches = trimreadmismatches, trimcoverage = trimreadcoverage  )
 
-def transcriptcoverage(samplecoverages, mismatchreport, trnalist,sampledata, mincoverage, trnastk, positionnums):
+def transcriptcoverage(samplecoverages, mismatchreport, trnalist,sampledata,sizefactor, mincoverage, trnastk, positionnums):
 
     print >>mismatchreport, "\t".join(["Feature","Sample","position","coverage","ends","uniquecoverage","multitrnacoverage","multianticodoncoverage","multiaminocoverage","tRNAreadstotal","actualbase","mismatchedbases","adenines","thymines","cytosines","guanines","deletions"])
+    print >>sys.stderr,mismatchreport
+    print >>sys.stderr,"||***"
     samples = sampledata.getsamples()
     for currfeat in trnalist:
         #print >>sys.stderr, samplecoverages[list(samples)[0]].allcoverages.keys()
@@ -352,18 +371,133 @@ def transcriptcoverage(samplecoverages, mismatchreport, trnalist,sampledata, min
             #print >>sys.stderr, ",".join(list(str(curr) if curr is not None else 0 for curr in samplecoverages[currsample].readmismatches[currfeat.name].coveragealign(trnastk.aligns[currfeat.name])))
             #covcounts = list(curr/(1.*samplecoverages[currsample].readcounts[currfeat.name]) if curr is not None else 0 for curr in samplecoverages[currsample].readmismatches[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
             
+            covcounts =  list(curr/sizefactor[currsample] if curr is not None else 0 for curr in samplecoverages[currsample].allcoverages[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
+
+            mismatches =  list(curr/sizefactor[currsample] if curr is not None else 0 for curr in samplecoverages[currsample].readmismatches[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
+
+
+            uniquecounts =  list(curr/sizefactor[currsample] if curr is not None else 0 for curr in samplecoverages[currsample].uniquecoverages[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
+            multitrna =  list(curr/sizefactor[currsample] if curr is not None else 0 for curr in samplecoverages[currsample].multtrnacoverages[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
+            multaccounts =  list(curr/sizefactor[currsample] if curr is not None else 0 for curr in samplecoverages[currsample].multaccoverages[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
+            multaminocounts =  list(curr/sizefactor[currsample] if curr is not None else 0 for curr in samplecoverages[currsample].multaminocoverages[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
+
+
+
+            allstarts  = list(curr/sizefactor[currsample] if curr is not None else 0 for curr in samplecoverages[currsample].readstarts[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
+            allcovcount  = list(curr/sizefactor[currsample] if curr is not None else 0 for curr in samplecoverages[currsample].allcoverages[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
+            adeninecount  = list(curr/sizefactor[currsample] if curr is not None else 0 for curr in samplecoverages[currsample].adeninemismatches[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
+            thyminecount = list(curr/sizefactor[currsample] if curr is not None else 0 for curr in samplecoverages[currsample].thyminemismatches[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
+            cytosinecount = list(curr/sizefactor[currsample] if curr is not None else 0 for curr in samplecoverages[currsample].cytosinemismatches[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
+            guanosinecount  = list(curr/sizefactor[currsample] if curr is not None else 0 for curr in samplecoverages[currsample].guanosinemismatches[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
+            readskipcount  = list(curr/sizefactor[currsample] if curr is not None else 0 for curr in samplecoverages[currsample].readskips[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
+
+            for i, currcount in enumerate(allcovcount):
+                mismatchthreshold = .1
+
+                print >>mismatchreport, "\t".join([currfeat.name,currsample,str(positionnums[i]),str(covcounts[i]),str(allstarts[i]),str(uniquecounts[i]),str(multitrna[i]),str(multaccounts[i]),str(multaminocounts[i]),str(1.*samplecoverages[currsample].readcounts[currfeat.name]),trnastk.aligns[currfeat.name][i],str(mismatches[i]),str(adeninecount[i]),str(thyminecount[i]),str(cytosinecount[i]),str(guanosinecount[i]), str(readskipcount[i])])
+    #sys.exit(1)        
+
+def locuscoverage(locicoverages, locicoveragetable, locilist,sampledata,sizefactor, mincoverage, locistk, locipositionnums):
+
+    print >>locicoveragetable, "\t".join(["tRNA_name","sample","position","coverage", "total"])
+    samples = sampledata.getsamples()
+    for currfeat in locilist:
+
+        totalreads = sum(locicoverages[currsample].allcoverages[currfeat.name].totalreads for currsample in samples)
+        if totalreads < mincoverage:
+            continue
+        reportpositions = set()  
+        for currsample in samples:
+            
+            allcovcount  = list(curr/sizefactor[currsample] if curr is not None else 0 for curr in locicoverages[currsample].allcoverages[currfeat.name].coveragealign(locistk.aligns[currfeat.name]))
+
+            for i, currcount in enumerate(allcovcount):
+                mismatchthreshold = .1
+
+                print >>locicoveragetable, "\t".join([currfeat.name,currsample,str(locipositionnums[i]),str(currcount),str(locicoverages[currsample].readcounts[currfeat.name])])
+    #sys.exit(1)  
+
+
+class positioninfo:
+    def __init__(self, trnaname, positionname):
+        self.trnaname = trnaname
+        self.positionname = positionname
+        self.sampletotal = dict()
+        self.samplemism = dict()
+        self.samplegaps = dict()
+        self.samplebase = dict()
+        self.sampleacounts = dict()
+        self.sampletcounts = dict()
+        self.sampleccounts = dict()
+        self.samplegcounts = dict()   
+        self.allsamples = set()
+        
+        self.trimreadcount = dict()
+        self.trimmismatchcount = dict()   
+        
+    def addsample(self, currsample, totalcounts, mismatches, gaps, base, acounts, tcounts, ccounts,gcounts, trimreadcount, trimmismatchcount):
+        self.allsamples.add(currsample)
+        self.sampletotal[currsample]   = totalcounts
+        self.samplemism[currsample]    = mismatches
+        self.samplegaps[currsample]    = gaps
+        self.samplebase[currsample]    = base
+        self.sampleacounts[currsample] = acounts
+        self.sampletcounts[currsample] = tcounts
+        self.sampleccounts[currsample] = ccounts
+        self.samplegcounts[currsample] = gcounts
+        
+        self.trimreadcount[currsample] = trimreadcount           
+        self.trimmismatchcount[currsample] = trimmismatchcount
+    '''
+    get the median of the mismatchs while incorporating the 30 mismatch cutoff
+    '''
+    def getsigdiffs(self, repdict):
+        
+        for firsample, secsample in itertools.combinations(repdict.keys(),2):
+            
+            #firmismedian = (self.samplemism[firsample]/(1.*self.sampletotal[firsample] for currrep in repdict    
+            if self.sampletotal[firsample] < 40 or self.sampletotal[secsample] < 40:
+                continue
+            firmism = self.samplemism[firsample]/(1.*self.sampletotal[firsample])
+            secmism = self.samplemism[secsample]/(1.*self.sampletotal[secsample])
+            
+            if abs(firmism - secmism) > .2:
+                yield tuple([self.trnaname,self.positionname,firsample,secsample,self.samplemism[firsample],self.sampletotal[firsample],self.samplemism[secsample],self.sampletotal[secsample]])
+    def getsamplepair(self, firsample, secsample):
+        #firmism = self.samplemism[firsample]/(1.*self.sampletotal[firsample])
+        #secmism = self.samplemism[secsample]/(1.*self.sampletotal[secsample])
+        if firsample in self.sampletotal and secsample in self.sampletotal:
+            yield tuple([self.trnaname,self.positionname,firsample,secsample,self.samplemism[firsample],self.sampletotal[firsample],self.samplemism[secsample],self.sampletotal[secsample],        self.trimmismatchcount[firsample],self.trimreadcount[firsample],self.trimmismatchcount[secsample],self.trimreadcount[secsample]                        ])
+            
+        
+
+
+def getdiffs(samplecoverages, mismatchreport, trnalist,sampledata, sizefactor,mincoverage, trnastk, positionnums):
+
+    #print >>mismatchreport, "\t".join(["Feature","Sample","position","coverage","ends","uniquecoverage","multitrnacoverage","multianticodoncoverage","multiaminocoverage","tRNAreadstotal","actualbase","mismatchedbases","adenines","thymines","cytosines","guanines","deletions"])
+    samples = sampledata.getsamples()
+    posinfo = dict()
+    for currfeat in trnalist:
+        posinfo[currfeat.name] = dict()
+        for currpos in positionnums:
+            posinfo[currfeat.name][currpos] = positioninfo(currfeat.name, currpos) 
+    
+    for currfeat in trnalist:
+        #print >>sys.stderr, samplecoverages[list(samples)[0]].allcoverages.keys()
+        totalreads = sum(samplecoverages[currsample].allcoverages[currfeat.name].totalreads for currsample in samples)
+        if totalreads < mincoverage:
+            continue
+        reportpositions = set()
+        for currsample in samples:
             covcounts =  list(curr if curr is not None else 0 for curr in samplecoverages[currsample].allcoverages[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
 
             mismatches =  list(curr if curr is not None else 0 for curr in samplecoverages[currsample].readmismatches[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
-
 
             uniquecounts =  list(curr if curr is not None else 0 for curr in samplecoverages[currsample].uniquecoverages[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
             multitrna =  list(curr if curr is not None else 0 for curr in samplecoverages[currsample].multtrnacoverages[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
             multaccounts =  list(curr if curr is not None else 0 for curr in samplecoverages[currsample].multaccoverages[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
             multaminocounts =  list(curr if curr is not None else 0 for curr in samplecoverages[currsample].multaminocoverages[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
-
-
-
+            
             allstarts  = list(curr if curr is not None else 0 for curr in samplecoverages[currsample].readstarts[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
             allcovcount  = list(curr if curr is not None else 0 for curr in samplecoverages[currsample].allcoverages[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
             adeninecount  = list(curr if curr is not None else 0 for curr in samplecoverages[currsample].adeninemismatches[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
@@ -372,31 +506,34 @@ def transcriptcoverage(samplecoverages, mismatchreport, trnalist,sampledata, min
             guanosinecount  = list(curr if curr is not None else 0 for curr in samplecoverages[currsample].guanosinemismatches[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
             readskipcount  = list(curr if curr is not None else 0 for curr in samplecoverages[currsample].readskips[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
 
-            for i, currcount in enumerate(allcovcount):
-                mismatchthreshold = .1
-
-                print >>mismatchreport, "\t".join([currfeat.name,currsample,str(positionnums[i]),str(covcounts[i]),str(allstarts[i]),str(uniquecounts[i]),str(multitrna[i]),str(multaccounts[i]),str(multaminocounts[i]),str(1.*samplecoverages[currsample].readcounts[currfeat.name]),trnastk.aligns[currfeat.name][i],str(mismatches[i]),str(adeninecount[i]),str(thyminecount[i]),str(cytosinecount[i]),str(guanosinecount[i]), str(readskipcount[i])])
-    #sys.exit(1)        
-
-def locuscoverage(locicoverages, locicoveragetable, locilist,sampledata, mincoverage, locistk, locipositionnums):
-
-    print >>locicoveragetable, "\t".join(["tRNA_name","sample","position","coverage", "total"])
-    samples = sampledata.getsamples()
-    for currfeat in locilist:
-      
-        totalreads = sum(locicoverages[currsample].allcoverages[currfeat.name].totalreads for currsample in samples)
-        if totalreads < mincoverage:
-            continue
-        reportpositions = set()  
-        for currsample in samples:
-            
-            allcovcount  = list(curr if curr is not None else 0 for curr in locicoverages[currsample].allcoverages[currfeat.name].coveragealign(locistk.aligns[currfeat.name]))
+            trimcovcount  = list(curr if curr is not None else 0 for curr in samplecoverages[currsample].trimcoverage[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
+            trimmismatchcount  = list(curr if curr is not None else 0 for curr in samplecoverages[currsample].trimmismatches[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
 
             for i, currcount in enumerate(allcovcount):
                 mismatchthreshold = .1
+                
+                
+                currposition = positionnums[i]
+                
+                posinfo[currfeat.name][currposition].addsample(currsample, covcounts[i],mismatches[i],readskipcount[i],trnastk.aligns[currfeat.name][i],adeninecount[i],thyminecount[i],cytosinecount[i],guanosinecount[i], trimcovcount[i], trimmismatchcount[i])
+                #print >>mismatchreport, "\t".join([currfeat.name,currsample,str(positionnums[i]),str(covcounts[i]),str(allstarts[i]),str(uniquecounts[i]),str(multitrna[i]),str(multaccounts[i]),str(multaminocounts[i]),str(1.*samplecoverages[currsample].readcounts[currfeat.name]),trnastk.aligns[currfeat.name][i],str(mismatches[i]),str(adeninecount[i]),str(thyminecount[i]),str(cytosinecount[i]),str(guanosinecount[i]), str(readskipcount[i])])
+    print >>mismatchreport, "\t".join(["pos","firsample","secsample","firmismatches","firtotal","secmismatches","sectotal","firmismatchestrim","firtotaltrim","secmismatchestrim","sectotaltrim"])           
 
-                print >>locicoveragetable, "\t".join([currfeat.name,currsample,str(locipositionnums[i]),str(currcount),str(locicoverages[currsample].readcounts[currfeat.name])])
-    #sys.exit(1)        
+    for currfeat in trnalist:
+        for currpos in positionnums:
+            #for currline in posinfo[currfeat.name][currpos].getsigdiffs(sampledata.getreplicateinfo()):
+                #print >>mismatchreport, "\t".join(str(curr) for curr in currline)
+                #pass
+            #for currline in posinfo[currfeat.name][currpos].getsamplepair("Mouse_Brain_M5_plusAlkB","Mouse_Brain_M6_plusAlkB"):
+            #for currline in posinfo[currfeat.name][currpos].getsamplepair("M_dm_Liver_M4_plusAlkB","M_dm_Liver_M5_plusAlkB"):
+            #for currline in posinfo[currfeat.name][currpos].getsamplepair("M_dm_Liver_M4_plusAlkB","Mouse_Brain_M5_plusAlkB"):
+            for currline in posinfo[currfeat.name][currpos].getsamplepair("M_dm_Liver_M4_plusAlkB","M_dm_Heart_M5_plusAlkB"):
+
+                print >>mismatchreport, "\t".join(str(curr) for curr in currline)
+                
+                 
+ 
+    
 def genomeprint(samplecoverages, uniquegenome, trnalist,sampledata, mincoverage):
     covfiles = {uniquegenome + '-uniquegenomecoverages.txt':uniquegenomecoverages,uniquegenome + '-multgenomecoverages.txt':multigenomecoverages}
     
@@ -434,6 +571,8 @@ def uniqcoverage(samplecoverages, uniquename, trnalist,sampledata, mincoverage):
         covfile.close()
 def makecoveragepool(args):
     return getsamplecoverage(*args[0], **args[1])
+def makelocicoveragepool(args):
+    return getlocicoverage(*args[0], **args[1])
 def compressargs( *args, **kwargs):
     return tuple([args, kwargs])
 def testmain(**argdict):
@@ -458,9 +597,9 @@ def testmain(**argdict):
         
         
     maxmismatches = argdict["maxmismatches"]
-    uniquename = argdict["uniquename"]
+    #uniquename = argdict["uniquename"]
     cores = argdict["cores"]
-    uniquegenome = argdict["uniquegenome"]
+    #uniquegenome = argdict["uniquegenome"]
     trnastk = list(readrnastk(open(argdict["stkfile"], "r")))[0]
     bedfile = argdict["bedfile"]
     locibed = argdict["locibed"]
@@ -510,11 +649,13 @@ def testmain(**argdict):
 
     maxoffset = 10
     samplecoverages = dict()
-    threadmode = False
+    threadmode = True
     trackargs = list()
     lociargs = list()
     coveragepool = Pool(processes = cores)
     locicoverages = dict()
+    print >>sys.stderr, ",".join(curr.name for curr in locilist if "Ala" in curr.name)
+    #sys.exit(1)
     if not threadmode:
         for currsample in samples:
             samplecoverages[currsample] = getsamplecoverage(currsample, sampledata, trnalist,  trnaseqs,  maxmismatches = maxmismatches, minextend = minextend)
@@ -522,20 +663,28 @@ def testmain(**argdict):
  
     else:
         for currsample in samples:
-            trackargs.append(compressargs(currsample, sampledata, trnalist, basetrnas,trnaseqs,  maxmismatches = maxmismatches, minextend = minextend))
-            lociargs.append(compressargs(currsample, sampledata,  locilist,  maxmismatches = maxmismatches, minextend = minextend))
+            trackargs.append(compressargs(currsample, sampledata, trnalist,  trnaseqs,  maxmismatches = maxmismatches, minextend = minextend))
+            lociargs.append(compressargs(  currsample, sampledata, locilist,  maxmismatches = maxmismatches, minextend = minextend))
  
         results = coveragepool.map(makecoveragepool, trackargs)
         for i, currsample in enumerate(samples):
             samplecoverages[currsample] = results[i]
-        lociresults = coveragepool.map(makecoveragepool, trackargs)
+        lociresults = coveragepool.map(makelocicoveragepool, lociargs)
         for i, currsample in enumerate(samples):
-            samplecoverages[currsample] = lociresults[i]
+            locicoverages[currsample] = lociresults[i]
     #print >>sys.stderr, samplecoverages.values()
     coveragetable = open(argdict["allcoverage"], "w")
     locicoveragetable = open(argdict["locicoverage"], "w")
-    transcriptcoverage(samplecoverages, coveragetable, trnalist,sampledata, mincoverage, trnastk, positionnums)
-    locuscoverage(locicoverages, locicoveragetable, locilist,sampledata, mincoverage, locistk, locipositionnums)
+    mismatchcomparetable = open("mismatchcompare.txt", "w")
+    
+    transcriptcoverage(samplecoverages, coveragetable, trnalist,sampledata,sizefactor, mincoverage,trnastk, positionnums)
+    
+    if True:
+        getdiffs(samplecoverages, mismatchcomparetable, trnalist,sampledata, sizefactor,mincoverage,trnastk, positionnums)
+
+    
+    
+    locuscoverage(locicoverages, locicoveragetable, locilist,sampledata, sizefactor,mincoverage, locistk, locipositionnums)
 
 
         

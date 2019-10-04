@@ -1,13 +1,20 @@
 #!/usr/bin/env bash
 
+
+REALNAME=$(readlink -f $0)
+SCRIPTDIR=$( cd "$( dirname "$REALNAME" )" && pwd )
+
+
 #Download and remove adapters from small RNA sequencing studies
-fastq-dump -Z SRR029131 | cutadapt -m 15 --adapter='TCGTATGCCGTCTTCT' - |  gzip -c  >SRR029131.fastq.gz
+fastq-dump --gzip  SRR029131 
+fastq-dump --gzip  SRR029124 
 
-fastq-dump -Z SRR029124 | cutadapt -m 15 --adapter='TCGTATGCCGTCTTCT' - |  gzip -c  >SRR029124.fastq.gz
+fastq-dump --gzip  SRR207111
+fastq-dump --gzip  SRR207116 
 
-fastq-dump -Z SRR207111 | cutadapt -m 15 --adapter='CGTATGCCGTCT' - |  gzip -c  >SRR207111.fastq.gz 
-
-fastq-dump -Z SRR207116 | cutadapt -m 15 --adapter='CGTATGCCGTCT' - |  gzip -c  >SRR207116.fastq.gz
+"$SCRIPTDIR/trimadapters.py" --runname adapt1 --runfile $SCRIPTDIR/testadapt1.txt --firadapter TCGTATGCCGTCTTCT --singleend
+ 
+"$SCRIPTDIR/trimadapters.py" --runname adapt2 --runfile $SCRIPTDIR/testadapt2.txt --firadapter TCGTATGCCGTCTTCT  --singleend
 
 #Download and combine hg19 chromosomes 
 wget http://hgdownload.soe.ucsc.edu/goldenPath/hg19/bigZips/chromFa.tar.gz
@@ -23,13 +30,14 @@ wget http://gtrnadb.ucsc.edu/genomes/eukaryota/Hsapi19/hg19-tRNAs.tar.gz
 tar xvf hg19-tRNAs.tar.gz
 
 
-REALNAME=$(readlink -f $0)
-SCRIPTDIR=$( cd "$( dirname "$REALNAME" )" && pwd )
+
 
 #Create the tRNA database
-"$SCRIPTDIR/maketrnadb.py" --databasename=hg19 --genomefile=hg19.fa --trnascanfile=hg19-tRNAs.out.nohap --gtrnafafile=hg19-tRNAs.fa
+"$SCRIPTDIR/maketrnadb.py" --databasename=hg19 --genomefile=hg19.fa --trnascanfile=hg19-tRNAs-confidence-set.out --namemapfile=hg19-tRNAs_name_map.txt
 
 
 #Map the tRNAreads
-"$SCRIPTDIR/processsamples.py" --experimentname=TestTrnas --databasename=hg19 --samplefile=${SCRIPTDIR}/TestSamples.txt --ensemblgtf=hg19-genes.gtf --olddeseq
+#"$SCRIPTDIR/processsamples.py" --experimentname=TestTrnas --databasename=hg19 --samplefile=${SCRIPTDIR}/TestSamples.txt --ensemblgtf=hg19-genes.gtf --olddeseq
+"$SCRIPTDIR/threadprocesssamples.py" --experimentname=TestTrnas --databasename=hg19 --samplefile=${SCRIPTDIR}/TestSamples.txt --ensemblgtf=hg19-genes.gtf --olddeseq
+
 
