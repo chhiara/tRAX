@@ -86,6 +86,12 @@ coldata = data.frame(condition=factor(sampleinfo))
 
 
 cds = DESeqDataSetFromMatrix(countData = readcounts,coldata  ,design = ~ condition)
+cds = estimateSizeFactors(cds)
+normalizedrnas = sweep(readcounts,2,cds$sizeFactor, "/" )
+write.table(normalizedrnas,paste(experimentname,"/",experimentname,"-normalizedreadcounts.txt", sep = ""), sep = "\t")
+q()
+#print(sizefactors)
+write.table(rbind(colnames(readcounts),cds$sizeFactor),file=paste(experimentname,"/",experimentname,"-SizeFactors.txt", sep = ""), row.names=FALSE,col.names=FALSE)
 cds = DESeq(cds,betaPrior=TRUE)
 
 
@@ -140,11 +146,10 @@ write.table(allcombinevals,paste(experimentname,"/",experimentname,"-combine.txt
 
 #stop("Message")
 #Print out the size factors
-write.table(rbind(colnames(readcounts),dds$sizeFactor),file=paste(experimentname,"/",experimentname,"-SizeFactors.txt", sep = ""), row.names=FALSE,col.names=FALSE)
+#write.table(rbind(colnames(readcounts),dds$sizeFactor),file=paste(experimentname,"/",experimentname,"-SizeFactors.txt", sep = ""), row.names=FALSE,col.names=FALSE)
 #stop("Message")
 #get deseq normalized  raw counts
-normalizedrnas = sweep(readcounts,2,dds$sizeFactor, "/" )
-write.table(normalizedrnas,paste(experimentname,"/",experimentname,"-normalizedreadcounts.txt", sep = ""), sep = "\t")
+
 #
 
 allcombined = cbind(allcombinevals,normalizedrnas)

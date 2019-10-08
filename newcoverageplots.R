@@ -28,6 +28,208 @@ expand.delimited <- function(x, col1=1, col2=2, sep=",") {
   return(df)
 }
 
+myBreaks <- function(x){
+    breaks <- c(min(0),floor(max(x)))
+    names(breaks) <- attr(breaks,"labels")
+    breaks
+}
+percentbreaks <- function(x){
+    breaks <- c(0,1)
+    names(breaks) <- attr(breaks,"labels")
+    names(breaks) <- c("0%", "100%")
+    breaks
+}
+
+makebasiccovplot <-  function(covdata, filename){
+
+#show_col(hue_pal()(4))
+
+#uniquecols <- c("Transcript specific" = "#C77CFF", "Isodecoder Specific" = "#00BEC4","Isotype Specific" = "#7CAE00", "Not Amino Specific" = "#F8766D")
+
+#uniquecols <- c("#C77CFF","#00BEC4", "#7CAE00","#F8766D")
+
+#
+
+allfeatures = unique(covdata$Feature)
+
+#firstsample = unique(covdata$Feature)[1]
+#scalingpoint <- data.frame(Feature = allfeatures, Sample =  rep(length(allfeatures),firstsample),variable = rep("1",length(allfeatures)), value = rep(50,length(allfeatures)))
+# geom_point(data = scalingpoint, aes(x = variable, y = value), alpha = 0)
+
+#uniquecoverage	multitrnacoverage	multianticodoncoverage	multiaminocoverage
+coverage   <- ggplot(covdata,aes(x=variable,y=value), size = 2)  +theme_bw()+facet_grid(Feature ~ Sample, scales="free") + expand_limits(y = 50)+ geom_bar(stat="identity") +  geom_vline(aes(xintercept = dist, col = Modification),data = aminomodomicstable,show.legend=TRUE,size=.2,linetype = "longdash")+theme(axis.text.y=element_text(colour="black",size=6),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8)) + ylab("Normalized Read Count") + xlab("tRNA position") + scale_y_continuous(breaks=myBreaks) +scale_x_discrete(breaks=c("1","13","22","31","39","53","61","73"), labels=c("Start","D-loop start","D-loop end","AC-loop start","AC-loop end","T-loop start","T-loop end","tail")) + labs(fill="Mappability", vline="RNA\nModification") #+ scale_color_hue("mod")+labs(fill="RNA\nModification")#+scale_fill_manual(name="RNA\nmodifications")#+scale_colour_manual(data = aminomodomicstable, name="RNA\nModification") #+scale_x_discrete(breaks=c("1","37","73"), labels=c("Start","anticodon", "tail"))
+
+coverage <- configurecov(coverage)
+
+ggsave(filename=filename, coverage,height=scalefactor*(2 + 1.5*length(unique(covdata$Feature))),width=scalefactor*(2+5*length(unique(covdata$Sample))), limitsize=FALSE, dpi = 600)
+
+}
+
+
+makecovplot <-  function(covdata, filename){
+
+#show_col(hue_pal()(4))
+
+uniquecols <- c("Transcript specific" = "#C77CFF", "Isodecoder Specific" = "#00BEC4","Isotype Specific" = "#7CAE00", "Not Amino Specific" = "#F8766D")
+
+#uniquecols <- c("#C77CFF","#00BEC4", "#7CAE00","#F8766D")
+
+#
+
+allsamples = unique(covdata$Sample)
+allfeatures = unique(covdata$Feature)
+
+#maplist = 
+
+#covdata$maptype = factor(covdata$maptype,levels = c("Transcript specific", "Isodecoder Specific","Isotype Specific", "Not Amino Specific"))
+covdata$maptype = factor(covdata$maptype,levels = c("Not Amino Specific","Isotype Specific","Isodecoder Specific","Transcript specific"))
+
+
+
+#covdata = covdata[order(as.numeric(covdata$maptype)),]
+
+#firstsample = unique(covdata$Feature)[1]
+#scalingpoint <- data.frame(Feature = allfeatures, Sample =  rep(firstsample,length(allfeatures)),variable = rep("1",length(allfeatures)), value = rep(50,length(allfeatures)), maptype = rep("Transcript specific",length(allfeatures)))
+#scaling = geom_point(data = scalingpoint, aes(x = variable, y = value), alpha = 0)
+
+#uniquecoverage	multitrnacoverage	multianticodoncoverage	multiaminocoverage
+coverage   <- ggplot(covdata,aes(x=variable,y=value, fill = maptype, order=-as.numeric(maptype)), size = 2) +scale_fill_manual(values = uniquecols)+ expand_limits(y = 50)+ theme_bw()+facet_grid(Feature ~ Sample, scales="free") + geom_bar(stat="identity") +  geom_vline(aes(xintercept = dist, col = Modification),data = aminomodomicstable,show.legend=TRUE,size=.2,linetype = "longdash")+theme(axis.text.y=element_text(colour="black",size=6),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8)) + ylab("Normalized Read Count") + xlab("tRNA position") + scale_y_continuous(breaks=myBreaks) +scale_x_discrete(breaks=c("1","13","22","31","39","53","61","73"), labels=c("Start","D-loop start","D-loop end","AC-loop start","AC-loop end","T-loop start","T-loop end","tail")) + labs(fill="Mappability", vline="RNA\nModification") #+ scale_color_hue("mod")+labs(fill="RNA\nModification")#+scale_fill_manual(name="RNA\nmodifications")#+scale_colour_manual(data = aminomodomicstable, name="RNA\nModification") #+scale_x_discrete(breaks=c("1","37","73"), labels=c("Start","anticodon", "tail"))
+
+coverage <- configurecov(coverage)
+
+ggsave(filename=filename, coverage,height=scalefactor*(2 + 1.5*length(unique(covdata$Feature))),width=scalefactor*(2+5*length(unique(covdata$Sample))), limitsize=FALSE, dpi = 600)
+
+}
+
+
+
+
+makepercentcovplot <-  function(covdata, filename){
+
+#show_col(hue_pal()(4))
+
+
+#uniquecols <- c("#C77CFF","#00BEC4", "#7CAE00","#F8766D")
+
+#
+
+allfeatures = unique(covdata$Feature)
+
+#firstsample = unique(covdata$Feature)[1]
+#scalingpoint <- data.frame(Feature = allfeatures, Sample =  rep(length(allfeatures),firstsample),variable = rep("1",length(allfeatures)), value = rep(50,length(allfeatures)))
+# geom_point(data = scalingpoint, aes(x = variable, y = value), alpha = 0)
+
+#uniquecoverage	multitrnacoverage	multianticodoncoverage	multiaminocoverage
+coverage   <- ggplot(covdata,aes(x=variable,y=value), size = 2)   +theme_bw()+facet_grid(Feature ~ Sample, scales="free") + geom_bar(stat="identity") +  geom_vline(aes(xintercept = dist, col = Modification),data = aminomodomicstable,show.legend=TRUE,size=.2,linetype = "longdash")+theme(axis.text.y=element_text(colour="black",size=6),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8)) + ylab("Percentage of Read Coverage") + xlab("tRNA position") + scale_y_continuous(breaks=percentbreaks,limits = c(0, 1.01)) +scale_x_discrete(breaks=c("1","13","22","31","39","53","61","73"), labels=c("Start","D-loop start","D-loop end","AC-loop start","AC-loop end","T-loop start","T-loop end","tail")) + labs(fill="Mappability", vline="RNA\nModification") #+ scale_color_hue("mod")+labs(fill="RNA\nModification")#+scale_fill_manual(name="RNA\nmodifications")#+scale_colour_manual(data = aminomodomicstable, name="RNA\nModification") #+scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon", "tail"))
+
+coverage <- configurecov(coverage)
+
+ggsave(filename=filename, coverage,height=scalefactor*(2 + 1.5*length(unique(covdata$Feature))),width=scalefactor*(2+5*length(unique(covdata$Sample))), limitsize=FALSE, dpi = 600)
+
+}
+
+
+
+
+makecombplot <-  function(covdata, filename){
+
+smallcovsummary <- ggplot(covdata,aes(x=variable,y=value, fill = sortacceptor, order = as.numeric(sortacceptor)),width = 2, size = 2	) + facet_grid( ~ Sample, scales="free") +xlab("Position")+ geom_bar(stat="identity")+ ylab("Normalized Read Count") +   scale_y_continuous(breaks=myBreaks) +scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon","tail"),expand = c(0.05, .01)) +scale_fill_discrete(drop=FALSE, name="Acceptor\ntype", breaks = levels(sortacceptor))
+
+smallcovsummary <- configurecombine(smallcovsummary)
+
+combinescale = 3
+ggsave(filename=filename, smallcovsummary, width =combinescale*(.5+.75*length(unique(covdata$Sample))), height = combinescale*1,limitsize = FALSE)
+
+}
+																																#																																	#, expand = c(0.05, 0)
+
+
+
+
+percentbreaks <- function(x){
+    breaks <- c(0,1)
+    names(breaks) <- attr(breaks,"labels")
+    breaks
+}
+configurecov <- function(covplot){
+covplot<- covplot+ theme_bw()
+covplot<- covplot+theme(text = element_text(size = 4))
+covplot<- covplot+theme(rect = element_rect(size=.01))
+              
+covplot<- covplot+theme(legend.key.size =  unit(.3, "cm")) # Change key size in the legend
+covplot<- covplot+theme(legend.key.height =  unit(.3, "cm")) # Change key size in the legend
+              
+covplot<- covplot+theme(legend.text = element_text(size=4)) # Change the size labels in the legend
+covplot<- covplot+theme(legend.title = element_text(size=4))             
+              
+covplot<- covplot+theme(axis.ticks = element_line(size = .1)) 
+#smallcovall< covplot+theme(axis.ticks.y=element_blank())
+              
+covplot<- covplot+theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=6))
+
+              
+covplot<- covplot+theme(axis.line = element_line(size = .1))
+covplot<- covplot+theme(panel.grid  = element_line(size = .1))
+              
+              
+covplot<- covplot+theme(axis.line = element_line(size = .1))
+covplot<- covplot+theme(panel.grid  = element_line(size = .15))
+              
+covplot<- covplot+theme(strip.switch.pad.grid = unit(.1, "cm"))
+
+#covplot<- covplot+theme(panel.margin = unit(.25, "lines"))
+covplot<- covplot+theme(panel.spacing = unit(.25, "lines"))
+
+
+#This needs to be different from the combined version for some reason
+covplot<- covplot+theme(axis.text.y=element_text(size=6))
+            
+covplot<- covplot+theme(strip.text.y = element_text(angle=0,size=10))
+#as does this  
+covplot<- covplot+theme(strip.text.x = element_text(angle=0,size=10))
+covplot<- covplot+theme(axis.text=element_text(size=8))
+covplot<- covplot+theme(axis.title=element_text(size=8))
+
+covplot
+}
+
+configurecombine <- function(covplot){
+covplot<- covplot+ theme_bw()
+covplot<- covplot+theme(text = element_text(size = 4))
+covplot<- covplot+theme(rect = element_rect(size=.01))
+              
+covplot<- covplot+theme(legend.key.size =  unit(.4, "cm")) # Change key size in the legend
+covplot<- covplot+theme(legend.key.height =  unit(.4, "cm")) # Change key size in the legend
+              
+covplot<- covplot+theme(legend.text = element_text(size=6)) # Change the size labels in the legend
+covplot<- covplot+theme(legend.title = element_text(size=8))             
+              
+covplot<- covplot+theme(axis.ticks = element_line(size = .1)) 
+#smallcovall< covplot+theme(axis.ticks.y=element_blank())
+              
+covplot<- covplot+theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=6))
+
+              
+covplot<- covplot+theme(axis.line = element_line(size = .1))
+covplot<- covplot+theme(panel.grid  = element_line(size = .1))
+              
+              
+covplot<- covplot+theme(axis.line = element_line(size = .1))
+covplot<- covplot+theme(panel.grid  = element_line(size = .15))
+              
+covplot<- covplot+theme(strip.switch.pad.grid = unit(.1, "cm"))
+#covplot<- covplot+theme(panel.margin = unit(.15, "lines"))
+#This needs to be different from the combined version for some reason
+covplot<- covplot+theme(axis.text.y=element_text(size=6))
+            
+covplot<- covplot+theme(strip.text.y = element_text(angle=0,size=10))
+#as does this  
+covplot<- covplot+theme(strip.text.x = element_text(angle=0,size=10))
+covplot<- covplot+theme(axis.text=element_text(size=8))
+covplot<- covplot+theme(axis.title=element_text(size=8))
+
+covplot
+}
 
 coverageprep <- function(coveragemeltagg, samples, trnatable) {
 
@@ -56,7 +258,7 @@ script.name <- sub(file.arg.name, "", initial.options[grep(file.arg.name, initia
 script.dirname <- dirname(script.name)
 #print(paste(script.dirname,"traxlib.R",sep="/"))
 
-source(paste(script.dirname,"traxlib.R",sep="/"))
+#source(paste(script.dirname,"traxlib.R",sep="/"))
 
 #hcvm.i <- melt(hcvm.i, id.vars=c(grep("^readC", names(hcvm.i), value=TRUE, invert=TRUE)), variable.name="tRNA.basePosition", value.name="read.density")
 
