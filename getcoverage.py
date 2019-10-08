@@ -356,8 +356,8 @@ def getsamplecoverage(currsample, sampledata, trnalist, trnaseqs,maxmismatches =
 def transcriptcoverage(samplecoverages, mismatchreport, trnalist,sampledata,sizefactor, mincoverage, trnastk, positionnums):
 
     print >>mismatchreport, "\t".join(["Feature","Sample","position","coverage","ends","uniquecoverage","multitrnacoverage","multianticodoncoverage","multiaminocoverage","tRNAreadstotal","actualbase","mismatchedbases","adenines","thymines","cytosines","guanines","deletions"])
-    print >>sys.stderr,mismatchreport
-    print >>sys.stderr,"||***"
+    #print >>sys.stderr,mismatchreport
+    #print >>sys.stderr,"||***"
     samples = sampledata.getsamples()
     for currfeat in trnalist:
         #print >>sys.stderr, samplecoverages[list(samples)[0]].allcoverages.keys()
@@ -654,7 +654,7 @@ def testmain(**argdict):
     lociargs = list()
     coveragepool = Pool(processes = cores)
     locicoverages = dict()
-    print >>sys.stderr, ",".join(curr.name for curr in locilist if "Ala" in curr.name)
+    #print >>sys.stderr, ",".join(curr.name for curr in locilist if "Ala" in curr.name)
     #sys.exit(1)
     if not threadmode:
         for currsample in samples:

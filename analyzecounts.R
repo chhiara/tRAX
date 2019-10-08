@@ -63,6 +63,10 @@ if (length(args) > 3){
 
 pairtable = read.table(args[4], stringsAsFactors = FALSE)
 pairreduce = pairtable[pairtable[,1] %in% samplenames & pairtable[,2] %in% samplenames,]
+
+#print(pairtable)
+#print(samplenames)
+
 comparisons <- apply(pairreduce, 1, list)
 comparisons <- lapply(comparisons,unlist)
 }else{
@@ -76,11 +80,17 @@ coldata = data.frame(condition=factor(sampleinfo))
 #print(nrow(coldata))
 #print(head(readcounts))
 
+
+#print(comparisons)
+#print("}}***||*")
+
+
 cds = DESeqDataSetFromMatrix(countData = readcounts,coldata  ,design = ~ condition)
 cds = DESeq(cds,betaPrior=TRUE)
 
 
-print(head(cds))
+#print(coldata)
+
 
 
 names = lapply(comparisons, function(currcompare){ })
@@ -102,6 +112,9 @@ dds = cds
 
 #print adjusted p-values
 allprobs = Reduce(function(x,y) cbind(x,y), reslist)
+#print("***||*")
+#print(reslist)
+
 write.table(allprobs,paste(experimentname,"/",experimentname,"-padjs.txt", sep = ""),sep="	")
 #stop("Message")                                                              
 #Print log values
@@ -109,7 +122,7 @@ write.table(allprobs,paste(experimentname,"/",experimentname,"-padjs.txt", sep =
 
 alllogvals = Reduce(function(x,y) cbind(x,y), resloglist)
 write.table(alllogvals,paste(experimentname,"/",experimentname,"-logvals.txt", sep = ""),sep="	")
-
+#print(alllogvals)
 #stop("Message")
 #Print log values
 #print(head(alllogvals))
@@ -117,7 +130,7 @@ write.table(alllogvals,paste(experimentname,"/",experimentname,"-logvals.txt", s
 #head(samplenames)
 #head(pairreduce)
 colnames(alllogvals) <- paste("log2", colnames(alllogvals), sep = "_")
-print("***||")
+#print("***||")
 
 colnames(allprobs) <- paste("pval", colnames(allprobs), sep = "_")
 allcombinevals = cbind(alllogvals,allprobs)
@@ -162,10 +175,10 @@ medcountmat = as.matrix(medcountmat)
 allcombinevals = as.matrix(allcombinevals)
 
 #medcounts
-typeof(allcombinevals)
-typeof(medcountmat)
-typeof(medcounts)
-typeof(normalizedrnas)
+#typeof(allcombinevals)
+#typeof(medcountmat)
+#typeof(medcounts)
+#typeof(normalizedrnas)
 allcombinevals = cbind(allcombinevals,medcountmat)
 
 write.table(allcombinevals[apply(readcounts,1,max) > 30 & apply(alllogvals,1,min) < .05 ,],paste(experimentname,"/",experimentname,"-relevnormalizedsamples.txt", sep = ""), col.names=NA )

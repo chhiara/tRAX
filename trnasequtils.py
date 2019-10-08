@@ -366,8 +366,15 @@ class transcriptfile:
     def allanticodons(self):
         return  set(self.anticodon.values())
         
-
-
+def getpairfile(pairfilename):
+    pairfile = open(pairfilename)
+    for currline in pairfile:
+        
+        fields = currline.split()
+        if len(fields) > 1:
+            yield fields[0], fields[1]
+    
+    
 class samplefile:
     def __init__(self, samplefilename):
         try:

@@ -321,13 +321,31 @@ for currsample in samples:
         sys.exit(1)
 replicates = sampledata.allreplicates()
 for currsample in replicates:
+    
     if '-' in currsample:
         print >>sys.stderr, "Sample names containing '-' character are not allowed"
         sys.exit(1)
     if currsample[0].isdigit():
         print >>sys.stderr, "Sample names starting with digits are not allowed"
         sys.exit(1)
+        
+replicates = set(replicates)        
+       
 
+if pairfile is not None:
+    
+    missingnames = set()
+    for fir, sec in getpairfile(pairfile):
+        #print >>sys.stderr, "**"
+        if fir not in replicates:
+            missingnames.add(fir)
+        if sec not in replicates:
+            missingnames.add(sec)
+    if len(missingnames) > 0:
+        print >>sys.stderr, "Pair names "+",".join(missingnames)+" are not present in sample file"
+        sys.exit(1)
+        
+#sys.exit(0)
 deseqversion = "DESeq2"
 if olddeseq:
     deseqversion = "DESeq"
@@ -454,7 +472,7 @@ if pairfile:
             sys.exit(1)    
     else:
         deseqret = runrscript(scriptdir+"/analyzecounts.R",expname,expinfo.genecounts,samplefilename, pairfile)
-        print >>sys.stderr, scriptdir+"/analyzecounts.R",expname,expinfo.genecounts,samplefilename
+        print >>sys.stderr, scriptdir+"/analyzecounts.R",expname,expinfo.genecounts,samplefilename, pairfile
 
         if deseqret == 2:
             print >>sys.stderr, "Deseq analysis failed, cannot continue"
@@ -469,7 +487,7 @@ elif not nosizefactors:
             sys.exit(1)    
     else:
         deseqret = runrscript(scriptdir+"/analyzecounts.R",expname,expinfo.genecounts,samplefilename)
-        #print >>sys.stderr, scriptdir+"/analyzecounts.R",expname,expinfo.genecounts,samplefilename
+        print >>sys.stderr, scriptdir+"/analyzecounts.R",expname,expinfo.genecounts,samplefilename
         if deseqret == 2:
             print >>sys.stderr, "Deseq analysis failed, cannot continue"
             sys.exit(1)
