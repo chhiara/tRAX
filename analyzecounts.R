@@ -89,7 +89,6 @@ cds = DESeqDataSetFromMatrix(countData = readcounts,coldata  ,design = ~ conditi
 cds = estimateSizeFactors(cds)
 normalizedrnas = sweep(readcounts,2,cds$sizeFactor, "/" )
 write.table(normalizedrnas,paste(experimentname,"/",experimentname,"-normalizedreadcounts.txt", sep = ""), sep = "\t")
-q()
 #print(sizefactors)
 write.table(rbind(colnames(readcounts),cds$sizeFactor),file=paste(experimentname,"/",experimentname,"-SizeFactors.txt", sep = ""), row.names=FALSE,col.names=FALSE)
 cds = DESeq(cds,betaPrior=TRUE)
