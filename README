@@ -108,6 +108,13 @@ Required input files
     - Described below
     - optional, without it no scatter plots will be created and Deseq results will be all vs. all
     
+Docker
+
+- You can download the docker image from dockerhub using the command `docker pull ucsclowelab/trax`
+- We have also included a Makefile for quickly building packages for popular genomes (Hg19, Hg38, etc)
+
+  - These can be created with the command `make build-hg19` for example
+
 Special file formats
 
  - Sample file consists of information needed to determine replicate and sample information

@@ -24,7 +24,7 @@ function db_builder() {
     gtRNAdb_URL="http://gtrnadb.ucsc.edu/genomes/eukaryota/Mmusc10/mm10-tRNAs.tar.gz"
     gtRNAdb_OUT="mm10-tRNAs-detailed.out"
     gtRNAdb_NAME="mm10-tRNAs_name_map.txt"
-    GENOME_URL="http://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/hg38.fa.gz"
+    GENOME_URL="https://hgdownload.soe.ucsc.edu/goldenPath/mm10/bigZips/mm10.2bit"
     FASTA=false
   else
     echo "Could not generate RNA database"
@@ -43,29 +43,31 @@ function db_builder() {
 
   # gtRNAdb Files
   echo "Generating gtRNAdb"
-  wget -q -O /rnadb/tse.tar.gz ${gtRNAdb}
+  wget -q -O /rnadb/tse.tar.gz ${gtRNAdb_URL}
   tar zxf /rnadb/tse.tar.gz -C /rnadb
+  rm /rnadb/tse.tar.gz
   echo "Generating gtRNAdb Done"
 
   # Genome Fasta File from UCSC
-  #echo "Generating Fasta"
-  #if [ "$FASTA" = true]
-  #then
-  #  wget -q -O - ${GENOME_URL} | gzip -cd > /rnadb/genome.fa
-  #else
-  #  wget -q -O - ${GENOME_URL} | gzip -cd > /rnadb/genome.2bit
-  #  wget -q -O - twoBitToFa http://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/twoBitToFa
-  #  twoBitToFa genome.2bit genome.fa
-  #fi
-  #echo "Generating Fasta Done"
+  echo "Generating Fasta"
+  if test ${FASTA} = true
+  then
+    wget -q -O - ${GENOME_URL} | gzip -cd > /rnadb/genome.fa
+  else
+    wget -q -O /rnadb/genome.2bit ${GENOME_URL}
+    wget -q -O twoBitToFa http://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/twoBitToFa
+    chmod +x /rnadb/twoBitToFa
+    /rnadb/twoBitToFa genome.2bit genome.fa
+  fi
+  echo "Generating Fasta Done"
 
   # TRAX maketrnadb
-  #echo "Starting TRAX makernadb"
-  #python maketrnadb.py \
-  #  --databasename=/rnadb/db \
-  #  --genomefile=/rnadb/genome.fa \
-  #  --trnascanfile=/rnadb/${gtRNAdb_OUT} \
-  #  --namemapfile=/rnadb/${gtRNAdb_NAME}
+  echo "Starting TRAX makernadb"
+  python maketrnadb.py \
+    --databasename=/rnadb/db \
+    --genomefile=/rnadb/genome.fa \
+    --trnascanfile=/rnadb/${gtRNAdb_OUT} \
+    --namemapfile=/rnadb/${gtRNAdb_NAME}
 }
 
 db_builder ${1}
