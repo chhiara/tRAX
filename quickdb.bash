@@ -55,9 +55,9 @@ function db_builder() {
     wget -q -O - ${GENOME_URL} | gzip -cd > /rnadb/genome.fa
   else
     wget -q -O /rnadb/genome.2bit ${GENOME_URL}
-    wget -q -O twoBitToFa http://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/twoBitToFa
+    wget -q -O /rnadb/twoBitToFa http://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/twoBitToFa
     chmod +x /rnadb/twoBitToFa
-    /rnadb/twoBitToFa genome.2bit genome.fa
+    /rnadb/twoBitToFa /rnadb/genome.2bit /rnadb/genome.fa
   fi
   echo "Generating Fasta Done"
 
@@ -68,6 +68,9 @@ function db_builder() {
     --genomefile=/rnadb/genome.fa \
     --trnascanfile=/rnadb/${gtRNAdb_OUT} \
     --namemapfile=/rnadb/${gtRNAdb_NAME}
+
+  # Change permissions
+  chmod -R 777 /rnadb/
 }
 
 db_builder ${1}
