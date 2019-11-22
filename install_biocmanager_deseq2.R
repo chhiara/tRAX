@@ -17,3 +17,5 @@ for (builtin in builtins)
         suppressWarnings(BiocManager::install(builtin,
                                               version="3.10",
                                               update=TRUE, ask=FALSE))
+
+BiocManager::install(c("DESeq2"))

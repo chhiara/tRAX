@@ -6,7 +6,8 @@ GENOMES=("hsapi19" "hsapi38" "mmusc10")
 # Help function
 function print_usage() {
   echo "USAGE: $0 tool databasename data" >&2
-  echo "  tool: build, run, manual" >&2
+  echo "  tool: make, build, run, manual" >&2
+  echo "    make: Build the docker container" >&2
   echo "    build: Build RNA database into a docker volume" >&2
   echo "    run: Run TRAX with a prebuilt docker volume, must also supply the following arguments" >&2
   echo "      experiment_name: The name for your samples that will be made as a folder in the data parameter" >&2
@@ -16,7 +17,7 @@ function print_usage() {
   echo "  data: Directory to mount with the data (optional)" >&2 
 }
 
-# Function to start trax automatically
+# Function to start trax automatically and run
 function docker_trax() {
   if [ -z "$4" ]
   then
@@ -26,26 +27,30 @@ function docker_trax() {
       --user=`id -u`:`id -g` \
       -v rnadb-${1}:/rnadb \
       -v ${2}:/data \
-      -v `pwd`/output:/trax/output \
-      -v `pwd`/sample:/trax/samples \
+      -v `pwd`:/home/jerry/data \
       trax ./processsamples.py \
-      --experimentname=/output \
+      --experimentname=/home/jerry/data/output \
       --databasename=/rnadb/db \
-      --samplefile=/data/${4} \
+      --samplefile=/home/jerry/data/${4} \
       --ensemblgtf=/rnadb/genes.gtf
   fi
 }
 
-# Function to start trax container
+# Function to start a manual Docker TRAX container
 function docker_manual() {
   docker run --rm -it --name trax-${USER} \
     --user=`id -u`:`id -g` \
     -v rnadb-${1}:/rnadb \
-    -v ${2}:/data \
+    -v ${2}:/home/jerry/data \
     trax
 }
 
-# Function to start the container with a named volume
+# Function to build the Docker container
+function docker_make() {
+  docker build -f Dockerfile -t trax .
+}
+
+# Function to start the container and build a RNA database
 function docker_build_db() {
   docker volume create rnadb-${1}
   docker run --rm -it --name trax-build-rnadb-${1} \
@@ -55,7 +60,10 @@ function docker_build_db() {
 }
 
 # Init function
-if test ${1} = "build"
+if test ${1} = "make"
+then
+ docker_make
+elif test ${1} = "build"
 then
   [[ ${GENOMES[*]} =~ ${2} ]] && docker_build_db ${2} ${3} || print_usage
 elif test ${1} = "run"

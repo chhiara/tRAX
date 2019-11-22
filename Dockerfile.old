@@ -99,7 +99,7 @@ RUN Rscript -e 'install.packages("getopt", dependencies=TRUE, lib="/usr/local/li
 RUN Rscript -e 'update.packages()'
 RUN Rscript -e 'install.packages("ggplot2", dependencies=TRUE, lib="/usr/local/lib/R/site-library")'
 RUN Rscript -e 'install.packages("BiocManager")'
-RUN Rscript -e 'BiocManager::install(c("DESeq2"))'
+RUN Rscript -e 'BiocManager::install("DESeq2")'
 
 #Set working directory and copy TRAX software into docker container
 COPY * /trax/
