@@ -18,32 +18,22 @@ function print_usage() {
 }
 
 # Function to start trax automatically and run
-function docker_trax() {
-  if [ -z "$4" ]
-  then
-    print_usage
-  else
-    docker run --rm -it --name trax-${USER} \
-      --user=`id -u`:`id -g` \
-      -v rnadb-${1}:/rnadb \
-      -v ${2}:/data \
-      -v `pwd`:/home/jerry/data \
-      trax ./processsamples.py \
-      --experimentname=/home/jerry/data/output \
-      --databasename=/rnadb/db \
-      --samplefile=/home/jerry/data/${4} \
-      --ensemblgtf=/rnadb/genes.gtf
-  fi
-}
-
-# Function to start a manual Docker TRAX container
-function docker_manual() {
-  docker run --rm -it --name trax-${USER} \
-    --user=`id -u`:`id -g` \
-    -v rnadb-${1}:/rnadb \
-    -v ${2}:/home/jerry/data \
-    trax
-}
+#function docker_trax() {
+#  if [ -z "$4" ]
+#  then
+#    print_usage
+#  else
+#    docker run --rm -it --name trax-${USER} \
+#      --user=`id -u`:`id -g` \
+#      -v rnadb-${1}:/rnadb \
+#      -v ${2}:${2} \
+#      trax ./processsamples.py \
+#      --experimentname=/home/jerry/data/output \
+#      --databasename=/rnadb/db \
+#      --samplefile=/home/jerry/data/${4} \
+#      --ensemblgtf=/rnadb/genes.gtf
+#  fi
+#}
 
 # Function to build the Docker container
 function docker_make() {
@@ -55,8 +45,19 @@ function docker_build_db() {
   docker volume create rnadb-${1}
   docker run --rm -it --name trax-build-rnadb-${1} \
     -v rnadb-${1}:/rnadb \
-    -v ${2}:/data \
-    trax ./quickdb.bash ${1}
+    trax ./quickdb_trax.bash ${1}
+}
+
+# Function to start a manual Docker TRAX container
+function docker_manual() {
+  docker run --rm -it --name trax-${USER}-2 \
+  --user=`id -u`:`id -g` \
+  -v rnadb-${1}:/rnadb \
+  #for i in ${@:2}
+  #do
+  #  -v  $i:$i
+  #done
+  trax
 }
 
 # Init function
@@ -65,13 +66,13 @@ then
  docker_make
 elif test ${1} = "build"
 then
-  [[ ${GENOMES[*]} =~ ${2} ]] && docker_build_db ${2} ${3} || print_usage
-elif test ${1} = "run"
-then
-  [[ ${GENOMES[*]} =~ ${2} ]] && docker_trax ${2} ${3} ${4} ${5} || print_usage
+  [[ ${GENOMES[*]} =~ ${2} ]] && docker_build_db ${@:2} || print_usage
+#elif test ${1} = "run"
+#then
+#  [[ ${GENOMES[*]} =~ ${2} ]] && docker_trax ${@:2} || print_usage
 elif test ${1} = "manual"
 then
-  [[ ${GENOMES[*]} =~ ${2} ]] && docker_manual ${2} ${3} || print_usage
+  [[ ${GENOMES[*]} =~ ${2} ]] && docker_manual ${@:2} || print_usage
 else
   print_usage
 fi
