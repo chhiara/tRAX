@@ -10,6 +10,7 @@ RUN conda install --quiet --yes -c r -c bioconda \
     'infernal' \
     'pysam' \
     'samtools' \
+    'seqprep' \
     'sra-tools'
 
 # Install R Packages
