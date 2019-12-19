@@ -45,7 +45,8 @@ function docker_build_db() {
   docker volume create rnadb-${1}
   docker run --rm -it --name trax-build-rnadb-${1} \
     -v rnadb-${1}:/rnadb \
-    trax ./quickdb_trax.bash ${1}
+    trax \
+    quickdb_trax.bash ${1}
 }
 
 # Function to start a manual Docker TRAX container

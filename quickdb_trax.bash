@@ -63,14 +63,14 @@ function db_builder() {
 
   # TRAX maketrnadb
   echo "Starting TRAX makernadb"
-  python maketrnadb.py \
+  maketrnadb.py \
     --databasename=/rnadb/db \
     --genomefile=/rnadb/genome.fa \
     --trnascanfile=/rnadb/${gtRNAdb_OUT} \
     --namemapfile=/rnadb/${gtRNAdb_NAME}
 
   # Change permissions
-  chmod -R 777 /rnadb/
+  #chmod -R 777 /rnadb/
 }
 
 db_builder ${1}
