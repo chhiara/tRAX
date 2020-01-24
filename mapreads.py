@@ -35,7 +35,7 @@ def wrapbowtie2(bowtiedb, unpaired, outfile, scriptdir, trnafile, maxmaps = MAXM
     temploc = os.path.basename(outfile)
     #bowtiecommand = bowtiecommand + ' | '+scriptdir+'choosemappings.py '+trnafile+' | samtools sort - '+outfile
     bowtiecommand = bowtiecommand + ' | '+scriptdir+'choosemappings.py '+trnafile+' --progname='+"TRAX"+ ' --fqname=' +unpaired+' --expname='+expname + ' | samtools sort -T '+tempfile.gettempdir()+"/"+temploc+'temp - -o '+outfile+'.bam'
-    #print >>sys.stderr,  bowtiecommand
+    print >>sys.stderr,  bowtiecommand
     if logfile:
         print >>logfile,  bowtiecommand
         logfile.flush()
@@ -75,8 +75,9 @@ def checkheaders(bamname, fqname):
         bamfile = pysam.Samfile(bamname, "r" )
     except ValueError:
         return True
-    except IOError:
+    except IOError as e:
         print >>sys.stderr, "Failed to read "+bamname
+        print >>sys.stderr, e
         sys.exit(1)
     newheader = bamfile.header
     if len(newheader["PG"]) > 1 and newheader["PG"][1]["PN"] == "TRAX":
@@ -223,7 +224,7 @@ def testmain(**argdict):
             #print >>sys.stderr, "time "+currresult.samplename+": "+str(time.time() - starttime)
             if currresult.failedrun == True:
                 print >>sys.stderr, "Failure to Bowtie2 map"
-                print >>sys.stderr, output[1]
+                #print >>sys.stderr, output[1]
                 currresult.printbowtie(logfile)
                 sys.exit(1)
             mapresults[currresult.samplename] = currresult

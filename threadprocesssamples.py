@@ -40,6 +40,7 @@ parser.add_argument('--samplefile',required=True,
                    help='sample file')
 parser.add_argument('--ensemblgtf',
                    help='The ensembl gene list for that species')
+
 parser.add_argument('--exppairs',
                    help='List of sample pairs to compare')
 parser.add_argument('--bedfile',  nargs='+', default=list(),
@@ -102,6 +103,7 @@ class trnadatabase:
         self.locialign = dbname+"-trnaloci.stk"
         self.trnafasta = dbname+"-maturetRNAs.fa"
         self.modomics = dbname+"-modomics.txt"
+        self.otherseqs = dbname+"-otherseqs.txt"
     def test(self):
         bowtie2job = subprocess.Popen(["bowtie2","-x",self.bowtiedb, "-U", scriptdir+"test.fq"],stdout = subprocess.PIPE,stderr = subprocess.STDOUT )
         rstatsresults = rstatsjob.communicate()[0]
@@ -158,16 +160,16 @@ class expdatabase:
         
 
 def mapsamples(samplefile, trnainfo,expinfo, lazyremap, cores = 8):
-    mapreads.testmain(samplefile=samplefile, trnafile=trnainfo.trnatable,bowtiedb=trnainfo.bowtiedb,logfile=expinfo.maplog,mapfile=expinfo.mapinfo, lazy=lazyremap)
+    mapreads.testmain(samplefile=samplefile, trnafile=trnainfo.trnatable,bowtiedb=trnainfo.bowtiedb,otherseqs = trnainfo.otherseqs,logfile=expinfo.maplog,mapfile=expinfo.mapinfo, lazy=lazyremap, cores = cores)
 def countfeatures(samplefile, trnainfo,expinfo, ensgtf, bedfiles, cores = 8):
-    countreads.testmain(samplefile=samplefile,ensemblgtf=ensgtf,maturetrnas=[trnainfo.maturetrnas],trnaloci=[trnainfo.locifile],removepseudo=True,genetypefile=expinfo.genetypes,trnatable=trnainfo.trnatable,countfile=expinfo.genecounts,bedfile=bedfiles, trnacounts = expinfo.trnacounts,trnauniquecounts = expinfo.trnauniquefile,nofrag=nofrag, cores = cores)
+    countreads.testmain(samplefile=samplefile,ensemblgtf=ensgtf,maturetrnas=[trnainfo.maturetrnas],otherseqs = trnainfo.otherseqs,trnaloci=[trnainfo.locifile],removepseudo=True,genetypefile=expinfo.genetypes,trnatable=trnainfo.trnatable,countfile=expinfo.genecounts,bedfile=bedfiles, trnacounts = expinfo.trnacounts,trnauniquecounts = expinfo.trnauniquefile,nofrag=nofrag, cores = cores)
     runrscript(scriptdir+"/pcareadcounts.R",expinfo.genecounts,samplefile,expinfo.pcaplot)
     runrscript(scriptdir+"/pcareadcounts.R",expinfo.trnacounts,samplefile,expinfo.pcatrnaplot)
 
 def counttypes(samplefile, trnainfo,expinfo, ensgtf, bedfiles, ignoresizefactors = False, countfrags = False, cores = 8):
     if not ignoresizefactors:
         
-        countreadtypes.testmain(sizefactors=expinfo.sizefactors,combinereps= True ,samplefile=samplefile,maturetrnas=[trnainfo.maturetrnas],trnatable=trnainfo.trnatable,trnaaminofile=expinfo.trnaaminofile,ensemblgtf=ensgtf,trnaloci=[trnainfo.locifile],countfile=expinfo.genetypecounts,realcountfile=expinfo.genetyperealcounts,bedfile= bedfiles,readlengthfile =  expinfo.trnalengthfile ,countfrags=countfrags, cores = cores)
+        countreadtypes.testmain(sizefactors=expinfo.sizefactors,combinereps= True ,otherseqs = trnainfo.otherseqs, samplefile=samplefile,maturetrnas=[trnainfo.maturetrnas],trnatable=trnainfo.trnatable,trnaaminofile=expinfo.trnaaminofile,ensemblgtf=ensgtf,trnaloci=[trnainfo.locifile],countfile=expinfo.genetypecounts,realcountfile=expinfo.genetyperealcounts,bedfile= bedfiles,readlengthfile =  expinfo.trnalengthfile ,countfrags=countfrags, cores = cores)
         #Plot reads by gene type and tRNAs by amino acid
         runrscript(scriptdir+"/featuretypes.R",expinfo.genetypecounts,expinfo.genetypeplot)
         runrscript(scriptdir+"/featuretypes.R",expinfo.trnaaminofile,expinfo.trnaaminoplot)
@@ -175,7 +177,7 @@ def counttypes(samplefile, trnainfo,expinfo, ensgtf, bedfiles, ignoresizefactors
 
         runrscript(scriptdir+"/readlengthhistogram.R",expinfo.trnalengthfile,expinfo.trnalengthplot)
     else:
-        countreadtypes.main(combinereps= True ,samplefile=samplefile,maturetrnas=[trnainfo.maturetrnas],trnatable=trnainfo.trnatable,trnaaminofile=expinfo.trnaaminofile,ensemblgtf=ensgtf,trnaloci=[trnainfo.locifile],countfile=expinfo.genetypecounts,realcountfile=expinfo.genetyperealcounts,bedfile= bedfiles,readlengthfile =  expinfo.trnalengthfile,countfrags=countfrags, cores = cores)
+        countreadtypes.main(combinereps= True ,samplefile=samplefile,maturetrnas=[trnainfo.maturetrnas],otherseqs = expinfo.otherseqs,trnatable=trnainfo.trnatable,trnaaminofile=expinfo.trnaaminofile,ensemblgtf=ensgtf,trnaloci=[trnainfo.locifile],countfile=expinfo.genetypecounts,realcountfile=expinfo.genetyperealcounts,bedfile= bedfiles,readlengthfile =  expinfo.trnalengthfile,countfrags=countfrags, cores = cores)
         #Plot reads by gene type and tRNAs by amino acid
         runrscript(scriptdir+"/featuretypes.R",expinfo.genetypecounts,expinfo.genetypeplot)
         runrscript(scriptdir+"/featuretypes.R",expinfo.trnaaminofile,expinfo.trnaaminoplot)

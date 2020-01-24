@@ -10,6 +10,7 @@ import os.path
 from trnasequtils import *
 import subprocess
 import tempfile
+import os
 
 from multiprocessing import Process, Queue, Pool
 import time
@@ -32,7 +33,7 @@ def convertbam(dbname,inputbam, outputbam, scriptdir, force = False, logfile = s
     if not os.path.isfile(outputbam) or force:
    
         #print >>sys.stderr, tempfile.gettempprefix()
-        tempprefix = inputbam.split(".")[0]
+        tempprefix = inputbam.split(".")[0]+"_"+str(os.getpid())
         bamconvertcommand =scriptdir+'/convertbam.py '+inputbam+' '+dbname+' | samtools sort -T '+tempfile.gettempdir()+'/convert'+tempprefix+' - -o '+outputbam
         #print >>sys.stderr, bamconvertcommand
         #sys.exit(1)
@@ -200,9 +201,9 @@ def makebigwigs(bamfile, repname, faifile, directory,scriptdir,filterloci = Fals
 def maketracks(dbname, currbam, genomebam, currsample, scriptdir,trackdir, sizefactors = None):
     if sizefactors is None:
         sizefactors = defaultdict(int)
-    convertbam(dbname, currbam, genomebam, scriptdir, force = True)
+    convertbam(dbname, currbam, genomebam, scriptdir, force = False)
     makebigwigs(genomebam, currsample, dbname+"-tRNAgenome.fa.fai",trackdir,scriptdir, scalefactor =  sizefactors[currsample])
-    makebigwigs(genomebam, currsample, dbname+"-tRNAgenome.fa.fai",trackdir,scriptdir, filterloci = True, suffix = 'uniqloci', scalefactor =  sizefactors[currsample])	
+    #makebigwigs(genomebam, currsample, dbname+"-tRNAgenome.fa.fai",trackdir,scriptdir, filterloci = True, suffix = 'uniqloci', scalefactor =  sizefactors[currsample])	
     return genomebam
     
 def maketracksspool(args):
@@ -225,8 +226,8 @@ def main(**args):
     convetbampool = Pool(processes=8)
     trackargs = list()
     starttime = time.time()
-    print >>sys.stderr, starttime
-    print >>sys.stderr, "**||"
+    #print >>sys.stderr, starttime
+    #print >>sys.stderr, "**||"
     threadmode = True
     for currsample in allsamples:
         currbam = sampledata.getbam(currsample)
@@ -247,7 +248,7 @@ def main(**args):
 
     trackfile = open(expname+"/trackhub/trackdb.txt", "w")
     createmultiwigtrackdb(sampledata,expname, trackfile, shortlabel = "all", longlabel = "all")
-    createmultiwigtrackdb(sampledata,expname,trackfile, shortlabel = "unique mapping only", longlabel = "uniquely mapping only", suffix = 'uniqloci', startpriority = 8.0)
+    #createmultiwigtrackdb(sampledata,expname,trackfile, shortlabel = "unique mapping only", longlabel = "uniquely mapping only", suffix = 'uniqloci', startpriority = 8.0)
     '''
 
 

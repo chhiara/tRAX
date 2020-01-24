@@ -6,6 +6,7 @@ import tempfile
 import re
 import gzip
 import subprocess
+import os.path
 from distutils.spawn import find_executable
 
 from collections import defaultdict
@@ -14,6 +15,8 @@ def readmultifasta(fafile):
     #print chrom+":"+ chromstart+"-"+ chromendre
     if fafile == "stdin":
         fafile = sys.stdin
+    elif fafile.endswith(".gz"):
+        fafile = gzip.open(fafile, "rb")
     else:
         fafile = open(fafile, "r")
     currloc = 0
@@ -365,6 +368,11 @@ class transcriptfile:
         return  set(self.amino.values())
     def allanticodons(self):
         return  set(self.anticodon.values())
+    def getaminotranscripts(self, trnaamino):
+        return  set(curr for curr in self.transcripts if trnaamino == self.amino[curr])
+    def getanticodontranscripts(self, trnaanticodon):
+        return   set(curr for curr in self.transcripts if trnaanticodon == self.anticodon[curr])
+        
         
 def getpairfile(pairfilename):
     pairfile = open(pairfilename)
@@ -374,7 +382,44 @@ def getpairfile(pairfilename):
         if len(fields) > 1:
             yield fields[0], fields[1]
     
-    
+class extraseqfile:
+    def __init__(self, extraseqfilename):
+        try:
+            extrafile = open(extraseqfilename)
+            seqlist = list()
+            seqfasta = dict()
+            seqbed = dict()
+            directory = os.path.dirname(extraseqfilename)
+            for i, line in enumerate(extrafile):
+                fields = line.split()
+                if len(fields) < 2:
+                    continue
+                seqfasta[fields[0]] = directory+"/"+fields[1]
+                seqbed[fields[0]] = directory+"/"+fields[2]
+                
+                seqlist.append(fields[0])
+
+            
+            #bamlist = list(curr + "_sort.bam" for curr in samplefiles.iterkeys())
+            self.seqlist = seqlist
+            self.seqfasta = seqfasta
+            self.seqbed = seqbed
+            #self.bamlist = list(curr+ "_sort.bam" for curr in samplelist)
+        except IOError as e:
+            self.seqlist = list()
+            self.seqfasta = dict()
+            self.seqbed = dict()
+            #print >>sys.stderr, "**||**" + extraseqfilename
+            #print >>sys.stderr,"extraseqfile I/O error({0}): {1}".format(e.errno, e.strerror)
+    def getseqnames(self):
+        seqnamedict = defaultdict(set)
+        for curr in seqlist:
+            seqnamedict[currseq] += set(curr.name for curr in readbed(self.seqbed[currseq]))
+        return seqnamedict
+    def getseqbeds(self):
+        return self.seqbed
+        
+            
 class samplefile:
     def __init__(self, samplefilename):
         try:
@@ -409,7 +454,7 @@ class samplefile:
     def getsamples(self):
         return self.samplelist
     def getbamlist(self):
-        return list(curr+ ".bam" for curr in samplelist)
+        return list(curr+ ".bam" for curr in self.samplelist)
     def getbam(self, sample):
         return sample+ ".bam"
     def getfastq(self, sample):
@@ -632,10 +677,12 @@ def readgtf(filename, orgdb="genome", seqfile= None, filterpsuedo = False, filte
                 skippedlines += 1
             elif not (fields[3].isdigit() and fields[4].isdigit()):
                 print >>sys.stderr, "non-number coordinates in "+filename
+                print >>sys.stderr, currline
+                
                 skippedlines += 1
             else:
                                     
-                yield GenomeRange( orgdb, fields[0],fields[3],fields[4],fields[6], name = featname, fastafile = seqfile, data = {"biotype":biotype, "source":genesource, "genename":genename})
+                yield GenomeRange( orgdb, fields[0],fields[3],fields[4],fields[6], name = featname, fastafile = seqfile, data = {"biotype":biotype, "source":genesource, "genename":genename,"feature":fields[2]})
             
 def readbed(filename, orgdb="genome", seqfile= None, includeintrons = False):
     bedfile = None
@@ -663,6 +710,7 @@ def readbed(filename, orgdb="genome", seqfile= None, includeintrons = False):
                 skippedlines += 1
             elif not (fields[1].isdigit() and fields[2].isdigit()):
                 print >>sys.stderr, "non-number coordinates in "+filename
+                print >>sys.stderr, currline
                 skippedlines += 1
             else:
                 if includeintrons and len(fields) > 7:

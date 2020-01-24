@@ -17,6 +17,8 @@ import getends
 import countreadtypes
 import maketrackhub
 from distutils.version import LooseVersion, StrictVersion
+from multiprocessing import Pool, cpu_count
+
 
  
 
@@ -38,6 +40,7 @@ parser.add_argument('--samplefile',required=True,
                    help='sample file')
 parser.add_argument('--ensemblgtf',
                    help='The ensembl gene list for that species')
+
 parser.add_argument('--exppairs',
                    help='List of sample pairs to compare')
 parser.add_argument('--bedfile',  nargs='+', default=list(),
@@ -67,21 +70,9 @@ parser.add_argument('--makeall', action="store_true", default=False,
                    help='make both track hub and tdrs')
 parser.add_argument('--splittypecounts', action="store_true", default=False,
                    help='Split type counts into tRNA types')
+parser.add_argument('--cores',
+                   help='number of cores to use')
 
-
-from functools import wraps
-from threading import Thread
-from multiprocessing import Process
-def run_async_dummy(func):
-    @wraps
-    def async_func(*args, **kwargs):
-            func_hl = Thread(target = func, args = args, kwargs = kwargs)
-            func_hl.start()
-            return func_hl
-    return async_func
-    
-def run_async(func):
-    return func
 
 rlogname = "Rlog.txt"
 rlogfile = open(rlogname, "w")
@@ -112,6 +103,7 @@ class trnadatabase:
         self.locialign = dbname+"-trnaloci.stk"
         self.trnafasta = dbname+"-maturetRNAs.fa"
         self.modomics = dbname+"-modomics.txt"
+        self.otherseqs = dbname+"-otherseqs.txt"
     def test(self):
         bowtie2job = subprocess.Popen(["bowtie2","-x",self.bowtiedb, "-U", scriptdir+"test.fq"],stdout = subprocess.PIPE,stderr = subprocess.STDOUT )
         rstatsresults = rstatsjob.communicate()[0]
@@ -167,18 +159,17 @@ class expdatabase:
         
         
 
-def mapsamples(samplefile, trnainfo,expinfo, lazyremap):
-    mapreads.main(samplefile=samplefile, trnafile=trnainfo.trnatable,bowtiedb=trnainfo.bowtiedb,logfile=expinfo.maplog,mapfile=expinfo.mapinfo, lazy=lazyremap)
-def countfeatures(samplefile, trnainfo,expinfo, ensgtf, bedfiles):
-    countreads.main(samplefile=samplefile,ensemblgtf=ensgtf,maturetrnas=[trnainfo.maturetrnas],trnaloci=[trnainfo.locifile],removepseudo=True,genetypefile=expinfo.genetypes,trnatable=trnainfo.trnatable,countfile=expinfo.genecounts,bedfile=bedfiles, trnacounts = expinfo.trnacounts,trnauniquecounts = expinfo.trnauniquefile,nofrag=nofrag)
+def mapsamples(samplefile, trnainfo,expinfo, lazyremap, cores = 8):
+    mapreads.testmain(samplefile=samplefile, trnafile=trnainfo.trnatable,bowtiedb=trnainfo.bowtiedb,otherseqs = trnainfo.otherseqs,logfile=expinfo.maplog,mapfile=expinfo.mapinfo, lazy=lazyremap, cores = cores)
+def countfeatures(samplefile, trnainfo,expinfo, ensgtf, bedfiles, cores = 8):
+    countreads.testmain(samplefile=samplefile,ensemblgtf=ensgtf,maturetrnas=[trnainfo.maturetrnas],otherseqs = trnainfo.otherseqs,trnaloci=[trnainfo.locifile],removepseudo=True,genetypefile=expinfo.genetypes,trnatable=trnainfo.trnatable,countfile=expinfo.genecounts,bedfile=bedfiles, trnacounts = expinfo.trnacounts,trnauniquecounts = expinfo.trnauniquefile,nofrag=nofrag, cores = cores)
     runrscript(scriptdir+"/pcareadcounts.R",expinfo.genecounts,samplefile,expinfo.pcaplot)
     runrscript(scriptdir+"/pcareadcounts.R",expinfo.trnacounts,samplefile,expinfo.pcatrnaplot)
 
-@run_async
-def counttypes(samplefile, trnainfo,expinfo, ensgtf, bedfiles, ignoresizefactors = False, countfrags = False):
+def counttypes(samplefile, trnainfo,expinfo, ensgtf, bedfiles, ignoresizefactors = False, countfrags = False, cores = 8):
     if not ignoresizefactors:
         
-        countreadtypes.main(sizefactors=expinfo.sizefactors,combinereps= True ,samplefile=samplefile,maturetrnas=[trnainfo.maturetrnas],trnatable=trnainfo.trnatable,trnaaminofile=expinfo.trnaaminofile,ensemblgtf=ensgtf,trnaloci=[trnainfo.locifile],countfile=expinfo.genetypecounts,realcountfile=expinfo.genetyperealcounts,bedfile= bedfiles,readlengthfile =  expinfo.trnalengthfile ,countfrags=countfrags)
+        countreadtypes.testmain(sizefactors=expinfo.sizefactors,combinereps= True ,otherseqs = trnainfo.otherseqs, samplefile=samplefile,maturetrnas=[trnainfo.maturetrnas],trnatable=trnainfo.trnatable,trnaaminofile=expinfo.trnaaminofile,ensemblgtf=ensgtf,trnaloci=[trnainfo.locifile],countfile=expinfo.genetypecounts,realcountfile=expinfo.genetyperealcounts,bedfile= bedfiles,readlengthfile =  expinfo.trnalengthfile ,countfrags=countfrags, cores = cores)
         #Plot reads by gene type and tRNAs by amino acid
         runrscript(scriptdir+"/featuretypes.R",expinfo.genetypecounts,expinfo.genetypeplot)
         runrscript(scriptdir+"/featuretypes.R",expinfo.trnaaminofile,expinfo.trnaaminoplot)
@@ -186,23 +177,25 @@ def counttypes(samplefile, trnainfo,expinfo, ensgtf, bedfiles, ignoresizefactors
 
         runrscript(scriptdir+"/readlengthhistogram.R",expinfo.trnalengthfile,expinfo.trnalengthplot)
     else:
-        countreadtypes.main(combinereps= True ,samplefile=samplefile,maturetrnas=[trnainfo.maturetrnas],trnatable=trnainfo.trnatable,trnaaminofile=expinfo.trnaaminofile,ensemblgtf=ensgtf,trnaloci=[trnainfo.locifile],countfile=expinfo.genetypecounts,realcountfile=expinfo.genetyperealcounts,bedfile= bedfiles,readlengthfile =  expinfo.trnalengthfile,countfrags=countfrags)
+        countreadtypes.main(combinereps= True ,samplefile=samplefile,maturetrnas=[trnainfo.maturetrnas],otherseqs = expinfo.otherseqs,trnatable=trnainfo.trnatable,trnaaminofile=expinfo.trnaaminofile,ensemblgtf=ensgtf,trnaloci=[trnainfo.locifile],countfile=expinfo.genetypecounts,realcountfile=expinfo.genetyperealcounts,bedfile= bedfiles,readlengthfile =  expinfo.trnalengthfile,countfrags=countfrags, cores = cores)
         #Plot reads by gene type and tRNAs by amino acid
         runrscript(scriptdir+"/featuretypes.R",expinfo.genetypecounts,expinfo.genetypeplot)
         runrscript(scriptdir+"/featuretypes.R",expinfo.trnaaminofile,expinfo.trnaaminoplot)
         runrscript(scriptdir+"/featuretypesreal.R",expinfo.trnaaminofile,expinfo.trnaaminoplot)
 
         runrscript(scriptdir+"/readlengthhistogram.R",expinfo.trnalengthfile,expinfo.trnalengthplot)
-@run_async
-def gettrnacoverage(samplefile, trnainfo,expinfo, ignoresizefactors = False):
+        
+def gettrnacoverage(samplefile, trnainfo,expinfo, ignoresizefactors = False, cores = 8):
     if not ignoresizefactors:
-        getcoverage.main(samplefile=samplefile,bedfile=[trnainfo.maturetrnas],sizefactors=expinfo.sizefactors,stkfile=trnainfo.trnaalign,uniquename=expname+"/"+expname, allcoverage=expinfo.trnacoveragefile)
-        runrscript(scriptdir+"/coverageplots.R","--cov="+expinfo.trnacoveragefile,"--trna="+trnainfo.trnatable,"--samples="+samplefile,"--allcov="+expinfo.trnacoverageplot,"--uniquename="+expname+"/"+expname,"--modomics="+trnainfo.modomics,"--combinecov="+expinfo.trnacombinecoverageplot,"--directory="+expname)
+        getcoverage.testmain(samplefile=samplefile,bedfile=[trnainfo.maturetrnas],locibed=[trnainfo.locifile],locistk=trnainfo.locialign,lociedgemargin=30,sizefactors=expinfo.sizefactors,locicoverage=expinfo.locicoveragefile,stkfile=trnainfo.trnaalign, allcoverage=expinfo.trnacoveragefile,trnafasta = trnainfo.trnafasta, cores = cores)
+        runrscript(scriptdir+"/newcoverageplots.R","--cov="+expinfo.trnacoveragefile,"--locicov="+expinfo.locicoveragefile,"--trna="+trnainfo.trnatable,"--samples="+samplefile,"--allcov="+expinfo.trnacoverageplot,"--runname="+expname,"--modomics="+trnainfo.modomics,"--combinecov="+expinfo.trnacombinecoverageplot,"--directory="+expname)
+        runrscript(scriptdir+"/boxplotmismatches.R","--mismatch="+expinfo.trnacoveragefile,"--trna="+trnainfo.trnatable,"--samples="+samplefile,"--directory="+expname+"/mismatch/")
     else:
-        getcoverage.main(samplefile=samplefile,bedfile=[trnainfo.maturetrnas],stkfile=trnainfo.trnaalign,uniquename=expname+"/"+expname, allcoverage=expinfo.trnacoveragefile)
-        runrscript(scriptdir+"/coverageplots.R","--cov="+expinfo.trnacoveragefile,"--trna="+trnainfo.trnatable,"--samples="+samplefile,"--allcov="+expinfo.trnacoverageplot,"--uniquename="+expname+"/"+expname,"--modomics="+trnainfo.modomics,"--combinecov="+expinfo.trnacombinecoverageplot,"--directory="+expname)
-
-@run_async
+        getcoverage.testmain(samplefile=samplefile,bedfile=[trnainfo.maturetrnas],stkfile=trnainfo.trnaalign,uniquename=expname+"/"+expname, allcoverage=expinfo.trnacoveragefile,trnafasta = trnainfo.trnafasta, cores = cores)
+        runrscript(scriptdir+"/newcoverageplots.R","--cov="+expinfo.trnacoveragefile,"--locicov="+expinfo.locicoveragefile,"--trna="+trnainfo.trnatable,"--samples="+samplefile,"--allcov="+expinfo.trnacoverageplot,"--runname="+expname,"--modomics="+trnainfo.modomics,"--combinecov="+expinfo.trnacombinecoverageplot,"--directory="+expname)
+        
+        runrscript(scriptdir+"/boxplotmismatches.R","--mismatch="+expinfo.trnacoveragefile,"--trna="+trnainfo.trnatable,"--samples="+samplefile,"--directory="+expname+"/mismatch/")
+'''
 def getendscoverage(samplefile, trnainfo,expinfo, ignoresizefactors = False):
     if not ignoresizefactors:
         getends.main(samplefile=samplefile,bedfile=[trnainfo.maturetrnas],sizefactors=expinfo.sizefactors,stkfile=trnainfo.trnaalign,uniquename=expname+"/mismatch/"+expname, allmismatch=expinfo.trnamismatchfile,trnafasta = trnainfo.trnafasta,mismatchfile=expinfo.trnamismatchfile,mismatchreport=expinfo.trnamismatchreport, indelfile=expinfo.trnadeletefile)
@@ -212,7 +205,6 @@ def getendscoverage(samplefile, trnainfo,expinfo, ignoresizefactors = False):
         getends.main(samplefile=samplefile,bedfile=[trnainfo.maturetrnas],stkfile=trnainfo.trnaalign,uniquename=expname+"/mismatch/"+expname, allmismatch=expinfo.trnamismatchfile,trnafasta = trnainfo.trnafasta,mismatchfile=expinfo.trnamismatchfile,mismatchreport=expinfo.trnamismatchreport )
         runrscript(scriptdir+"/endplots.R","--cov="+expinfo.trnamismatchfile,"--mismatchcov="+expinfo.trnamismatchfile,"--trna="+trnainfo.trnatable,"--samples="+samplefile,"--allcov="+expinfo.trnamismatchplot,"--uniquename="+expname+"/mismatch/mismatch/"+expname,"--modomics="+trnainfo.modomics,"--directory="+expname+"/mismatch/")
         runrscript(scriptdir+"/boxplotmismatches.R","--mismatch="+expinfo.trnamismatchreport,"--trna="+trnainfo.trnatable,"--samples="+samplefile,"--directory="+expname+"/mismatch/")
-@run_async
 def getlocuscoverage(samplefile, trnainfo,expinfo, ignoresizefactors = False):
     if not ignoresizefactors:
         getcoverage.main(samplefile=samplefile ,bedfile=[trnainfo.locifile],sizefactors=expinfo.sizefactors,stkfile=trnainfo.locialign,edgemargin=30, uniquegenome=expname+"/"+expname+"loci",allcoverage=expinfo.locicoveragefile) #removed minextend = 5
@@ -220,13 +212,14 @@ def getlocuscoverage(samplefile, trnainfo,expinfo, ignoresizefactors = False):
     else:
         getcoverage.main(samplefile=samplefile ,bedfile=[trnainfo.locifile],stkfile=trnainfo.locialign,edgemargin=30, uniquegenome=expname+"/"+expname+"loci",allcoverage=expinfo.locicoveragefile)
         runrscript(scriptdir+"/locuscoverage.R", "--cov="+expinfo.locicoveragefile,"--trna="+trnainfo.trnatable,"--samples="+samplefile,"--allcov="+expinfo.locicoverageplot,"--combinecov="+expinfo.locicombinecoverageplot,"--directory="+expname)
+'''
 def gettdrinfo(samplefile, dbname,expname):
     
     tdrcommand = " ".join(["bash",scriptdir+"/"+"tdrtrax.bash", samplefile, dbname,expname+"/"+expname+"tdrs"])
     print >>sys.stderr, tdrcommand
     tdrjob = subprocess.Popen(tdrcommand,stdout = subprocess.PIPE,stderr = subprocess.STDOUT, shell=True )
     print >>sys.stderr, tdrjob.communicate()[0]
-@run_async
+    
 def createtrackhub(samplefile, trnainfo,expinfo):
     maketrackhub.main(genomedatabase=trnainfo, samplefile=samplefile,expname=expname)
 
@@ -246,6 +239,10 @@ olddeseq = args.olddeseq
 mismatch = args.mismatch 
 paironly= args.paironly
 splittypecounts = args.splittypecounts
+
+cores = args.cores
+if cores is None:
+    cores = min(8,cpu_count())
 
 hubonly = args.hubonly
 
@@ -326,13 +323,31 @@ for currsample in samples:
         sys.exit(1)
 replicates = sampledata.allreplicates()
 for currsample in replicates:
+    
     if '-' in currsample:
         print >>sys.stderr, "Sample names containing '-' character are not allowed"
         sys.exit(1)
     if currsample[0].isdigit():
         print >>sys.stderr, "Sample names starting with digits are not allowed"
         sys.exit(1)
+        
+replicates = set(replicates)        
+       
 
+if pairfile is not None:
+    
+    missingnames = set()
+    for fir, sec in getpairfile(pairfile):
+        #print >>sys.stderr, "**"
+        if fir not in replicates:
+            missingnames.add(fir)
+        if sec not in replicates:
+            missingnames.add(sec)
+    if len(missingnames) > 0:
+        print >>sys.stderr, "Pair names "+",".join(missingnames)+" are not present in sample file"
+        sys.exit(1)
+        
+#sys.exit(0)
 deseqversion = "DESeq2"
 if olddeseq:
     deseqversion = "DESeq"
@@ -380,7 +395,7 @@ if pairfile and paironly:
             print >>sys.stderr, "Deseq analysis failed, cannot continue"
             sys.exit(1)    
     else:
-        print >>sys.stderr, scriptdir+"/analyzecounts.R",expname,expinfo.genecounts,samplefilename, pairfile
+        print >>sys.stderr, scriptdir+"/analyzecounts.R",expname,expinfo.genecounts,samplefilename
 
         deseqret = runrscript(scriptdir+"/analyzecounts.R",expname,expinfo.genecounts,samplefilename, pairfile)
 
@@ -444,7 +459,7 @@ runrscript(scriptdir+"/featuretypes.R",expinfo.mapinfo,expinfo.mapplot)
 
 #Count the reads for DEseq2 and scatter plots
 print >>sys.stderr, "Counting Reads"
-countfeatures(samplefilename, trnainfo,expinfo, ensgtf, bedfiles)
+countfeatures(samplefilename, trnainfo,expinfo, ensgtf, bedfiles, cores = cores)
 #Create a plot of mapped reads                                
 print >>sys.stderr, "Analyzing counts"
 
@@ -474,27 +489,27 @@ elif not nosizefactors:
             sys.exit(1)    
     else:
         deseqret = runrscript(scriptdir+"/analyzecounts.R",expname,expinfo.genecounts,samplefilename)
-        #print >>sys.stderr, scriptdir+"/analyzecounts.R",expname,expinfo.genecounts,samplefilename
+        print >>sys.stderr, scriptdir+"/analyzecounts.R",expname,expinfo.genecounts,samplefilename
         if deseqret == 2:
             print >>sys.stderr, "Deseq analysis failed, cannot continue"
             sys.exit(1)
 #Count the reads by gene type
 print >>sys.stderr, "Counting Read Types"
-counttypes(samplefilename, trnainfo,expinfo, ensgtf, bedfiles, ignoresizefactors = nosizefactors,countfrags =  splittypecounts)
+counttypes(samplefilename, trnainfo,expinfo, ensgtf, bedfiles, ignoresizefactors = nosizefactors,countfrags =  splittypecounts, cores = cores)
 
 
 #coverage plot of tRNAs
 print >>sys.stderr, "Generating Read Coverage plots"      
-gettrnacoverage(samplefilename, trnainfo,expinfo, ignoresizefactors = nosizefactors)
+gettrnacoverage(samplefilename, trnainfo,expinfo, ignoresizefactors = nosizefactors, cores = cores)
 
 #coverage plot of pre-tRNAs
-getlocuscoverage(samplefilename, trnainfo,expinfo, nosizefactors)
+#getlocuscoverage(samplefilename, trnainfo,expinfo, nosizefactors)
 
 #coverage plot of mismatches
 #getmismatchcoverage(samplefilename, trnainfo,expinfo, nosizefactors)
-print >>sys.stderr, "Counting mismatches"      
+#print >>sys.stderr, "Counting mismatches"      
 
-getendscoverage(samplefilename, trnainfo,expinfo, nosizefactors)
+#getendscoverage(samplefilename, trnainfo,expinfo, nosizefactors)
 
 if makehubs:
     print >>sys.stderr, "Creating trackhub"      

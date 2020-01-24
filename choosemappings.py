@@ -29,10 +29,15 @@ maxmaps = 50
 def isprimarymapping(mapping):
     return not (mapping.flag & 0x0100 > 0)
 
-def getbesttrnamappings(trnafile, bamout = True, logfile = sys.stderr, progname = None, fqname = None, libname = None,setcountfile = None):
+def getbesttrnamappings(trnafile, bamout = True, logfile = sys.stderr, progname = None, fqname = None, libname = None,setcountfile = None, extraseqfilename = None):
     
     trnadata = transcriptfile(trnafile)
     trnatranscripts = set(trnadata.gettranscripts())
+    extraseqs = set()
+    seqdata = None
+    if extraseqfilename is not None:
+        seqdata = extraseqfile(extraseqfilename)
+        extraseqs = set(trnadata.gettranscripts())
     readtargets = set()
 
     hitscores = dict()
@@ -198,6 +203,12 @@ def getbesttrnamappings(trnafile, bamout = True, logfile = sys.stderr, progname 
                 else:
                     #print curr.data["bamline"].rstrip()
                     pass
+        elif sum(bamfile.getrname(curr.tid) in extraseqs for curr in newset) > 0:
+            for currseqset in seqdata.seqlist():
+                if sum(bamfile.getrname(curr.tid) in extraseqdict[currseqset] for curr in newset) > 0:
+                    finalset = list(curr for curr in newset if bamfile.getrname(curr.tid) in extraseqdict[currseqset])
+                    break
+            
         else:
             #for non-tRNA, remove reads that are too small
             if readlength < minnontrnasize:

@@ -10,6 +10,12 @@ import itertools
 from multiprocessing import Process, Queue, Pool
 import time
 
+
+def getchromdict(features):
+    chromdict = defaultdict(list)
+    for curr in features:
+        chromdict[curr.chrom].append(curr)
+    return chromdict
 class counttypes:
     def __init__(self, samplename, bamfile, trnas = list(), trnaloci = list(), emblgenes = list(), otherfeats = list()):
         self.samplename = samplename
@@ -21,6 +27,7 @@ class counttypes:
         self.emblbiotypes = set()
         self.aminos = set()
         self.bedtypes = set()
+        self.extraseqtypes = set()
         
         self.embltypecounts =defaultdict(int)
         self.bedtypecounts =defaultdict(int)
@@ -40,6 +47,7 @@ class counttypes:
         self.trnalocuscounts = defaultdict(int)
         self.partiallocuscounts = defaultdict(int)
         self.fulllocuscounts = defaultdict(int)
+        self.extraseqcounts = defaultdict(int)
         
 
     def addsamplecounts(self):
@@ -75,10 +83,12 @@ class counttypes:
     def addbedcounts(self, genetype):
         self.bedtypes.add(genetype)
         self.bedtypecounts[genetype] += 1
+    def addextracounts(self, genetype):
+        self.extraseqtypes.add(genetype)
+        self.extraseqcounts[genetype] += 1
 
 
-
-def counttypereads(bamfile, samplename,trnainfo, trnaloci, trnalist,maturenames,featurelist = list(), embllist = list(), bedlist = list(),nomultimap = False, allowindels = True, maxmismatches = None, bamnofeature = False, countfrags = False):
+def counttypereads(bamfile, samplename,trnainfo, trnaloci, trnalist,maturenames,featurelist = list(), otherseqlist = list(), embllist = list(), bedlist = list(),nomultimap = False, allowindels = True, maxmismatches = None, bamnofeature = False, countfrags = False):
     
     readtypecounts = counttypes(samplename, bamfile, trnas = trnalist, trnaloci = trnaloci, emblgenes = embllist, otherfeats = featurelist)
     mitochrom = None
@@ -104,8 +114,9 @@ def counttypereads(bamfile, samplename,trnainfo, trnaloci, trnalist,maturenames,
         print >>sys.stderr, strerror
         sys.exit()
     #continue #point0
+    #print >>sys.stderr, "**||"+currbam
     for i, currread in enumerate(getbam(bamfile, primaryonly = True)):
-
+        
         isindel = False
         readlength = currread.getlength()
         gotread = False
@@ -223,7 +234,23 @@ def counttypereads(bamfile, samplename,trnainfo, trnaloci, trnalist,maturenames,
                     gotread = True
                     break
                     #print >>sys.stderr, currbam +":"+ currbed
-
+        if gotread: 
+            continue
+        for currbed in otherseqlist:
+            #print >>sys.stderr, len(list(otherseqlist[currbed].getbin(currread)))
+            #print >>sys.stderr, "**"+ otherseqlist[currbed].keys()[0]
+            #print >>sys.stderr, "||"+ currfeat.chrom
+            for currfeat in otherseqlist[currbed][currread.chrom]:
+                #print >>sys.stderr, "**"+currbed
+                if currfeat.coverage(currread) > 10:
+                    
+                    readtypecounts.addextracounts(currbed)
+                    gotread = True
+                    break 
+                    #print >>sys.stderr, currbam +":"+ currbed
+        #print >>sys.stderr, "**||"
+        if gotread: 
+            continue
         readtypecounts.addotherreads()
         if not gotread and embllist is not None and mitochrom == currread.chrom:
             currtype = "Mitochondrial_other"
@@ -235,7 +262,7 @@ def counttypereads(bamfile, samplename,trnainfo, trnaloci, trnalist,maturenames,
 
 
 
-def printtypefile(countfile,samples, sampledata,allcounts,trnalist, trnaloci, bedtypes, emblbiotypes, sizefactor,countfrags = False, combinereps = True):
+def printtypefile(countfile,samples, sampledata,allcounts,trnalist, trnaloci, bedtypes, emblbiotypes, sizefactor,extraseqtypes = set(),countfrags = False, combinereps = True):
 
     def sumsamples(countdict,sampledata, repname, currfeat = None, sizefactors = defaultdict(lambda: 1)):
         if currfeat is None: #To account for the "other" counts, which don't have a feature
@@ -243,7 +270,8 @@ def printtypefile(countfile,samples, sampledata,allcounts,trnalist, trnaloci, be
         else:
             return sum(countdict[currsample][currfeat]/sizefactors[currsample] for currsample in sampledata.getrepsamples(repname))
   
-        
+     
+    
     if combinereps:
         replicates = list(sampledata.allreplicates())
         print >>countfile, "\t".join(replicates)
@@ -272,11 +300,15 @@ def printtypefile(countfile,samples, sampledata,allcounts,trnalist, trnaloci, be
             #print  >>countfile, currbiotype+"\t"+"\t".join(str(sumsamples(emblcounts,sampledata,currrep, currbiotype, sizefactors = sizefactor)) for currrep in replicates)
             print  >>countfile, currbiotype+"\t"+"\t".join(str(sum(allcounts[currsample].embltypecounts[currbiotype]/sizefactor[currsample] for currsample in sampledata.getrepsamples(currrep))) for currrep in replicates)
             
+        for currname in extraseqtypes:
+            #print >>sys.stderr, currname
+            print >>countfile, currname+"_seq\t"+"\t".join(str(sum(allcounts[currsample].extraseqcounts[currname]/sizefactor[currsample] for currsample in sampledata.getrepsamples(currrep))) for currrep in replicates)
+        #print  >>countfile, "other"+"\t"+"\t".join(str(sumsamples(othercounts,sampledata,currrep, sizefactors = sizefactor)) for currrep in replicates)
+        print  >>countfile, "other"+"\t"+"\t".join(str(sum(allcounts[currsample].otherreads/sizefactor[currsample] for currsample in sampledata.getrepsamples(currrep))) for currrep in replicates)
         for currbed in bedtypes:
             print  >>countfile, os.path.basename(currbed)+"\t"+"\t".join(str(sum(allcounts[currsample].bedtypecounts[currbed]/sizefactor[currsample] for currsample in sampledata.getrepsamples(currrep))) for currrep in replicates)
         #print  >>countfile, "other"+"\t"+"\t".join(str(sumsamples(othercounts,sampledata,currrep, sizefactors = sizefactor)) for currrep in replicates)
-        print  >>countfile, "other"+"\t"+"\t".join(str(sum(allcounts[currsample].otherreads/sizefactor[currsample] for currsample in sampledata.getrepsamples(currrep))) for currrep in replicates)
-        
+        #sys.exit()
     else:
         print  >>countfile, "\t".join(samples)
         
@@ -307,7 +339,7 @@ def printtypefile(countfile,samples, sampledata,allcounts,trnalist, trnaloci, be
         print  >>countfile, "other"+"\t"+"\t".join(str(othercounts[currsample]/sizefactor[currsample]) for currsample in samples)
 
     
-def printrealcounts(countfile,samples, sampledata,allcounts,trnalist, trnaloci, bedtypes, emblbiotypes):
+def printrealcounts(countfile,samples, sampledata,allcounts,trnalist, trnaloci, bedtypes, emblbiotypes,extraseqtypes = set()):
 
 
         
@@ -326,8 +358,12 @@ def printrealcounts(countfile,samples, sampledata,allcounts,trnalist, trnaloci, 
     for currbed in bedtypes:
         print  >>countfile, os.path.basename(currbed)+"\t"+"\t".join(str(allcounts[currsample].bedtypecounts[currbed]) for currsample in samples)
     #print  >>countfile, "other"+"\t"+"\t".join(str(sumsamples(othercounts,sampledata,currrep, sizefactors = sizefactor)) for currrep in replicates)
+    for currname in extraseqtypes:
+         print >>countfile, currname+"_seq\t"+"\t".join(str(allcounts[currsample].extraseqcounts[currname]) for currsample in samples)
+
+    
     print  >>countfile, "other"+"\t"+"\t".join(str(allcounts[currsample].otherreads) for currsample in samples)
-        
+
 
 def printaminocounts(trnaaminofilename, sampledata,allcounts, sizefactor):
     #print >>sys.stderr, trnaaminocounts
@@ -376,8 +412,14 @@ def testmain(**argdict):
     bamnofeature = argdict["bamnofeature"]
     trnatable = argdict["trnatable"]
     trnaaminofile = argdict["trnaaminofile"]
+    otherseqs = extraseqfile(argdict["otherseqs"])
+    #print >>sys.stderr, argdict["otherseqs"]
+    
     sampledata = samplefile(argdict["samplefile"])
     cores = argdict["cores"]
+    threadmode = True
+    if cores == 1:
+        threadmode = False
     minpretrnaextend = 5
     mitochrom = None
     if argdict["mitochrom"]:
@@ -434,7 +476,7 @@ def testmain(**argdict):
     allfrags = dict()
     alltrnas = list()
     maturenames = dict()
-    
+    otherseqlist = dict()
     
 
 
@@ -452,6 +494,7 @@ def testmain(**argdict):
         trnaloci = dict()
         trnalist = dict()
         ensembllist = dict()
+        otherseqlist = dict()
         for currfile in bedfiles:
             featurelist[currfile] = RangeBin(readfeatures(currfile))
         
@@ -465,21 +508,25 @@ def testmain(**argdict):
             embllist = RangeBin(readgtf(ensemblgtf, filtertypes = set()))
         else:
             embllist = None
-    
+        
+        for currname, currfile in otherseqs.seqbed.iteritems():
+            #print >>sys.stderr, currfile
+            #print >>sys.stderr, len(list(readbed(currfile)))
+            otherseqlist[currname] = getchromdict(readbed(currfile))
     except IOError as e:
         print >>sys.stderr, e
         sys.exit()
     
-    
-
+    #print >>sys.stderr, otherseqlist.keys()
+    #print >>sys.stderr, "**"
+    #sys.exit()
     featcount = defaultdict(int)
     bedlist = list(featurelist.iterkeys())
     maxmismatches = None
     allcounts = dict()
-    multithreaded = True
     poolmode = True
     starttime = time.time()
-    if multithreaded:
+    if threadmode:
         countqueue = Queue()
         threads = dict()
         if poolmode:
@@ -487,7 +534,7 @@ def testmain(**argdict):
             arglist = list()
             for currsample in samples:
                 currbam = sampledata.getbam(currsample)
-                arglist.append(compressargs(currbam,currsample, trnainfo, trnaloci, trnalist,maturenames, embllist = embllist, featurelist = featurelist, maxmismatches = maxmismatches, bamnofeature = bamnofeature))
+                arglist.append(compressargs(currbam,currsample, trnainfo, trnaloci, trnalist,maturenames, otherseqlist = otherseqlist, embllist = embllist, featurelist = featurelist, maxmismatches = maxmismatches, bamnofeature = bamnofeature))
             #arglist = list((tuple([currsample, sampledata.getbam(currsample)]) for currsample in samples))
             results = countpool.map(counttypereadspool, arglist)
             for i, curr in enumerate(samples):
@@ -511,13 +558,15 @@ def testmain(**argdict):
     else:
         for currsample in samples:
             currbam = sampledata.getbam(currsample)
-            allcounts[currsample] = counttypereads(currbam, currsample,trnainfo, trnaloci, trnalist,maturenames, embllist = embllist, featurelist = featurelist, maxmismatches = maxmismatches, bamnofeature = bamnofeature)
+            allcounts[currsample] = counttypereads(currbam, currsample,trnainfo, trnaloci, trnalist,maturenames, otherseqlist = otherseqlist, embllist = embllist, featurelist = featurelist, maxmismatches = maxmismatches, bamnofeature = bamnofeature)
         
         
     emblbiotypes  = set(itertools.chain.from_iterable(curr.emblbiotypes for curr in allcounts.values()))        
-    bedtypes  = set(itertools.chain.from_iterable(curr.bedtypes for curr in allcounts.values()))       
-    printtypefile(countfile, samples, sampledata,allcounts,trnalist, trnaloci, bedtypes, emblbiotypes,sizefactor, countfrags = countfrags )
-    printrealcounts(realcountfile, samples, sampledata,allcounts,trnalist, trnaloci, bedtypes, emblbiotypes)
+    bedtypes  = set(itertools.chain.from_iterable(curr.bedtypes for curr in allcounts.values())) 
+    extraseqtypes  = set(itertools.chain.from_iterable(curr.extraseqtypes for curr in allcounts.values()))   
+    print >>sys.stderr, extraseqtypes
+    printtypefile(countfile, samples, sampledata,allcounts,trnalist, trnaloci, bedtypes, emblbiotypes,sizefactor, countfrags = countfrags , extraseqtypes = extraseqtypes)
+    printrealcounts(realcountfile, samples, sampledata,allcounts,trnalist, trnaloci, bedtypes, emblbiotypes , extraseqtypes = extraseqtypes)
 
     #printrealcounts()
     if readlengthfile is not None:

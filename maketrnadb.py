@@ -12,6 +12,8 @@ import aligntrnalocus
 from distutils.spawn import find_executable
 from distutils.version import LooseVersion, StrictVersion
 import time
+from multiprocessing import Pool, cpu_count
+
 
 def get_location(program, allowfail = False):
     progloc = find_executable(program)
@@ -31,6 +33,8 @@ parser.add_argument('--genomefile',required=True,
                    help='Fasta file containing genome sequence')
 parser.add_argument('--trnascanfile',required=True,
                    help='output from tRNAscan-SE run')
+parser.add_argument('--addseqs',
+                   help='file with additional sets of sequence transcripts')
 parser.add_argument('--gtrnafafile',
                    help='Fasta file of tRNA sequences from gtRNAdb')
 parser.add_argument('--namemapfile',
@@ -56,7 +60,11 @@ scanfile = args.trnascanfile
 genomefile = args.genomefile
 gtrnafafile = args.gtrnafafile
 namemapfile = args.namemapfile
-
+addseqs = args.addseqs
+dbdirectory = os.path.dirname(dbname) + "/"
+if dbdirectory == "/":
+    dbdirectory = ""
+dbname = os.path.basename(dbname)
 
 
 runtime = time.time()
@@ -80,24 +88,73 @@ if not os.path.isfile(genomefile+".fai"):
     
 
 
-getmaturetrnas.main(trnascan=[scanfile], genome=genomefile,gtrnafa=gtrnafafile,namemap=namemapfile, bedfile=dbname+"-maturetRNAs.bed",maturetrnatable=dbname+"-trnatable.txt",trnaalignment=dbname+"-trnaalign.stk",locibed=dbname+"-trnaloci.bed",maturetrnafa=dbname+"-maturetRNAs.fa")
-aligntrnalocus.main(genomefile=genomefile,stkfile=dbname+"-trnaloci.stk",trnaloci=dbname+"-trnaloci.bed")
+getmaturetrnas.main(trnascan=[scanfile], genome=genomefile,gtrnafa=gtrnafafile,namemap=namemapfile, bedfile=dbdirectory+dbname+"-maturetRNAs.bed",maturetrnatable=dbdirectory+dbname+"-trnatable.txt",trnaalignment=dbdirectory+dbname+"-trnaalign.stk",locibed=dbdirectory+dbname+"-trnaloci.bed",maturetrnafa=dbdirectory+dbname+"-maturetRNAs.fa")
+aligntrnalocus.main(genomefile=genomefile,stkfile=dbdirectory+dbname+"-trnaloci.stk",trnaloci=dbdirectory+dbname+"-trnaloci.bed")
+seqfiles = dict()
+newseqs = dict()
+seqfastaname = ""
+if addseqs:
+    seqfastaname = dbdirectory+dbname+"-additionals.fa"
+    seqfasta = open(seqfastaname, "w")
+    seqcounts = defaultdict(int)
+    otherseqs = open(dbdirectory+dbname+"-otherseqs.txt", "w")
+    for currline in open(addseqs):
+        
+        fields = currline.split()
+        if len(fields) < 2:
+            continue
+        seqsname = fields[0]   
+        seqsfile = fields[1]
+        print >>otherseqs, seqsname + "\t"+dbname+"-"+seqsname+"_seq.fa"+"\t"+dbname+"-"+seqsname+"_seq.bed"
+        seqfiles[fields[0]] = fields[1]
 
-
-shellcall("cat "+dbname+"-maturetRNAs.fa "+genomefile+" >"+dbname+"-tRNAgenome.fa", failquit = True)
+        seqbed = open(dbdirectory+dbname+"-"+seqsname+"_seq.bed", "w")
+        
+        for name, seq in readmultifasta(fields[1]):
+            
+            if name not in seqcounts:
+                
+                print >>seqfasta, ">"+name
+                seqcounts[name] += 1
+            else:
+                
+                print >>seqfasta, ">"+name +"."+str(seqcounts[name])
+                seqcounts[name] += 1
+            print >>seqfasta, (20 *"N")+seq.upper()+(20 *"N")
+        
+            print >>seqbed, "\t".join([name, str(20), str(len(seq) + 20), name,"1000", "+"])
+        
+        seqbed.close()
+    otherseqs.close() 
+    #print >>sys.stderr, "cat "+" ".join(newseqs.values())+" >"+dbdirectory+dbname+"-additionals.fa"
+    #shellcall("cat "+" ".join(newseqs.values())+" >"+dbdirectory+dbname+"-additionals.fa", failquit = True)
+    seqfasta.close()
     
+#shellcall("cat "+dbdirectory+dbname+"-maturetRNAs.fa "+genomefile+" "+" ".join(seqfiles.values())+" >"+dbdirectory+dbname+"-tRNAgenome.fa", failquit = True)
+
+shellcall("cat "+dbdirectory+dbname+"-maturetRNAs.fa "+genomefile+" "+seqfastaname+" >"+dbdirectory+dbname+"-tRNAgenome.fa", failquit = True)
+#sys.exit(1)    
 scriptdir = os.path.dirname(os.path.realpath(sys.argv[0]))+"/"
 gitversion, githash = getgithash(scriptdir)
     
     
-dbinfo = open(dbname+ "-dbinfo.txt","w")
+dbinfo = open(dbdirectory+dbname+ "-dbinfo.txt","w")
 print >>dbinfo, "time\t"+str(runtime)+"("+str(loctime[1])+"/"+str(loctime[2])+"/"+str(loctime[0])+")"
+print >>dbinfo, "creation\t"+" ".join(sys.argv)
 print >>dbinfo, "genomefile\t"+str(genomefile)
 print >>dbinfo, "trnascanfile\t"+str(scanfile)
 print >>dbinfo, "git version\t"+str(gitversion)
+if addseqs:
+    print >>dbinfo, "additional transcripts\t"+" ".join(name+":"+source for name, source in seqfiles.iteritems())
+
 dbinfo.close()
-    
-shellcall("bowtie2-build "+dbname+"-tRNAgenome.fa "+dbname+"-tRNAgenome", failquit = True)
+cores = None
+if cores is None:
+    cores = min(8,cpu_count())
+indexoption = ""
+if True:
+    indexoption = "--large-index"
+shellcall("bowtie2-build "+dbdirectory+dbname+"-tRNAgenome.fa "+dbdirectory+dbname+"-tRNAgenome "+indexoption+" -p "+str(cores)+"", failquit = True)
 
 
 

@@ -37,6 +37,14 @@ outputformat <- ".pdf"
 
 #positions =  c("58","26","37","9","76","34","20","32","1","73","6","49","e9","35","27","5")
 
+
+positionorder = c('0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','17a','18','19','20','20a','20b','21','22','23','24','25','26','27','28','29','30','31','32','33','34','35','36','37','38','39','40','41','42','43','44','45','46','47','48','49','50','51','52','53','54','55','56','57','58','59','60','61','62','63','64','65','66','67','68','69','70','71','72','73','74','75','76')
+
+aminos = c(" Glycine","Proline","Alanine","Valine","Leucine","Isoleucine","Methionine","Cysteine","Phenylalanine","Tyrosine","Tryptophan","Histidine","Lysine","Arginine","Glutamine","Asparagine","Glutamic_Acid","Aspartic_Acid","Serine","Threonine","iMethionine")
+threecodes = c("Gly","Pro","Ala","Val","Leu","Ile","Met","Cys","Phe","Tyr","Trp","His","Lys","Arg","Gln","Asn","Glu","Asp","Ser","Thr","iMet")
+onecodes = c("G","P","A","V","L","I","M","C","F","Y","W","H","K","R","Q","N","E","D","S","T","M")
+
+
 #posmismatches = mismatches[,c("position","Feature","percentmismatch")]
 mismatches$percentmismatch = mismatches$mismatchedbases / (mismatches$coverage + 10)
 
@@ -69,9 +77,7 @@ positions = union(mismatchpositions,deletepositions )
 
 #positions = unique(totalmism[totalmism$x > 10,"position"])
 
-aminos = c(" Glycine","Proline","Alanine","Valine","Leucine","Isoleucine","Methionine","Cysteine","Phenylalanine","Tyrosine","Tryptophan","Histidine","Lysine","Arginine","Glutamine","Asparagine","Glutamic_Acid","Aspartic_Acid","Serine","Threonine","iMethionine")
-threecodes = c("Gly","Pro","Ala","Val","Leu","Ile","Met","Cys","Phe","Tyr","Trp","His","Lys","Arg","Gln","Asn","Glu","Asp","Ser","Thr","iMet")
-onecodes = c("G","P","A","V","L","I","M","C","F","Y","W","H","K","R","Q","N","E","D","S","T","M")
+
 
 mismatchmelt = mismatches[,c("Feature","Sample","percentmismatch","position")]
 
@@ -89,6 +95,39 @@ currlistpos = 1
 
 
 dotsize = .4
+aminodotsize = .8
+
+mismatchmeltfilter = mismatches[	mismatches$adenines+mismatches$thymines+mismatches$cytosines+mismatches$guanines > 50,c("Feature","Sample","percentmismatch","position")]
+#head(mismatchmelt$adenines+mismatchmelt$thymines+mismatchmelt$cytosines+mismatchmelt$guanines)
+
+mismatchmeltposagg <- aggregate(mismatchmeltfilter$percentmismatch, by=list(position = mismatchmeltfilter$position, Feature = mismatchmeltfilter$Feature), FUN=max)
+
+
+mismatchmeltposagg <- mismatchmeltposagg[mismatchmeltposagg$position %in% positionorder,]
+mismatchmeltposagg$position = factor(mismatchmeltposagg$position, levels = positionorder)
+
+colnames(mismatchmeltposagg) <- c("Position","Feature","percentmismatch")
+
+mismatchmeltposagg$amino = trnatable[match(mismatchmeltposagg$Feature,trnatable[,1]),3]
+mismatchmeltposagg$anticodon = trnatable[match(mismatchmeltposagg$Feature,trnatable[,1]),4]
+
+
+
+posname = paste(directory,"/trnapositionmismatches",outputformat, sep = "")
+# geom_boxplot(aes(fill=position), outlier.shape=NA) 
+ggplot(data = mismatchmeltposagg, aes(x=Position, y=percentmismatch)) + theme_bw()+ geom_jitter(aes(color=amino), size = dotsize,width = 0.25) +  ggtitle(paste("Position Mismatches", sep = ""))+ theme(axis.text.x = element_text(angle = 90, hjust = 1))+  ylim(0, 1) + xlab("Position")+ylab("Maximum percent Misincorporation")
+ggsave(filename=posname,width=20, height=7)
+
+for (curramino in unique(trnatable[,3])){
+
+posname = paste(directory,"/",curramino,"-trnapositionmismatches",outputformat, sep = "")
+# geom_boxplot(aes(fill=position), outlier.shape=NA) 
+mismatchmeltposaggamino = mismatchmeltposagg[mismatchmeltposagg$amino == curramino,]
+ggplot(data = mismatchmeltposaggamino, aes(x=Position, y=percentmismatch)) + theme_bw()+ geom_jitter(aes(color=anticodon), size = aminodotsize,width = 0.25) +  ggtitle(paste("Position Mismatches", sep = ""))+ theme(axis.text.x = element_text(angle = 90, hjust = 1))+  ylim(0, 1) + xlab("Position")+ylab("Maximum percent Misincorporation")
+ggsave(filename=posname,width=20, height=7)
+
+}
+
 
 for (currpos in positions){
 #print(currpos)

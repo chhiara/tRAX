@@ -137,6 +137,8 @@ def readrnacentral(scanfile,chromnames, mode = 'locus'):
                     intronseqs = sequence[intronstart:intronend]
             
             newseq = ''
+
+            
             for i in range(len(sequence)):
                 if i in set(intronnums):
                     newseq += '-'
@@ -211,7 +213,7 @@ def readtRNAscan(scanfile, genomefile, mode = None):
     
         
         currtRNA.fastafile = genomefile
-        #print >>sys.stderr, len(currtrans.name)
+
         trnalist.append(currtRNA)
         if int(fields[6]) != 0:
             if currtRNA.strand ==  "-":
@@ -240,7 +242,7 @@ def striplocus(trnaname):
 #Name    	tRNA #	Begin    	End      	Type	Codon	Begin	End	Score	Score	Score	Origin	Pseudo	CM	Score	
 #--------
 def readtRNAdb(scanfile, genomefile, trnamap):
-    
+
     
     #mode = 'gtRNAdb'
     trnalist = list()
@@ -297,33 +299,53 @@ def readtRNAdb(scanfile, genomefile, trnamap):
         trnascore[currtrans.name] =  float(fields[8])
         trnas[currtrans.name] =  currtrans
     
-    
-        
+
         currtRNA.fastafile = genomefile
         #print >>sys.stderr, genomefile
         trnalist.append(currtRNA)
         if int(fields[6]) != 0:
             if currtRNA.strand ==  "-":
-                intronstart = int(fields[2]) - int(fields[6]) - 2
-                intronend = int(fields[2]) - int(fields[7])  - 1
+                intronstart = int(fields[2]) - int(fields[6])
+                intronend = int(fields[2]) - int(fields[7])  + 1
             else:
-                intronstart = int(fields[6]) - int(fields[2]) - 1
-                intronend = int(fields[7]) - int(fields[2])
+                intronstart = int(fields[6]) - int(fields[2]) 
+                intronend = int(fields[7]) - int(fields[2]) + 1
             tRNAintron[currtRNA.name] = tuple([intronstart, intronend])
+
     trnaseqs = getseqdict(trnalist, faifiles = {orgname:genomefile+".fai"})
     intronseq = defaultdict(str)
     trnaloci = list()
+
     for curr in trnaseqs.iterkeys():
         currintron = None
         if curr in tRNAintron:
+            
             start = tRNAintron[curr][0]
             end = tRNAintron[curr][1]
+            if curr in set(["tRNA-Arg-TCT-3-1"]):
+                #print >>sys.stderr, curr
+                #print >>sys.stderr, [start,end]
+                #print >>sys.stderr, trnaseqs[curr]
+                #print >>sys.stderr, trnaseqs[curr][:start] + trnaseqs[curr][end:]
+                #sys.exit(1)
+                pass
             intronseq[curr] = trnaseqs[curr][start:end]
             trnaseqs[curr] = trnaseqs[curr][:start] + trnaseqs[curr][end:]
             currintron = tRNAintron[curr]
 
-        
         trnaloci.append( tRNAlocus(trnas[curr], trnaseqs[curr], trnascore[curr],trnaamino[curr],trnaanticodon[curr],intronseq[curr],currintron))
+    '''
+    for curr in trnaseqs.iterkeys():
+        allintronseqs[curr] = ''
+        if curr in tRNAintron:
+            start = tRNAintron[curr][0]
+            end = tRNAintron[curr][1]
+            intronseq[curr] = trnaseqs[curr][start:end]
+            allintronseqs[curr] =  trnaseqs[curr][start:end]
+            intronsplices[curr] = [start,end]
+            trnaseqs[curr] = trnaseqs[curr][:start] + trnaseqs[curr][end:]
+    '''        
+            
         
     trnaloci.sort(key = lambda x: striplocus(x.name))
     for transname, currloci in itertools.groupby(trnaloci, lambda x: striplocus(x.name)):
