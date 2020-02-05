@@ -695,9 +695,9 @@ def main(**argdict):
     #for groupname, samplelist, trnalist, poslist in getreplicates(mismatchlocs, trnainfo,sampleinfo):
     #for groupname, samplelist, trnalist, poslist in getsamples(mismatchlocs, trnainfo,sampleinfo):
     #no 56pos in results
-    outfile = open(runname+"-mismatchpos.txt","w")
-    gettrnainfo(outfile, covcounts, mismatchlocs, trnainfo,sampleinfo)
-    sys.exit()
+    #outfile = open(runname+"-mismatchpos.txt","w")
+    #gettrnainfo(outfile, covcounts, mismatchlocs, trnainfo,sampleinfo)
+    #sys.exit()
     
     outfile = open(runname+"-repcompare.txt","w")
     pairgroup = getreplicates(mismatchlocs, trnainfo,sampleinfo)
@@ -726,7 +726,7 @@ def main(**argdict):
     createtable(outfile, covcounts, pairgroup, minreads = minreads, skipmatches = False,shufflemode = False, drawmode = False)
     outfile.close()
         
-    outfile = open(runname+"-samplecompare.txt","w")
+    outfile = open(runname+"-samplecomparedraw.txt","w")
     pairgroup = getsamples(mismatchlocs, trnainfo,sampleinfo)
     createtable(outfile, covcounts, pairgroup, minreads = minreads, skipmatches = False,shufflemode = False, drawmode = True)
     outfile.close()

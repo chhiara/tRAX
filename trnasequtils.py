@@ -465,6 +465,10 @@ class samplefile:
         return self.replicatelist
     def getrepsamples(self, replicate):
         return list(currsample for currsample in self.samplelist if self.replicatename[currsample] == replicate)
+    def getfastqsample(self, fastqname):
+        for currsample in self.samplefiles.iterkeys():
+            if self.samplefiles[currsample] == fastqname:
+                return currsample
         
 def getsizefactors( sizefactorfilename):
     sizefactorfile = None
@@ -1201,7 +1205,10 @@ def getgithash(scriptdir):
         print >>sys.stderr, "Recording of versioning not possible"
     gitjob = subprocess.Popen([gitloc,"--git-dir="+scriptdir+"/.git","rev-parse","HEAD"],stdout = subprocess.PIPE,stderr = subprocess.STDOUT )
     githash = gitjob.communicate()[0].rstrip()
+    if gitjob.returncode != 0:
+        githash = "Cannot find git hash"
     gitjob = subprocess.Popen([gitloc,"--git-dir="+scriptdir+"/.git","describe"],stdout = subprocess.PIPE,stderr = subprocess.STDOUT )
     gitversion = gitjob.communicate()[0].rstrip()
-
+    if gitjob.returncode != 0:
+        gitversion = "Cannot find git version"
     return gitversion, githash 

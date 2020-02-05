@@ -246,13 +246,14 @@ def getbesttrnamappings(trnafile, bamout = True, logfile = sys.stderr, progname 
             #print >>sys.stderr, "**"
             for curr in finalset:
                 outfile.write(curr)
-           
+    '''       
     for curr in acsets.iterkeys():
         if ((1.*acsets[curr])/ambanticodon) > .1:
             print >>logfile, ",".join(curr) + ":"+str(acsets[curr])
     for curr in aminosets.iterkeys():
         if ((1.*aminosets[curr])/ambamino) > .1:
             print >>logfile, ",".join(curr) + ":"+str(aminosets[curr])
+    '''
         
     if setcountfile is not None:
         setcounts = open(setcountfile, "w")
@@ -263,13 +264,13 @@ def getbesttrnamappings(trnafile, bamout = True, logfile = sys.stderr, progname 
     print >>logfile, "tRNA Reads with multiple anticodons:"+str(ambanticodon)+"/"+str(trnareads)
     print >>logfile, "tRNA Reads with multiple aminos:"+str(ambamino)+"/"+str(trnareads)
     print >>logfile, "Imperfect matches:"+str(imperfect)+"/"+str(trnareads)
-    print >>logfile, "Extra Imperfect matches:"+str(extraimperfect)+"/"+str(trnareads)
+    #print >>logfile, "Extra Imperfect matches:"+str(extraimperfect)+"/"+str(trnareads)
     
     #print >>logfile, str(trnareads)+"/"+str(totalreads)
     #print >>logfile, str(maxreads)+"/"+str(totalreads)
     #print >>logfile, str(multimaps)+"/"+str(totalreads)
     #print >>logfile, str(shortened)+"/"+str(multimaps)
-    print >>logfile, "Mappings Removed:"+str(mapsremoved)+"/"+str(totalmaps)
+    #print >>logfile, "Mappings Removed:"+str(mapsremoved)+"/"+str(totalmaps)
     outfile.close()
     
 if __name__ == "__main__":

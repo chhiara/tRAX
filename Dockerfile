@@ -23,7 +23,7 @@ ADD install_biocmanager_deseq2.R /tmp/
 RUN R -f /tmp/install_biocmanager_deseq2.R
 
 # Set working directory and copy TRAX software into docker container
-ADD * /opt/trax/
+COPY . /opt/trax/
 #RUN chmod -R 777 trax/
 ENV PATH /opt/trax:$PATH
 

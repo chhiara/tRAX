@@ -16,6 +16,7 @@ import getcoverage
 import getends
 import countreadtypes
 import maketrackhub
+import traxqc
 from distutils.version import LooseVersion, StrictVersion
 from multiprocessing import Pool, cpu_count
 
@@ -95,6 +96,7 @@ def runrscript(*script):
 
 class trnadatabase:
     def __init__(self, dbname):
+        self.dbname = dbname
         self.trnatable = dbname+"-trnatable.txt"
         self.bowtiedb = dbname+"-tRNAgenome"
         self.locifile = dbname+"-trnaloci.bed"
@@ -113,6 +115,7 @@ class trnadatabase:
         
 class expdatabase:
     def __init__(self, expname):
+        self.expname = expname
         self.mapinfo = expname+"/"+expname+"-mapinfo.txt"
         self.mapplot = expname+"/"+expname+"-mapinfo.pdf"
         
@@ -155,6 +158,8 @@ class expdatabase:
         
         self.pcaplot = expname+"/"+expname+"-pca.pdf"
         self.pcatrnaplot = expname+"/"+expname+"-pcatrna.pdf"
+        
+        self.qaoutputname = expname+"/"+expname+"-qa.html"
         
         
         
@@ -221,7 +226,10 @@ def gettdrinfo(samplefile, dbname,expname):
     print >>sys.stderr, tdrjob.communicate()[0]
     
 def createtrackhub(samplefile, trnainfo,expinfo):
-    maketrackhub.main(genomedatabase=trnainfo, samplefile=samplefile,expname=expname)
+    maketrackhub.main(genomedatabase=trnainfo, samplefile=samplefile,expname=expinfo.expname)
+def gettraxqc(samplefile, trnainfo,expinfo, tgirtmode = False):
+    traxqc.main(samplefile=samplefile,databasename=trnainfo.dbname,experimentname=expinfo.expname,tgirt = tgirtmode, output=expinfo.qaoutputname)
+
 
         
 
@@ -412,7 +420,7 @@ elif paironly:
 if hubonly:
     print >>sys.stderr, "Creating trackhub"      
 
-    createtrackhub(samplefilename, dbname,expname)
+    createtrackhub(samplefilename, dbname,expinfo)
     sys.exit(0)
 #getendscoverage(samplefilename, trnainfo,expinfo, nosizefactors)
 #
@@ -448,6 +456,8 @@ print >>dbinfo, "dbname\t"+os.path.realpath(dbname)
 print >>dbinfo, "git version\t"+gitversion
 
 print >>dbinfo, "git version hash\t"+gitversionhash
+
+print >>dbinfo, " ".join(sys.argv)
 dbinfo.close()
 
 runrscript(scriptdir+"/featuretypes.R",expinfo.mapinfo,expinfo.mapplot)
@@ -511,10 +521,12 @@ gettrnacoverage(samplefilename, trnainfo,expinfo, ignoresizefactors = nosizefact
 
 #getendscoverage(samplefilename, trnainfo,expinfo, nosizefactors)
 
+gettraxqc(samplefilename, trnainfo, expinfo, tgirtmode = nofrag)
+
 if makehubs:
     print >>sys.stderr, "Creating trackhub"      
 
-    createtrackhub(samplefilename, dbname,expname)
+    createtrackhub(samplefilename, dbname,expinfo)
 
 
 if (os.path.isfile(scriptdir+"/"+"tdrtrax.bash") and maketdrs):

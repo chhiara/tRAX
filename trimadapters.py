@@ -12,6 +12,23 @@ import subprocess
 from multiprocessing import Pool, cpu_count
 
 
+def updatemanifest(indexfilename, runname, runfile):
+    filelocs = dict()
+    try:
+        indexfile = open(indexfilename)
+        for currline in indexfile:
+            fields = currline.split()
+            if len(fields) > 1:
+                filelocs[fields[0]] = fields[1]
+        indexfile.close()
+    except IOError as e:
+        pass
+    filelocs = filelocs
+    filelocs[runname] = runfile
+    outfile = open(indexfilename, "w") 
+    for currname in filelocs.iterkeys():
+           print >>outfile, currname+"\t"+filelocs[currname]
+           
 
 def runrscript(*script):
     print >>sys.stderr, "Rscript "+" ".join(script)
@@ -127,7 +144,7 @@ for currsample in samplefiles.iterkeys():
             sys.exit(1)
 seqprepruns = dict()
 cutadaptruns = dict()
-for currsample in samplefiles.iterkeys():
+for currsample in sampleorder:
     
     if not singleendmode:
         #seqprepcommmand = program+' -x '+bowtiedb+' -k '+str(maxmaps)+' --very-sensitive --ignore-quals --np 5 --reorder -p '+str(numcores)+' -U '+unpaired
@@ -150,7 +167,7 @@ for currsample in samplefiles.iterkeys():
         
         cutadaptruns[currsample] = None
         cutadaptruns[currsample] = subprocess.Popen(cutadaptcommand, shell = True, stderr = subprocess.PIPE)
-        
+
 
 
 for currsample in samplefiles.iterkeys():
@@ -208,9 +225,13 @@ for currsample in samplefiles.iterkeys():
         
         
 #print >>sys.stderr, cutadaptcounts
+
 if not singleendmode:
     samplefile = open(runname+"_sp.txt", "w")
     logfile = open(runname+"_log.txt", "w")
+    replicatefile = open(runname+"_manifest.txt", "w")
+    for i, curr in enumerate(sampleorder):
+        print >>replicatefile, curr+"\t"+outputfiles[i]
     print >>samplefile,"\t".join(sampleorder)
     for currtype in ["merged","unmerged","discarded"]:
         print >>samplefile,currtype+"\t"+"\t".join(str(seqprepcounts[currsample][currtype]) for currsample in sampleorder)
@@ -230,6 +251,9 @@ if not singleendmode:
 else:
     samplefile = open(runname+"_ca.txt", "w")
     logfile = open(runname+"_log.txt", "w")
+    replicatefile = open(runname+"_manifest.txt", "w")
+    for i, curr in enumerate(cutadaptorder):
+        print >>replicatefile, curr+"\t"+outputfiles[i]
     print >>samplefile,"\t".join(cutadaptorder)
     for currtype in ["trimmed","untrimmed","discarded"]:
         print >>samplefile,currtype+"\t"+"\t".join(str(cutadaptcounts[currsample][currtype]) for currsample in cutadaptorder)
@@ -246,5 +270,5 @@ else:
     runrscript(scriptdir+"/featuretypesreal.R",runname+"_ca.txt",runname+"_ca.pdf")
 
 
-
+updatemanifest("trimindex.txt",runname,seqprepfile)
 
