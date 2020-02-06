@@ -211,9 +211,9 @@ def counttypereads(bamfile, samplename,trnainfo, trnaloci, trnalist,maturenames,
                         pass
 
                     if currtype is None or ncrnaorder[currfeat.data["source"]] > ncrnaorder[currtype]:
-                        currtype= currfeat.data["source"]
-                        if mitochrom == currread.chrom:
-                            currtype = "mito"+currtype
+                        currtype= currfeat.data["biotype"]
+                        #if mitochrom == currread.chrom:
+                            #currtype = "mito"+currtype
                     
                     
                     

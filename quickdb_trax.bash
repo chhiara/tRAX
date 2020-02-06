@@ -37,7 +37,8 @@ function db_builder() {
     gzip -cd | \
     grep -v '^#' | \
     awk '{print "chr" $0;}' | \
-    grep -e Mt_rRNA -e miRNA -e misc_RNA -e rRNA -e snRNA -e snoRNA -e ribozyme -e sRNA -e scaRNA \
+    sed 's/chrMT/chrM/g' | \
+    grep -e Mt_rRNA -e Mt_tRNA -e miRNA -e misc_RNA -e rRNA -e snRNA -e snoRNA -e ribozyme -e sRNA -e scaRNA \
     > /rnadb/genes.gtf
   echo "Generating GTF Done"
 

@@ -82,6 +82,7 @@ def createmultiwigtrackdb(sampledata, expname,trackfile, shortlabel = "", longla
     
     print  >>trackdb, "shortLabel "+expname+" "+shortlabel
     print  >>trackdb, "longLabel Data from "+expname+" "+longlabel
+    print  >>trackdb, "visibility full"
     #print  >>trackdb, "type bigWig                           "
     #print  >>trackdb, "dragAndDrop on                        "
     #print  >>trackdb, "autoScale on                          "
@@ -96,7 +97,7 @@ def createmultiwigtrackdb(sampledata, expname,trackfile, shortlabel = "", longla
             print  >>trackdb, "\ttrack "+currrep+suffix+'_'+currstrand+"tracks"
             print  >>trackdb, "\tcontainer multiWig"
             print  >>trackdb, "\tshortLabel "+currrep+suffix+" "+currstrand+" Strand"
-            print  >>trackdb, "\tlongLabel Data from "+currrep+suffix+" "+currstrand+" Strand"
+            print  >>trackdb, "\tlongLabel Data from "+expname+" "+currrep+suffix+" "+currstrand+" Strand"
             print  >>trackdb, "\ttype bigWig"
             print  >>trackdb, "\tparent "+expname+suffix+"tracks on"
             print  >>trackdb, "\tdragAndDrop on"
@@ -119,7 +120,7 @@ def createmultiwigtrackdb(sampledata, expname,trackfile, shortlabel = "", longla
                 print  >>trackdb, "\t\ttype bigWig"
                 print  >>trackdb, "\t\tparent "+currrep+suffix+'_'+currstrand+"tracks"
                 print  >>trackdb, "\t\tshortLabel "+currsample+suffix+" "+currstrand+" Strand"
-                print  >>trackdb, "\t\tlongLabel Data from "+currsample+suffix+" "+currstrand+" Strand"
+                print  >>trackdb, "\t\tlongLabel Data from "+expname+" "+currsample+suffix+" "+currstrand+" Strand"
                 print  >>trackdb, "\t\tcolor "+trackcolors[i % len(trackcolors)]+""
                 print  >>trackdb, "\t\tbigDataUrl "+currsample+suffix+"."+currstrand+".bw"
                 print  >>trackdb, "\t\tvisibility full"
