@@ -21,7 +21,8 @@ def getdupes(namelist):
         else:
             allset.add(currname)
 
-
+def enddict():
+    return defaultdict(int)
 class featurecount:
     def __init__(self, samplename, bamfile, trnas = list(), trnaloci = list(), emblgenes = list(), otherfeats = list()):
         self.samplename = samplename
@@ -42,7 +43,8 @@ class featurecount:
         self.fulltrnalocuscounts  = defaultdict(int)
         self.trnauniquecounts = defaultdict(int)
         self.aminocounts  = defaultdict(int)
-        self.anticodoncounts =  defaultdict(int)    
+        self.anticodoncounts =  defaultdict(int) 
+        self.trnaendtypecounts = defaultdict(enddict)
         
         
         self.genetypes = dict()
@@ -74,6 +76,9 @@ class featurecount:
             self.trnafivecounts[featname] += 1
         elif fragtype == "Threeprime":
             self.trnathreecounts[featname] += 1
+    def addendcount(self, featname, endtype):    
+        if endtype is not None:
+            self.trnaendtypecounts[featname][endtype] += 1
             
             
     def getgenecount(self, genename):
@@ -101,6 +106,8 @@ class featurecount:
        return self.trnathreecounts[genename]
     def getwholecount(self, genename):
        return self.trnawholecounts[genename]
+    def getendtypecount(self, genename):
+       return self.trnaendtypecounts[genename]
 
 
 def getbamcounts(bamfile, samplename,trnainfo, trnaloci, trnalist,featurelist = list(),otherseqdict = dict(), embllist = list(), nomultimap = False, allowindels = True, maxmismatches = None):
@@ -167,7 +174,7 @@ def getbamcounts(bamfile, samplename,trnainfo, trnaloci, trnalist,featurelist = 
                         
                         samplecounts.addcount(genename)
                         #print >>sys.stderr, "**"+currread.name
-                        samplecounts.setgenetype(genename,currfeat.data["source"])
+                        samplecounts.setgenetype(genename,currfeat.data["biotype"])
                         #print >>sys.stderr, currfeat.bedstring()
         except ValueError:
             pass
@@ -210,6 +217,9 @@ def getbamcounts(bamfile, samplename,trnainfo, trnaloci, trnalist,featurelist = 
                 
             fragtype = getfragtype(currfeat, currread)
             samplecounts.addfragcount(currfeat.name, fragtype)
+            endtype = getendtype(currfeat, currread)
+            #print >>sys.stderr, endtype
+            samplecounts.addendcount(currfeat.name, endtype)
 
             if currread.isuniqueaminomapping():
                 samplecounts.adduniquecount(currfeat.name)
@@ -344,8 +354,21 @@ def printtrnacountfile(trnacountfilename,samples,  samplecounts, trnalist, trnal
         if max(samplecounts[currsample].gettrnacount(currfeat.name) for currsample in samples) < minreads:
             continue
         print  >>trnacountfile, currfeat.name+"\t"+"\t".join(str(samplecounts[currsample].gettrnacount(currfeat.name)) for currsample in samples)
-    trnacountfile.close()           
-    
+    trnacountfile.close()
+trnaends = list(["CCA","CC","C",""])    
+def printtrnaendfile(trnaendfilename,samples,  samplecounts, trnalist, trnaloci , minreads = 5):
+    trnaendfile = open(trnaendfilename, "w")
+    print >>trnaendfile, "\t".join(currsample for currsample in samples)
+
+    for currfeat in trnalist:
+        if max(samplecounts[currsample].gettrnacount(currfeat.name) for currsample in samples) < minreads:
+            continue
+        for currend in trnaends:
+            endstring = currend
+            if currend == "":
+                endstring = "Trimmed"
+            print  >>trnaendfile, currfeat.name+"_"+endstring+"\t"+"\t".join(str(samplecounts[currsample].getendtypecount(currfeat.name)[currend]) for currsample in samples)
+    trnaendfile.close()   
     
 def getbamcountsthr(results,currsample, *args, **kwargs):
     results[currsample] = getbamcounts(*args, **kwargs)
@@ -370,13 +393,14 @@ def testmain(**argdict):
     nomultimap = argdict["nomultimap"]
     maxmismatches = argdict["maxmismatches"]
     cores = argdict["cores"]
+    trnaendfilename = argdict["trnaends"]
     threadmode = True
     if cores == 1:
         threadmode = False
     otherseqs = extraseqfile(argdict["otherseqs"])
     typefile = None
     sampledata = samplefile(argdict["samplefile"])
-    bedfiles = list()
+    bedfiles = list() 
     if "trnauniquecounts" in argdict:
         trnauniquefilename = argdict["trnauniquecounts"]
     if "bedfile"  in argdict:
@@ -496,6 +520,7 @@ def testmain(**argdict):
         #trnauniquefile = open(trnauniquefilename, "w")
         #printtrnacountfile()
         printtrnacountfile(trnacountfilename,samples,  allcounts, trnalist, trnaloci )
+        printtrnaendfile(trnaendfilename,samples,  allcounts, trnalist, trnaloci )
        
         
     if trnauniquefilename is not None:
@@ -539,6 +564,7 @@ def main(**argdict):
     #maturetrnas=argdict["maturetrnas"]
     genetypefile = argdict["genetypefile"]
     trnacountfilename = argdict["trnacounts"]
+    trnaendfilename = argdict["trnaends"]
     if "countfile" not in argdict or argdict["countfile"] == "stdout":
         countfile = sys.stdout
     else:
@@ -658,7 +684,7 @@ def main(**argdict):
                         #continue
                         if currfeat.coverage(currread) > 10:
                             counts[currsample][genename] += 1 
-                            genetypes[genename] = currfeat.data["source"]
+                            genetypes[genename] = currfeat.data["biotype"]
                             #print >>sys.stderr, currfeat.bedstring()
             except ValueError:
                 pass

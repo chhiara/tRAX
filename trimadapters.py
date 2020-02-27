@@ -118,6 +118,7 @@ for currline in open(seqprepfile):
     elif singleendmode and len(fields) > 1:
         samplefiles[fields[0]] = tuple([fields[1]])
         cutadaptorder.append(fields[0])
+        sampleorder.append(fields[0])
 
 
 if len(sampleorder) < 1 and len(cutadaptorder) < 1:
@@ -168,7 +169,7 @@ for currsample in sampleorder:
         cutadaptruns[currsample] = None
         cutadaptruns[currsample] = subprocess.Popen(cutadaptcommand, shell = True, stderr = subprocess.PIPE)
 
-
+#print >>sys.stderr, sampleorder
 
 for currsample in samplefiles.iterkeys():
     if not singleendmode:

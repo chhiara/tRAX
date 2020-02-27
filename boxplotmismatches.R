@@ -1,9 +1,13 @@
 library(ggplot2)
+library(RColorBrewer)
+
 library(reshape2)
+library(ggsci)
 library(scales)
 library(plyr)
 library(gridExtra)
 library(getopt)
+
 
 args <- commandArgs(trailingOnly = TRUE)
 
@@ -16,6 +20,7 @@ spec <- matrix(c(
         'mismatch'     , 'm', 1, "character", "mismatches",
         'samples'    , 's', 1, "character", "Sample file (required)",
         'trna'     , 't', 1, "character", "trna file (required)",
+        'comparisons'     , 'c', 1, "character", "comparisons file",
         'directory'     , 'd', 1, "character", "output directory (required)",
 
 
@@ -28,6 +33,7 @@ opt = getopt(spec);
 mismatches <- read.table(opt$mismatch, header = TRUE,row.names = NULL, stringsAsFactors=FALSE)
 Sampletable <- read.table(opt$samples)
 trnatable <- read.table(opt$trna)
+
 directory <- opt$directory
 
 outputformat <- ".pdf"
@@ -115,8 +121,39 @@ mismatchmeltposagg$anticodon = trnatable[match(mismatchmeltposagg$Feature,trnata
 
 posname = paste(directory,"/trnapositionmismatches",outputformat, sep = "")
 # geom_boxplot(aes(fill=position), outlier.shape=NA) 
-ggplot(data = mismatchmeltposagg, aes(x=Position, y=percentmismatch)) + theme_bw()+ geom_jitter(aes(color=amino), size = dotsize,width = 0.25) +  ggtitle(paste("Position Mismatches", sep = ""))+ theme(axis.text.x = element_text(angle = 90, hjust = 1))+  ylim(0, 1) + xlab("Position")+ylab("Maximum percent Misincorporation")
+ggplot(data = mismatchmeltposagg, aes(x=Position, y=percentmismatch)) + theme_bw()+ geom_jitter(aes(color=amino), size = 1,width = 0.25) +  ggtitle(paste("Position Mismatches", sep = ""))+ theme(axis.text.x = element_text(angle = 90, hjust = 1))+  ylim(0, 1) + xlab("Position")+ylab("Maximum percent Misincorporation")
 ggsave(filename=posname,width=20, height=7)
+
+fiveprimemeltfilter = mismatches[	mismatches$tRNAreadstotal > 30,c("Feature","Sample","position","readstarts","tRNAreadstotal","coverage")]
+fiveprimemeltfilter$percentstart = fiveprimemeltfilter$readstarts/fiveprimemeltfilter$tRNAreadstotal
+
+threeprimemeltfilter = mismatches[	mismatches$tRNAreadstotal > 30,c("Feature","Sample","position","readends","tRNAreadstotal","coverage")]
+threeprimemeltfilter$percentstart = threeprimemeltfilter$readends/threeprimemeltfilter$tRNAreadstotal
+
+mismatchfilter = mismatches[mismatches$tRNAreadstotal > 30,c("Feature","Sample","position","percentmismatch","coverage")]
+
+#print(length(fiveprimemeltfilter$percentstart))
+#print(length(fiveprimemeltfilter$position))
+#print(length(fiveprimemeltfilter$Feature))
+fiveprimeposagg <- aggregate(fiveprimemeltfilter$percentstart, by=list(position = fiveprimemeltfilter$position, Sample = fiveprimemeltfilter$Sample), FUN=mean)
+fiveprimeposagg <- fiveprimeposagg[fiveprimeposagg$position %in% positionorder,]
+fiveprimeposagg$position = factor(fiveprimeposagg$position, levels = positionorder)
+#print("**")
+colnames(fiveprimeposagg) <- c("Position","Sample","percentstart")
+print("||**")
+fiveprimemeltfilter$amino = trnatable[match(fiveprimemeltfilter$Feature,trnatable[,1]),3]
+threeprimemeltfilter$amino = trnatable[match(threeprimemeltfilter$Feature,trnatable[,1]),3]
+mismatchfilter$amino = trnatable[match(mismatchfilter$Feature,trnatable[,1]),3]
+#fiveprimeposagg$anticodon = trnatable[match(fiveprimeposagg$Feature,trnatable[,1]),4]
+
+
+#print("**||")
+posname = paste(directory,"/trnapositionfiveprime",outputformat, sep = "")
+# geom_boxplot(aes(fill=position), outlier.shape=NA) 
+ggplot(data = fiveprimeposagg, aes(x=Position, y=percentstart)) + theme_bw()+ geom_jitter(aes(color=Sample), size = dotsize,width = 0.25) +  ggtitle(paste("Position Starts", sep = ""))+ theme(axis.text.x = element_text(angle = 90, hjust = 1))+  ylim(0, 1) + xlab("Position")+ylab("Maximum Starts")
+ggsave(filename=posname,width=20, height=7)
+#print("**")
+getPalette = colorRampPalette(brewer.pal(9, "Set1"))
 
 for (curramino in unique(trnatable[,3])){
 
@@ -126,6 +163,101 @@ mismatchmeltposaggamino = mismatchmeltposagg[mismatchmeltposagg$amino == currami
 ggplot(data = mismatchmeltposaggamino, aes(x=Position, y=percentmismatch)) + theme_bw()+ geom_jitter(aes(color=anticodon), size = aminodotsize,width = 0.25) +  ggtitle(paste("Position Mismatches", sep = ""))+ theme(axis.text.x = element_text(angle = 90, hjust = 1))+  ylim(0, 1) + xlab("Position")+ylab("Maximum percent Misincorporation")
 ggsave(filename=posname,width=20, height=7)
 
+
+#positionagg <- aggregate(fiveprimemeltfilter$percentstart, by=list(Feature = fiveprimemeltfilter$Feature, Sample = Sampletable[match(fiveprimemeltfilter$Sample,Sampletable[,1]),2],Position=fiveprimemeltfilter$position ), FUN=mean)
+#print("**")
+#fiveprimeaminoposagg = dcast(fiveprimeposagg,Feature+Position~Sample,mean)
+#fiveprimeaminoposagg = aggregate(fiveprimemeltfilter$percentstart, by=list(Feature = fiveprimemeltfilter$, Sample = Sampletable[match(fiveprimemeltfilter$Sample,Sampletable[,1]),2],Position=fiveprimemeltfilter$position ), FUN=mean)
+
+fiveprimeamino = fiveprimemeltfilter[fiveprimemeltfilter$amino == curramino,]
+threeprimeamino = threeprimemeltfilter[threeprimemeltfilter$amino == curramino,]
+mismatchamino = mismatchfilter[mismatchfilter$amino == curramino,]
+
+fiveprimeaminoposagg = aggregate(fiveprimeamino$percentstart, by=list( Sample = Sampletable[match(fiveprimeamino$Sample,Sampletable[,1]),2],Position=fiveprimeamino$position ), FUN=mean) 
+
+fiveprimeaminoposagg <- fiveprimeaminoposagg[fiveprimeaminoposagg$Position %in% positionorder,]
+fiveprimeaminoposagg$Position = factor(fiveprimeaminoposagg$Position, levels = positionorder)
+
+colourCount = length(unique(fiveprimeaminoposagg$Position))+1
+
+#print(head(fiveprimeaminoposagg))
+currplot = ggplot(fiveprimeaminoposagg,aes(x = Sample, y = x,fill = Position, stat="identity")) + theme_bw() + theme(panel.border = element_rect(linetype = "blank"), panel.grid = element_line(linetype = "blank")) + 
+	geom_bar(position = "fill",stat="identity") +
+    geom_bar(position = "fill",stat="identity",color="black",show.legend=FALSE) + 
+    scale_y_continuous(labels = percent_format()) +
+    theme(axis.text.x = element_text(size=5))+
+    xlab("Sample") +
+    ylab("Percentage of reads that start at position") + 
+    labs(fill="position")+
+    #scale_fill_ucscgb()+
+    #scale_fill_brewer(palette = "Dark2")+
+    scale_fill_manual(values = getPalette(colourCount))+
+    theme(axis.title.x = element_text(face="bold", size=15), axis.text.x = element_text(face="bold", size=9,angle = 90, vjust = .5)) #+scale_colour_gradient() #+ scale_fill_brewer( palette="RdPu")
+
+
+ggsave(paste(directory,"/",curramino ,"-fiveprimecounts",outputformat,sep= ""), currplot)
+#print(head(fiveprimeamino))
+#print(max(fiveprimeamino$percentstart))
+
+fiveprimeaminoposagg = aggregate(fiveprimeamino$percentstart, by=list( Sample = Sampletable[match(fiveprimeamino$Sample,Sampletable[,1]),2],position=fiveprimeamino$position, Feature = fiveprimeamino$Feature ), FUN=mean) 
+
+fiveprimeaminoposagg$percentstart = fiveprimeaminoposagg$x
+fiveprimeaminoposagg <- fiveprimeaminoposagg[fiveprimeaminoposagg$position %in% positionorder,]
+fiveprimeaminoposagg$position = factor(fiveprimeaminoposagg$position, levels = positionorder)
+currplot = ggplot(fiveprimeaminoposagg,aes(x = position,y= Sample, fill = percentstart)) + geom_tile()+scale_fill_gradient(low="white", high="blue", limits = c(0,1))+ theme_bw() +facet_grid(rows = vars(Feature))+ theme(panel.border = element_rect(linetype = "blank"), panel.grid = element_line(linetype = "blank")) + 
+    theme(axis.title.x=element_blank(), axis.text.y=element_text(colour="black",size=24),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=16), strip.text.y = element_text(size=24))+
+    xlab("Sample") +
+    ylab("Percentage of reads that start at position") + 
+    labs(fill="position")+
+    #scale_fill_ucscgb()+
+    #scale_fill_brewer(palette = "Dark2")+
+    theme(axis.title.x = element_text(face="bold", size=15), axis.text.x = element_text(face="bold", size=16,angle = 90, vjust = .5)) #+scale_colour_gradient() #+ scale_fill_brewer( palette="RdPu")
+
+
+ggsave(paste(directory,"/",curramino ,"-fiveprimeheatmap",outputformat,sep= ""), currplot,height=.25*length(unique(fiveprimeamino$Feature))*length(unique(fiveprimeamino$Sample)),width=.25*length(unique(fiveprimeamino$position)), limitsize=FALSE)
+
+
+
+
+threeprimeaminoposagg = aggregate(threeprimeamino$percentstart, by=list( Sample = Sampletable[match(threeprimeamino$Sample,Sampletable[,1]),2],position=threeprimeamino$position, Feature = threeprimeamino$Feature ), FUN=mean)
+#print(head(threeprimeaminoposagg))
+threeprimeaminoposagg$percentstart = threeprimeaminoposagg$x
+threeprimeaminoposagg <- threeprimeaminoposagg[threeprimeaminoposagg$position %in% positionorder,]
+threeprimeaminoposagg$position = factor(threeprimeaminoposagg$position, levels = positionorder)
+
+currplot = ggplot(threeprimeaminoposagg,aes(x = position,y= Sample, fill = percentstart)) + geom_tile()+scale_fill_gradient(low="white", high="blue", limits = c(0,1))+ theme_bw() +facet_grid(rows = vars(Feature))+ theme(panel.border = element_rect(linetype = "blank"), panel.grid = element_line(linetype = "blank")) + 
+    theme(axis.title.x=element_blank(), axis.text.y=element_text(colour="black",size=24),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=16), strip.text.y = element_text(size=24))+
+    xlab("Sample") +
+    ylab("Percentage of reads that start at position") + 
+    labs(fill="position")+
+    #scale_fill_ucscgb()+
+    #scale_fill_brewer(palette = "Dark2")+
+    theme(axis.title.x = element_text(face="bold", size=15), axis.text.x = element_text(face="bold", size=16,angle = 90, vjust = .5)) #+scale_colour_gradient() #+ scale_fill_brewer( palette="RdPu")
+
+
+ggsave(paste(directory,"/",curramino ,"-threeprimeheatmap",outputformat,sep= ""), currplot,height=.25*length(unique(fiveprimeamino$Feature))*length(unique(fiveprimeamino$Sample)),width=.25*length(unique(fiveprimeamino$position)), limitsize=FALSE)
+
+mismatchaminoposagg = aggregate(mismatchamino$percentmismatch, by=list( Sample = Sampletable[match(mismatchamino$Sample,Sampletable[,1]),2],position=mismatchamino$position, Feature = mismatchamino$Feature ), FUN=mean)
+#print("**::")
+#print(head(mismatchaminoposagg))
+mismatchaminoposagg$percentmismatch = mismatchaminoposagg$x
+#print("::**")
+mismatchaminoposagg <- mismatchaminoposagg[mismatchaminoposagg$position %in% positionorder,]
+mismatchaminoposagg$position = factor(mismatchaminoposagg$position, levels = positionorder)
+
+currplot = ggplot(mismatchaminoposagg,aes(x = position,y= Sample, fill = percentmismatch)) + geom_tile()+scale_fill_gradient(low="white", high="blue", limits = c(0,1))+ theme_bw() +facet_grid(rows = vars(Feature))+ theme(panel.border = element_rect(linetype = "blank"), panel.grid = element_line(linetype = "blank")) + 
+    theme(axis.title.x=element_blank(), axis.text.y=element_text(colour="black",size=24),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=16), strip.text.y = element_text(size=24))+
+    xlab("Sample") +
+    ylab("Percentage of reads that start at position") + 
+    labs(fill="position")+
+    #scale_fill_ucscgb()+
+    #scale_fill_brewer(palette = "Dark2")+
+    theme(axis.title.x = element_text(face="bold", size=15), axis.text.x = element_text(face="bold", size=16,angle = 90, vjust = .5)) #+scale_colour_gradient() #+ scale_fill_brewer( palette="RdPu")
+
+
+ggsave(paste(directory,"/",curramino ,"-mismatchheatmap",outputformat,sep= ""), currplot,height=.25*length(unique(fiveprimeamino$Feature))*length(unique(fiveprimeamino$Sample)),width=.25*length(unique(fiveprimeamino$position)), limitsize=FALSE)
+
+
 }
 
 
@@ -134,17 +266,19 @@ for (currpos in positions){
 
 mismatchmelt = mismatches[mismatches$position == currpos,c("Feature","Sample","percentmismatch")]
 deletionmelt = mismatches[mismatches$position == currpos,c("Feature","Sample","deletions","coverage")]
-#print(head(deletionmelt))
+fiveprimemelt = mismatches[mismatches$position == currpos,c("Feature","Sample","readstarts","tRNAreadstotal","coverage")]
+fiveprimemelt$percentstart = fiveprimemelt$readstarts/fiveprimemelt$tRNAreadstotal
+
 deletionmelt$deletepercent = deletionmelt$deletions/(deletionmelt$deletions + deletionmelt$coverage + 30)
-#deletionmelt$deletepercent = deletionmelt$deletions 
-
-#print(deletionmelt$deletions / (deletionmelt$deletions+deletionmelt$coverage))
-#print(deletionmelt$deletions / (deletionmelt$deletions+deletionmelt$coverage))
 
 
-#print(head(deletionmelt))
+fiveprimeagg <- aggregate(fiveprimemelt$percentstart, by=list(Feature = fiveprimemelt$Feature, Sample = Sampletable[match(fiveprimemelt$Sample,Sampletable[,1]),2]), FUN=mean)
+#print(head(fiveprimeagg))
+colnames(fiveprimeagg) <- c("Feature","Sample","percentstart")
 
-#head(Sampletable[match(mismatchmelt$variable,Sampletable[,1]),2])
+posname = paste(directory,"/",currpos,"-possamplereadstarts",outputformat, sep = "")
+ggplot(data = fiveprimeagg, aes(x=Sample, y=percentstart)) + geom_boxplot(aes(fill=Sample), outlier.shape=NA) + theme_bw()+ geom_jitter(aes(fill=Sample), size = dotsize) +  ggtitle(paste("Position ",currpos,"Read Starts", sep = ""))+ theme(axis.text.x = element_text(angle = 90, hjust = 1))+  ylim(0, 1) + xlab("Sample")+ylab("Percent Read Starts")
+ggsave(filename=posname,width=7, height=7)
 
 
 mismatchmeltagg <- aggregate(mismatchmelt$percentmismatch, by=list(Feature = mismatchmelt$Feature, Sample = Sampletable[match(mismatchmelt$Sample,Sampletable[,1]),2]), FUN=mean)
@@ -210,3 +344,9 @@ maxskips <- aggregate(deletionmelt$deletions/(deletionmelt$deletions + deletionm
 #print (maxskips[order(-maxskips$x),])
 #head(maxskips)
 #head()
+#print("|||**||")
+#print(head(fiveprimemeltfilter))
+#print(length(Sampletable[match(fiveprimemeltfilter$Sample,Sampletable[,1]),2]))
+#print(length(fiveprimemeltfilter$position))
+
+

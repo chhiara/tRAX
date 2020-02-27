@@ -461,7 +461,7 @@ acceptorType <- factor(acceptorType, levels = sort(unique(acceptorType)))
 sortacceptor <- acceptorType[order(coveragemelt$variable, coveragemelt$Sample,-as.numeric(coveragemelt$Feature))]
 
 
-endsmeltagg  <- aggregate(coverageall$ends, by=list(Feature = coverageall$Feature, Sample = sampletable[match(coverageall$Sample,sampletable[,1]),2], variable = coverageall$position), FUN=mean)
+endsmeltagg  <- aggregate(coverageall$readstarts, by=list(Feature = coverageall$Feature, Sample = sampletable[match(coverageall$Sample,sampletable[,1]),2], variable = coverageall$position), FUN=mean)
 endsmelt <- coverageprep(endsmeltagg, samples, trnatable)
 
 pcount = 30
@@ -685,7 +685,7 @@ makecovplot(aminodata,aminonamesec)
 
 
 aminoendsdata = endsmelt[acceptorType == curramino,]
-aminonamesec = paste(opt$directory,"/mismatch/",runname, "-",curramino,"_ends",outputformat,sep= "")
+aminonamesec = paste(opt$directory,"/mismatch/",runname, "-",curramino,"_fiveprimeends",outputformat,sep= "")
 makebasiccovplot(aminoendsdata,aminonamesec)
 
 
@@ -720,7 +720,7 @@ transcriptname = paste(opt$directory,"/indiv/",currtranscript,"-uniqcoverage",ou
 }
 }
 
-makecovplot(allmultmelt,paste(uniquename, "-uniquecoverages.pdf",sep= ""))
+makecovplot(allmultmelt,paste(uniquename, "-coverages.pdf",sep= ""))
 
 
 

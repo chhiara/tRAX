@@ -1,7 +1,20 @@
 
 
 library("DESeq2")
+library(ggplot2)
+library(gridExtra)
+library(scales)
+library(plyr)
 
+
+
+reverselog_trans <- function(base = exp(1)) {
+    trans <- function(x) -log(x, base)
+    inv <- function(x) base^(-x)
+    trans_new(paste0("reverselog-", format(base)), trans, inv, 
+              log_breaks(base = base), 
+              domain = c(1e-100, Inf))
+}
 
 
 colgetlogname =  function(currtable, newname){
@@ -110,6 +123,8 @@ resloglist = lapply(compareresults, function(currresult){colgetlogname(currresul
 resavglist = lapply(compareresults, function(currresult){colgetlogname(currresult[[2]],currresult[[1]])})                                
 
 
+
+
 dds = cds
 
 
@@ -127,6 +142,30 @@ write.table(allprobs,paste(experimentname,"/",experimentname,"-padjs.txt", sep =
 
 alllogvals = Reduce(function(x,y) cbind(x,y), resloglist)
 write.table(alllogvals,paste(experimentname,"/",experimentname,"-logvals.txt", sep = ""),sep="	")
+
+
+outputformat = ".pdf"
+for (currpair in colnames(alllogvals)){
+
+currlogval = alllogvals[,c(currpair)]
+currprob = allprobs[,c(currpair)]
+
+currsampledata = data.frame(currlogval, currprob)
+
+#print(head(currsampledata))
+
+
+
+#currsampledata = cbind(currlogval,currprob) # 
+#print(head(currsampledata))
+#currsampledata = currsampledata[currsampledata$currprob > .005,]
+#print(head(currsampledata))
+currplot <- ggplot(currsampledata, aes_string(x="currlogval", y="currprob")) + geom_point() +scale_x_continuous() +scale_y_continuous(trans=reverselog_trans(10))+geom_hline(yintercept = .05, linetype = 2)+geom_hline(yintercept = .005, linetype = 2)+theme_bw() + xlab("Log2-Fold Change")+ylab("Adjusted P-value")+ggtitle(currpair)+theme(legend.box="horizontal",aspect.ratio=1,axis.text.x=element_text(angle=90,hjust=1,vjust=0.5))
+ggsave(paste(experimentname,"/",currpair ,"-volcano",outputformat,sep= ""), currplot) 
+
+}
+
+
 #print(alllogvals)
 #stop("Message")
 #Print log values
@@ -142,6 +181,11 @@ allcombinevals = cbind(alllogvals,allprobs)
 
 write.table(allcombinevals,paste(experimentname,"/",experimentname,"-combine.txt", sep = ""),sep="	", col.names=NA,quote=FALSE) 
 
+sortcombinevals = allcombinevals[order(apply(alllogvals,1,max)),]
+
+#apply(allprobs,1,min) < .05 
+
+write.table(sortcombinevals,paste(experimentname,"/",experimentname,"-combinesort.txt", sep = ""),sep="	", col.names=NA,quote=FALSE) 
 
 #stop("Message")
 #Print out the size factors
@@ -151,7 +195,7 @@ write.table(allcombinevals,paste(experimentname,"/",experimentname,"-combine.txt
 
 #
 
-allcombined = cbind(allcombinevals,normalizedrnas)
+#allcombined = cbind(allcombinevals,normalizedrnas)
 #write.table(allcombined,paste(experimentname,"/",experimentname,"-combineall.txt", sep = ""),sep="	", col.names=NA,quote=FALSE)
 
 

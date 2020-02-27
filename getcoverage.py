@@ -160,10 +160,11 @@ def gettnanums(trnaalign, margin = 0):
     return trnanum
     
 class coverageinfo:
-    def __init__(self, readcounts, allcoverage,readstarts, multaminocoverages, multaccoverages, multtrnacoverages,uniquecoverages, uniquegenomecoverages,multigenomecoverages, readmismatches,adeninemismatches,thyminemismatches,cytosinemismatches, guanosinemismatches, readskips, trimcoverage = None, trimmismatches = None  ):
+    def __init__(self, readcounts, allcoverage,readstarts, readends, multaminocoverages, multaccoverages, multtrnacoverages,uniquecoverages, uniquegenomecoverages,multigenomecoverages, readmismatches,adeninemismatches,thyminemismatches,cytosinemismatches, guanosinemismatches, readskips, trimcoverage = None, trimmismatches = None  ):
         self.readcounts = readcounts
         self.allcoverages = allcoverage
         self.readstarts = readstarts
+        self.readends = readends
         
         self.multaminocoverages = multaminocoverages
         self.multaccoverages = multaccoverages
@@ -182,7 +183,8 @@ class coverageinfo:
         self.thyminemismatches = thyminemismatches
         self.cytosinemismatches = cytosinemismatches
         self.guanosinemismatches = guanosinemismatches    
-        self.readskips = readskips  
+        self.readskips = readskips
+        
         
         
 class locicoverageinfo:
@@ -238,6 +240,7 @@ def getsamplecoverage(currsample, sampledata, trnalist, trnaseqs,maxmismatches =
     cytosinemismatches = dict()
     guanosinemismatches = dict()
     readstarts = dict()
+    readends = dict()
     readskips = dict()      
     
     trimreadcoverage =  dict()
@@ -265,6 +268,7 @@ def getsamplecoverage(currsample, sampledata, trnalist, trnaseqs,maxmismatches =
         multigenomecoverages[currfeat.name] = readcoverage(trnalist[i])
         
         readstarts[currfeat.name] = readcoverage(trnalist[i])
+        readends[currfeat.name] = readcoverage(trnalist[i])
         readmismatches[currfeat.name] = readcoverage(trnalist[i])
         adeninemismatches[currfeat.name] =   readcoverage(trnalist[i])
         thyminemismatches[currfeat.name] =   readcoverage(trnalist[i])
@@ -289,9 +293,11 @@ def getsamplecoverage(currsample, sampledata, trnalist, trnaseqs,maxmismatches =
                     continue
 
                 readstart = currread.getfirst(1)
+                readend = currread.getlast(1)
                 readcounts[trnalist[i].name] += 1
                 allcoverages[trnalist[i].name].addread(currread)
                 readstarts[trnalist[i].name].addread(readstart)
+                readends[trnalist[i].name].addread(readend )
 
                 if not currread.isuniqueaminomapping():
                     multaminocoverages[trnalist[i].name].addread(currread)
@@ -342,11 +348,11 @@ def getsamplecoverage(currsample, sampledata, trnalist, trnaseqs,maxmismatches =
                     elif currbase == "G":
                         guanosinemismatches[trnaname].addbase(currread.start + currpos)
 
-    return coverageinfo( readcounts, allcoverages,readstarts, multaminocoverages, multaccoverages, multtrnacoverages,uniquecoverages, uniquegenomecoverages,multigenomecoverages, readmismatches,adeninemismatches,thyminemismatches,cytosinemismatches, guanosinemismatches,readskips,trimmismatches = trimreadmismatches, trimcoverage = trimreadcoverage  )
+    return coverageinfo( readcounts, allcoverages,readstarts, readends,multaminocoverages, multaccoverages, multtrnacoverages,uniquecoverages, uniquegenomecoverages,multigenomecoverages, readmismatches,adeninemismatches,thyminemismatches,cytosinemismatches, guanosinemismatches,readskips,trimmismatches = trimreadmismatches, trimcoverage = trimreadcoverage  )
 
 def transcriptcoverage(samplecoverages, mismatchreport, trnalist,sampledata,sizefactor, mincoverage, trnastk, positionnums):
 
-    print >>mismatchreport, "\t".join(["Feature","Sample","position","coverage","ends","uniquecoverage","multitrnacoverage","multianticodoncoverage","multiaminocoverage","tRNAreadstotal","actualbase","mismatchedbases","adenines","thymines","cytosines","guanines","deletions"])
+    print >>mismatchreport, "\t".join(["Feature","Sample","position","coverage","readstarts","readends","uniquecoverage","multitrnacoverage","multianticodoncoverage","multiaminocoverage","tRNAreadstotal","actualbase","mismatchedbases","adenines","thymines","cytosines","guanines","deletions"])
     #print >>sys.stderr,mismatchreport
     #print >>sys.stderr,"||***"
     samples = sampledata.getsamples()
@@ -375,6 +381,7 @@ def transcriptcoverage(samplecoverages, mismatchreport, trnalist,sampledata,size
 
 
             allstarts  = list(curr/sizefactor[currsample] if curr is not None else 0 for curr in samplecoverages[currsample].readstarts[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
+            allends = list(curr/sizefactor[currsample] if curr is not None else 0 for curr in samplecoverages[currsample].readends[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
             allcovcount  = list(curr/sizefactor[currsample] if curr is not None else 0 for curr in samplecoverages[currsample].allcoverages[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
             adeninecount  = list(curr if curr is not None else 0 for curr in samplecoverages[currsample].adeninemismatches[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
             thyminecount = list(curr if curr is not None else 0 for curr in samplecoverages[currsample].thyminemismatches[currfeat.name].coveragealign(trnastk.aligns[currfeat.name]))
@@ -390,7 +397,7 @@ def transcriptcoverage(samplecoverages, mismatchreport, trnalist,sampledata,size
                     realbase = "-"
                 if realbase == "U":
                     realbase = "T"
-                print >>mismatchreport, "\t".join([currfeat.name,currsample,str(positionnums[i]),str(covcounts[i]),str(allstarts[i]),str(uniquecounts[i]),str(multitrna[i]),str(multaccounts[i]),str(multaminocounts[i]),str(1.*samplecoverages[currsample].readcounts[currfeat.name]),realbase,str(mismatches[i]),str(adeninecount[i]),str(thyminecount[i]),str(cytosinecount[i]),str(guanosinecount[i]), str(readskipcount[i])])
+                print >>mismatchreport, "\t".join([currfeat.name,currsample,str(positionnums[i]),str(covcounts[i]),str(allstarts[i]),str(allends[i]),str(uniquecounts[i]),str(multitrna[i]),str(multaccounts[i]),str(multaminocounts[i]),str(1.*samplecoverages[currsample].readcounts[currfeat.name]/sizefactor[currsample]),realbase,str(mismatches[i]),str(adeninecount[i]),str(thyminecount[i]),str(cytosinecount[i]),str(guanosinecount[i]), str(readskipcount[i])])
     #sys.exit(1)        
 
 def locuscoverage(locicoverages, locicoveragetable, locilist,sampledata,sizefactor, mincoverage, locistk, locipositionnums):

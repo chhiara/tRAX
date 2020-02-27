@@ -2,6 +2,7 @@ library(ggplot2)
 library(gridExtra)
 library(scales)
 library(plyr)
+library(RColorBrewer)
 
 
 args <- commandArgs(trailingOnly = TRUE)
@@ -48,7 +49,7 @@ counts <- merge(types,counts, by.x = 1, by.y = 0)
 colnames(counts)[2] <- "type"
 
 
-genetypes = c("trna_fiveprime","trna_threeprime","trna_other","trna_wholecounts","tRNA","snoRNA","miRNA")
+genetypes = c("trna_fiveprime","trna_threeprime","trna_other","trna_wholecounts","tRNA","snoRNA","miRNA","Mt_tRNA","rRNA","Mt_rRNA","snRNA")
 othertypes = !(counts[,"type"] %in% genetypes)
 
 
@@ -63,8 +64,11 @@ trnatypes <- c("trna_fiveprime","trna_threeprime","trna_other","trna_wholecounts
 fragtypes <- c("trna_fiveprime","trna_threeprime","trna_other","trna_wholecounts")
 trnagenes =  counts[,"type"] %in% trnatypes
 
-counts <- rbind(counts[counts[,"type"] == "other",],counts[counts[,"type"] == "snoRNA",],counts[counts[,"type"] == "miRNA",], counts[trnagenes,])
 
+
+
+counts <- rbind(counts[counts[,"type"] == "other",],counts[counts[,"type"] == "snoRNA",],counts[counts[,"type"] == "miRNA",], counts[counts[,"type"] == "Mt_tRNA",],counts[counts[,"type"] == "rRNA",],counts[counts[,"type"] == "Mt_rRNA",],counts[counts[,"type"] == "snRNA",],counts[trnagenes,])
+                                                                                                                                                       
 
 colnames(counts)[1] <- "name"
 colnames(trnatable) <- c("trnaname", "loci", "amino", "anticodon")
@@ -76,7 +80,9 @@ trnacounts <- merge(trnatable,counts, by.x = "trnaname", by.y = "trnaname", all.
 
 i = 1
 #trnacounts[is.na(trnacounts$amino),"amino"] = "non-tRNA"
-trnacounts <- rbind(trnacounts[trnacounts[,"type"] == "other",],trnacounts[trnacounts[,"type"] == "snoRNA",],trnacounts[trnacounts[,"type"] == "miRNA",], trnacounts[trnacounts[,"type"] %in% trnatypes,])
+trnacounts <- rbind(trnacounts[trnacounts[,"type"] == "other",],trnacounts[trnacounts[,"type"] == "snoRNA",],trnacounts[trnacounts[,"type"] == "miRNA",], trnacounts[trnacounts[,"type"] == "Mt_tRNA",],trnacounts[trnacounts[,"type"] == "rRNA",],trnacounts[trnacounts[,"type"] == "Mt_rRNA",],trnacounts[trnacounts[,"type"] == "snRNA",],trnacounts[trnagenes,])
+
+#trnacounts <- rbind(trnacounts[trnacounts[,"type"] == "other",],trnacounts[trnacounts[,"type"] == "snoRNA",],trnacounts[trnacounts[,"type"] == "miRNA",], trnacounts[trnacounts[,"type"] %in% trnatypes,])
 trnacounts$dotsize = ifelse(trnacounts[,"type"] %in% trnatypes, trnasize, .1)
 
 #cor.test(log(counts[,xaxis]+1),log(counts[,yaxis]+1))
@@ -166,7 +172,16 @@ sublabel = paste("Pearson Correlation: ",corr$estimate, sep = "")
 
 dashinterc = 1.5
 
-currplot <- qplot(data=counts,x=trnacounts[,xaxis],y=trnacounts[,yaxis],xlab = xaxis,ylab = yaxis,color=type, asp=1) + geom_abline(intercept = 0, slope = 1) + geom_abline(intercept = dashinterc, slope = 1,linetype = 2)+geom_abline(intercept = 0- dashinterc, slope = 1,linetype = 2)+scale_x_continuous(trans=log2_trans(),limits = c(1, maxlim)) + scale_y_continuous(trans=log2_trans(),limits = c(1, maxlim)) + theme_bw() + theme(legend.box="horizontal",aspect.ratio=1,axis.text.x=element_text(angle=90,hjust=1,vjust=0.5))
+colourCount = length(unique(counts$type))+1
+getPalette = colorRampPalette(brewer.pal(8, "Dark2"))
+#scale_colour_manual(values = getPalette(colourCount)) 
+
+
+#currplot <- qplot(data=counts,x=trnacounts[,xaxis],y=trnacounts[,yaxis],xlab = xaxis,ylab = yaxis,color=type, asp=1) + scale_colour_manual(values = getPalette(colourCount)) + geom_abline(intercept = 0, slope = 1) + geom_abline(intercept = dashinterc, slope = 1,linetype = 2)+geom_abline(intercept = 0- dashinterc, slope = 1,linetype = 2)+scale_x_continuous(trans=log2_trans(),limits = c(1, maxlim)) + scale_y_continuous(trans=log2_trans(),limits = c(1, maxlim)) + theme_bw() + theme(legend.box="horizontal",aspect.ratio=1,axis.text.x=element_text(angle=90,hjust=1,vjust=0.5))
+currplot <- ggplot(trnacounts, aes_string(x=xaxis, y=yaxis)) + geom_point(aes(color=type), size = 1) + scale_colour_manual(values = getPalette(colourCount)) + geom_abline(intercept = 0, slope = 1) + geom_abline(intercept = dashinterc, slope = 1,linetype = 2)+geom_abline(intercept = 0- dashinterc, slope = 1,linetype = 2)+scale_x_continuous(trans=log2_trans(),limits = c(1, maxlim)) + scale_y_continuous(trans=log2_trans(),limits = c(1, maxlim)) + theme_bw() + theme(legend.box="horizontal",aspect.ratio=1,axis.text.x=element_text(angle=90,hjust=1,vjust=0.5))
+             ggplot(trnacounts, aes_string(x=xaxis, y=yaxis))
+#currplot <- ggplot(data=counts,x=trnacounts[,xaxis],y=trnacounts[,yaxis],xlab = xaxis,ylab = yaxis,color=type, asp=1) + scale_colour_manual(values = getPalette(colourCount)) + geom_abline(intercept = 0, slope = 1) + geom_abline(intercept = dashinterc, slope = 1,linetype = 2)+geom_abline(intercept = 0- dashinterc, slope = 1,linetype = 2)+scale_x_continuous(trans=log2_trans(),limits = c(1, maxlim)) + scale_y_continuous(trans=log2_trans(),limits = c(1, maxlim)) + theme_bw() + theme(legend.box="horizontal",aspect.ratio=1,axis.text.x=element_text(angle=90,hjust=1,vjust=0.5))
+
 #currplot <- arrangeGrob(currplot, sub = textGrob(sublabel, x = 0, hjust = -0.1, vjust=0.1, gp = gpar(fontsize = 14)))
 ggsave(paste(experimentname,"/",comparisons[i,1],"_",comparisons[i,2] ,"-typescatter",outputformat,sep= ""), currplot)
 

@@ -612,7 +612,17 @@ def getfragtype(currfeat, currread, maxoffset = 10):
             return "Threeprime"
         else:
             return "Fiveprime"
-            
+def getendtype(currfeat, currread, maxoffset = 10):
+    endtype = None
+    if currread.end == currfeat.end:
+        endtype = "CCA"
+    elif currread.end == currfeat.end -1:
+        endtype = "CC"
+    elif currread.end == currfeat.end -2:
+        endtype = "C"
+    elif currread.end == currfeat.end -3:
+        endtype = ""
+    return endtype
 smallrnatypes = set([])            
 def readfeatures(filename, orgdb="genome", seqfile= None, removepseudo = False):
     if filename.endswith(".bed") or filename.endswith(".bed.gz"):

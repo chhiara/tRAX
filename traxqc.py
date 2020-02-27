@@ -127,6 +127,21 @@ class seqprepinfo:
         return self.merged[sample] / (1.*self.gettotal(sample))
     def getsamples(self):
         return tuple(self.merged.keys())
+        
+class cutadaptinfo:
+    def __init__(self, trimmed, untrimmed, discarded):
+        self.trimmed = trimmed
+        self.untrimmed = untrimmed
+        self.discarded = discarded
+    def gettotal(self, sample):
+        return self.trimmed[sample] + self.untrimmed[sample] + self.discarded[sample]
+    def getpassedpercent(self, sample):
+        return (self.trimmed[sample] + self.untrimmed[sample]) / (1.*self.gettotal(sample))
+    def getsamples(self):
+        return tuple(self.trimmed.keys())
+        
+        
+        
 def getreadprep(prepfilename, manifestfilename, sampleinfo):
     manifestfile = open(manifestfilename)
     samplenames = dict()
@@ -155,14 +170,46 @@ def getreadprep(prepfilename, manifestfilename, sampleinfo):
                 
     return seqprepinfo(merged, unmerged, discarded)
 
+def getcutadapt(prepfilename, manifestfilename, sampleinfo):
+    manifestfile = open(manifestfilename)
+    samplenames = dict()
+    for currline in manifestfile:
+        fields = currline.rstrip().split("\t")
+        samplenames[fields[0]] = sampleinfo.getfastqsample(fields[1])
+    prepfile = open(prepfilename)
+    trimmed = dict()
+    untrimmed = dict()
+    discarded = dict()
+    for i, currline in enumerate(prepfile):
+        fields = currline.rstrip().split("\t")
+        if i == 0:
+            runsamples = list(samplenames[curr] for curr in fields)
+            continue
+            
+        if len(fields) != len(runsamples) + 1:
+            continue
+        for j in range(0, len(runsamples)):
+            if fields[0] == "trimmed":
+                trimmed[runsamples[j]] = int(fields[j + 1])
+            elif fields[0] == "untrimmed":
+                untrimmed[runsamples[j]] = int(fields[j + 1])
+            elif fields[0] == "discarded":
+                discarded[runsamples[j]] = int(fields[j + 1])
+                
+    return cutadaptinfo(trimmed, untrimmed, discarded)
 
 minmergepercent = .6
 def checkreadprep(allpreps, sampleinfo):
     prepdict = dict()
     for prepinfo in allpreps:   
-        prepresults = getreadprep(prepinfo+"_sp.txt", prepinfo+"_manifest.txt",sampleinfo)
-        samples = prepresults.getsamples()
-        prepdict.update({currsample : prepresults.getmergedpercent(currsample) for currsample in samples})
+        if os.path.exists(prepinfo+"_sp.txt"):
+            prepresults = getreadprep(prepinfo+"_sp.txt", prepinfo+"_manifest.txt",sampleinfo)
+            samples = prepresults.getsamples()
+            prepdict.update({currsample : prepresults.getmergedpercent(currsample) for currsample in samples}) 
+        if os.path.exists(prepinfo+"_ca.txt"):
+            prepresults = getcutadapt(prepinfo+"_ca.txt", prepinfo+"_manifest.txt",sampleinfo)
+            samples = prepresults.getsamples()
+            prepdict.update({currsample : prepresults.getpassedpercent(currsample) for currsample in samples})
     #print >>sys.stderr, prepdict
     lowmergesamples = list(prepdict[currsample] < minmergepercent for currsample in samples)
     mergeerr = errorset("merging_rate",samples, lowmergesamples, "Sequencing read merging rate  > "+str(100*minmergepercent)+"%"+"","Merging Rate", prepdict, percentformat = True, checkfile = prepinfo+"_sp.pdf")
@@ -657,7 +704,9 @@ def main(**args):
         prepresults = checkreadprep(runnames,sampleinfo)
     if runname is not None:
         prepresults = checkreadprep([runname],sampleinfo)
-    mappingresults = checkreadsmapping(samplename, sampleinfo, tgirtmode)
+    mappingresults = list()
+    if os.path.exists(getmapfile(samplename)):
+        mappingresults = checkreadsmapping(samplename, sampleinfo, tgirtmode)
     typeresults = checkreadtypes(samplename, sampleinfo, tgirtmode)
     countresults = checkgenecounts(samplename, sampleinfo, trnainfo, tgirtmode)
     

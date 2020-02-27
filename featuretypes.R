@@ -1,8 +1,9 @@
 
-
+library(ggsci)
 library(ggplot2)
 library(reshape2)
 library(scales)
+library(RColorBrewer)
 
 args <- commandArgs(trailingOnly = TRUE)
 
@@ -38,6 +39,14 @@ sampletotals = aggregate(countsmelt$value, list(countsmelt$variable), sum)
 countsmelt = countsmelt[countsmelt$value > sampletotals$x[countsmelt$variable] / 100,]
 #countsmelt = countsmelt
 #head(countsmelt)
+
+#unique(countsmelt$seq)
+colourCount = length(unique(countsmelt$seq))+1
+#getPalette = colorRampPalette(brewer.pal(8, "Dark2"))
+getPalette = colorRampPalette(brewer.pal(9, "Set1"))
+
+#unique(head(countsmelt))
+
 ggplot(countsmelt,aes(x = variable, y = value,fill = seq, stat="identity")) + theme_bw() + theme(panel.border = element_rect(linetype = "blank"), panel.grid = element_line(linetype = "blank")) + 
 	geom_bar(position = "fill",stat="identity") +
     geom_bar(position = "fill",stat="identity",color="black",show.legend=FALSE) + 
@@ -46,7 +55,10 @@ ggplot(countsmelt,aes(x = variable, y = value,fill = seq, stat="identity")) + th
     xlab("Sample") +
     ylab("Percentage of Total Reads") + 
     labs(fill="Read\nType")+
-    theme(axis.title.x = element_text(face="bold", size=15), axis.text.x = element_text(face="bold", size=9,angle = 90, vjust = .5)) +scale_colour_gradient() #+ scale_fill_brewer( palette="RdPu")
+    #scale_fill_ucscgb()+
+    #scale_fill_brewer(palette = "Dark2")+
+    scale_fill_manual(values = getPalette(colourCount))+
+    theme(axis.title.x = element_text(face="bold", size=15), axis.text.x = element_text(face="bold", size=9,angle = 90, vjust = .5)) #+scale_colour_gradient() #+ scale_fill_brewer( palette="RdPu")
 
 ggsave(filename=args[2])
     
