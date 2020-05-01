@@ -88,9 +88,10 @@ class counttypes:
         self.extraseqcounts[genetype] += 1
 
 
-def counttypereads(bamfile, samplename,trnainfo, trnaloci, trnalist,maturenames,featurelist = list(), otherseqlist = list(), embllist = list(), bedlist = list(),nomultimap = False, allowindels = True, maxmismatches = None, bamnofeature = False, countfrags = False):
+def counttypereads(bamfile, samplename,trnainfo, trnaloci, trnalist,maturenames,featurelist = dict(), otherseqlist = list(), embllist = list(),nomultimap = False, allowindels = True, maxmismatches = None, bamnofeature = False, countfrags = False):
     
-    readtypecounts = counttypes(samplename, bamfile, trnas = trnalist, trnaloci = trnaloci, emblgenes = embllist, otherfeats = featurelist)
+    bedlist = featurelist.keys()
+    readtypecounts = counttypes(samplename, bamfile, trnas = trnalist, trnaloci = trnaloci, emblgenes = embllist, otherfeats = bedlist)
     mitochrom = None
     fullpretrnathreshold = 2
     minpretrnaextend = 5
@@ -226,11 +227,15 @@ def counttypereads(bamfile, samplename,trnainfo, trnaloci, trnalist,maturenames,
         if gotread: 
             continue
         #continue #point5
-
+        #print >>sys.stderr, "**||"
         for currbed in bedlist:
+            #print >>sys.stderr, "||"+currbed
             for currfeat in featurelist[currbed].getbin(currread):
+                
                 if currfeat.coverage(currread) > 10:
-                    counts[currsample][currbed] += 1
+                    print >>sys.stderr, currbam +":"+ currbed
+                    readtypecounts.addbedcounts(currbed)
+                    #counts[currsample][currbed] += 1
                     gotread = True
                     break
                     #print >>sys.stderr, currbam +":"+ currbed
@@ -296,7 +301,13 @@ def printtypefile(countfile,samples, sampledata,allcounts,trnalist, trnaloci, be
             else:
                 print  >>countfile, "pretRNA\t"+"\t".join(str(sum(allcounts[currsample].trnalocuscounts[currbed]/sizefactor[currsample] for currsample in sampledata.getrepsamples(currrep))) for currrep in replicates)
         #print >>sys.stderr, allcounts[sampledata.getrepsamples(replicates[0])[0]].embltypecounts 
-        for currbiotype in emblbiotypes:
+        biotypefirst = ['snoRNA','snRNA','scaRNA','sRNA','miRNA']         
+        biotypelast = ['Mt_rRNA','Mt_tRNA','rRNA']
+        otherbiotypes = list(set(emblbiotypes) - (set(biotypefirst) | set(biotypelast)))
+        biotypeorder = biotypefirst + otherbiotypes + biotypelast
+        #print >>sys.stderr, biotypeorder
+
+        for currbiotype in biotypeorder:
             #print  >>countfile, currbiotype+"\t"+"\t".join(str(sumsamples(emblcounts,sampledata,currrep, currbiotype, sizefactors = sizefactor)) for currrep in replicates)
             print  >>countfile, currbiotype+"\t"+"\t".join(str(sum(allcounts[currsample].embltypecounts[currbiotype]/sizefactor[currsample] for currsample in sampledata.getrepsamples(currrep))) for currrep in replicates)
             
@@ -332,7 +343,13 @@ def printtypefile(countfile,samples, sampledata,allcounts,trnalist, trnaloci, be
                 print  >>countfile, "pretRNA_trailer\t"+"\t".join(str(trnalocustrailercounts[currsample][currbed]/sizefactor[currsample]) for currsample in samples)
             else:
                 print  >>countfile, "pretRNA\t"+"\t".join(str(trnalocuscounts[currsample][currbed]/sizefactor[currsample]) for currsample in samples)
-        for currbiotype in sampledata.emblbiotypes:
+        biotypefirst = ['snoRNA','snRNA','scaRNA','sRNA','miRNA']         
+        biotypelast = ['Mt_rRNA','Mt_tRNA','rRNA']
+        otherbiotypes = list(set(sampledata.emblbiotypes) - (set(biotypefirst) | set(biotypelast)))
+        biotypeorder = biotypefirst + otherbiotypes + biotypelast
+        print >>sys.stderr, biotypeorder
+        print >>sys.stderr, "****"
+        for currbiotype in biotypeorder:
             print  >>countfile, currbiotype+"\t"+"\t".join(str(emblcounts[currsample][currbed]/sizefactor[currsample]) for currsample in samples)
         for currbed in bedlist:
             print  >>countfile, os.path.basename(currbed)+"\t"+"\t".join(str(counts[currsample][currbed]/sizefactor[currsample]) for currsample in samples)
@@ -526,6 +543,7 @@ def testmain(**argdict):
     allcounts = dict()
     poolmode = True
     starttime = time.time()
+    #threadmode = False
     if threadmode:
         countqueue = Queue()
         threads = dict()
@@ -564,7 +582,7 @@ def testmain(**argdict):
     emblbiotypes  = set(itertools.chain.from_iterable(curr.emblbiotypes for curr in allcounts.values()))        
     bedtypes  = set(itertools.chain.from_iterable(curr.bedtypes for curr in allcounts.values())) 
     extraseqtypes  = set(itertools.chain.from_iterable(curr.extraseqtypes for curr in allcounts.values()))   
-    print >>sys.stderr, extraseqtypes
+    print >>sys.stderr, bedtypes
     printtypefile(countfile, samples, sampledata,allcounts,trnalist, trnaloci, bedtypes, emblbiotypes,sizefactor, countfrags = countfrags , extraseqtypes = extraseqtypes)
     printrealcounts(realcountfile, samples, sampledata,allcounts,trnalist, trnaloci, bedtypes, emblbiotypes , extraseqtypes = extraseqtypes)
 

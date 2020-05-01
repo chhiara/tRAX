@@ -145,6 +145,7 @@ write.table(alllogvals,paste(experimentname,"/",experimentname,"-logvals.txt", s
 
 
 outputformat = ".pdf"
+if(length(args) > 3){
 for (currpair in colnames(alllogvals)){
 
 currlogval = alllogvals[,c(currpair)]
@@ -163,6 +164,7 @@ currsampledata = data.frame(currlogval, currprob)
 currplot <- ggplot(currsampledata, aes_string(x="currlogval", y="currprob")) + geom_point() +scale_x_continuous() +scale_y_continuous(trans=reverselog_trans(10))+geom_hline(yintercept = .05, linetype = 2)+geom_hline(yintercept = .005, linetype = 2)+theme_bw() + xlab("Log2-Fold Change")+ylab("Adjusted P-value")+ggtitle(currpair)+theme(legend.box="horizontal",aspect.ratio=1,axis.text.x=element_text(angle=90,hjust=1,vjust=0.5))
 ggsave(paste(experimentname,"/",currpair ,"-volcano",outputformat,sep= ""), currplot) 
 
+}
 }
 
 

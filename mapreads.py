@@ -17,9 +17,9 @@ MAXMAPS = 100
 numcores = 4
 
 
+defaultminnontrnasize = 20
 
-
-def wrapbowtie2(bowtiedb, unpaired, outfile, scriptdir, trnafile, maxmaps = MAXMAPS,program = 'bowtie2', logfile = None, mapfile = None, expname = None, samplename = None):
+def wrapbowtie2(bowtiedb, unpaired, outfile, scriptdir, trnafile, maxmaps = MAXMAPS,program = 'bowtie2', logfile = None, mapfile = None, expname = None, samplename = None, minnontrnasize = defaultminnontrnasize):
     '''
     I think the quals are irrelevant due to the RT step, and N should be scored as only slightly better than a mismatch
     this does both
@@ -34,7 +34,7 @@ def wrapbowtie2(bowtiedb, unpaired, outfile, scriptdir, trnafile, maxmaps = MAXM
     #print >>sys.stderr, bowtiecommand
     temploc = os.path.basename(outfile)
     #bowtiecommand = bowtiecommand + ' | '+scriptdir+'choosemappings.py '+trnafile+' | samtools sort - '+outfile
-    bowtiecommand = bowtiecommand + ' | '+scriptdir+'choosemappings.py '+trnafile+' --progname='+"TRAX"+ ' --fqname=' +unpaired+' --expname='+expname + ' | samtools sort -T '+tempfile.gettempdir()+"/"+temploc+'temp - -o '+outfile+'.bam'
+    bowtiecommand = bowtiecommand + ' | '+scriptdir+'choosemappings.py '+trnafile+' --progname='+"TRAX"+ ' --fqname=' +unpaired+' --expname='+expname + ' --minnontrnasize='+str(minnontrnasize)+' | samtools sort -T '+tempfile.gettempdir()+"/"+temploc+'temp - -o '+outfile+'.bam'
     print >>sys.stderr,  bowtiecommand
     if logfile:
         print >>logfile,  bowtiecommand
@@ -123,6 +123,7 @@ def testmain(**argdict):
     mapfile = argdict["mapfile"]
     bowtiedb = argdict["bowtiedb"]
     lazycreate = argdict["lazy"]
+    minnontrnasize = argdict["minnontrnasize"]
     
     if "cores" in argdict:
         cores = int(argdict["cores"])
@@ -213,7 +214,7 @@ def testmain(**argdict):
                 print >>sys.stderr, "Skipping "+samplename
 
             else:
-                mapargs.append(compressargs(bowtiedb, sampledata.getfastq(samplename),bamfile,scriptdir, trnafile, expname = samplefilename, samplename = samplename))
+                mapargs.append(compressargs(bowtiedb, sampledata.getfastq(samplename),bamfile,scriptdir, trnafile, expname = samplefilename, samplename = samplename, minnontrnasize = minnontrnasize))
                 
                 
                 #mapresults[samplename] = mapreads(bowtiedb, sampledata.getfastq(samplename),bamfile,scriptdir, trnafile,  logfile=logfile, expname = samplefilename)
@@ -241,7 +242,7 @@ def testmain(**argdict):
                 
             else:
         
-                mapresults[samplename] = mapreads(bowtiedb, sampledata.getfastq(samplename),bamfile,scriptdir, trnafile,  logfile=logfile, expname = samplefilename)
+                mapresults[samplename] = mapreads(bowtiedb, sampledata.getfastq(samplename),bamfile,scriptdir, trnafile,  logfile=logfile, expname = samplefilename, minnontrnasize = minnontrnasize)
 
     if lazycreate:
         #here is where I might add stuff to read old files in lazy mode

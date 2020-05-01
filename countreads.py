@@ -110,7 +110,7 @@ class featurecount:
        return self.trnaendtypecounts[genename]
 
 
-def getbamcounts(bamfile, samplename,trnainfo, trnaloci, trnalist,featurelist = list(),otherseqdict = dict(), embllist = list(), nomultimap = False, allowindels = True, maxmismatches = None):
+def getbamcounts(bamfile, samplename,trnainfo, trnaloci, trnalist,featurelist = dict(),otherseqdict = dict(), embllist = list(), bedfiles = list(),nomultimap = False, allowindels = True, maxmismatches = None):
     samplecounts = featurecount(samplename, bamfile, trnas = trnalist, trnaloci = trnaloci, emblgenes = embllist, otherfeats = featurelist)
     fullpretrnathreshold = 2
     minpretrnaextend = 5
@@ -125,6 +125,14 @@ def getbamcounts(bamfile, samplename,trnainfo, trnaloci, trnalist,featurelist = 
     
     
     currbam = bamfile
+    
+    for currfile in bedfiles:
+        bedfeatures = list(readfeatures(currfile, removepseudo = False))
+        for curr in bedfeatures:
+            genetypes[curr.name] = os.path.basename(currfile)
+            
+        featurelist[currfile] = bedfeatures
+    
     #print >>sys.stderr, currsample
     #doing this thing here why I only index the bamfile if the if the index file isn't there or is older than the map file
     try:
@@ -141,16 +149,17 @@ def getbamcounts(bamfile, samplename,trnainfo, trnaloci, trnalist,featurelist = 
         
     
     
-
-    for currfeat in featurelist:
-        #try catch is to account for weird chromosomes and the like that aren't in the genome
-        #means that if I can't find a feature, I record no counts for it rather than bailing
-        try:
-            for currread in getbamrange(bamfile, currfeat, singleonly = nomultimap, maxmismatches = maxmismatches,allowindels = allowindels):
-                if currfeat.coverage(currread) > 10:
-                    samplecounts.addcount(currfeat.name)
-        except ValueError:
-            pass
+    for currfile in featurelist.iterkeys():
+        for currfeat in featurelist[currfile]:
+            #try catch is to account for weird chromosomes and the like that aren't in the genome
+            #means that if I can't find a feature, I record no counts for it rather than bailing
+            try:
+                for currread in getbamrange(bamfile, currfeat, singleonly = nomultimap, maxmismatches = maxmismatches,allowindels = allowindels):
+                    if currfeat.coverage(currread) > 10:
+                        samplecounts.addcount(currfeat.name)
+                        samplecounts.setgenetype(currfeat.name,currfile)
+            except ValueError:
+                pass
 
     
     for currtype in otherseqdict.iterkeys():
@@ -259,12 +268,13 @@ def printcountfile(countfile, samples,  samplecounts, trnalist, trnaloci, featur
             print >>countfile, currfeat.name+"_wholeprecounts\t"+"\t".join(str(samplecounts[currsample].getfulllocuscount(currfeat.name) ) for currsample in samples)
             print >>countfile, currfeat.name+"_partialprecounts\t"+"\t".join(str(samplecounts[currsample].getpartiallocuscount(currfeat.name) ) for currsample in samples)
             print >>countfile, currfeat.name+"_trailercounts\t"+"\t".join(str(samplecounts[currsample].getlocustrailercount(currfeat.name)) for currsample in samples)        
-    for currfeat in featurelist :
-        if currfeat.name in trnanames:
-            continue
-        trnanames.add(currfeat.name)
-        if max(samplecounts[currsample].getgenecount(currfeat.name) for currsample in samples) > minreads:
-            print >>countfile, currfeat.name+"\t"+"\t".join(str(samplecounts[currsample].getgenecount(currfeat.name)) for currsample in samples)
+    for currbed in featurelist.iterkeys():
+        for currfeat in featurelist[currbed]:
+            if currfeat.name in trnanames:
+                continue
+            trnanames.add(currfeat.name)
+            if max(samplecounts[currsample].getgenecount(currfeat.name) for currsample in samples) > minreads:
+                print >>countfile, currfeat.name+"\t"+"\t".join(str(samplecounts[currsample].getgenecount(currfeat.name)) for currsample in samples)
     for currtype in otherseqdict.iterkeys():        
         for currfeat in otherseqdict[currtype] :
         
@@ -292,12 +302,13 @@ def printtypefile(genetypeout,samples, allcounts,trnalist, trnaloci, featurelist
     for currsample in samples:
         genetypes.update(allcounts[currsample].genetypes)
 
-    for currfeat in featurelist :
-        if currfeat.name in trnanames:
-            continue
-        #trnanames.add(currfeat.name)
-        if max(allcounts[currsample].counts[currfeat.name] for currsample in samples) > minreads:
-            print >>genetypeout, currfeat.name+"\t"+genetypes[currfeat.name]   
+    for currbed in featurelist.iterkeys():
+        for currfeat in featurelist[currbed] :
+            if currfeat.name in trnanames:
+                continue
+            #trnanames.add(currfeat.name)
+            if max(allcounts[currsample].counts[currfeat.name] for currsample in samples) > minreads:
+                print >>genetypeout, currfeat.name+"\t"+genetypes[currfeat.name]   
     
         
     for currfeat in trnaloci:
@@ -358,7 +369,7 @@ def printtrnacountfile(trnacountfilename,samples,  samplecounts, trnalist, trnal
 trnaends = list(["CCA","CC","C",""])    
 def printtrnaendfile(trnaendfilename,samples,  samplecounts, trnalist, trnaloci , minreads = 5):
     trnaendfile = open(trnaendfilename, "w")
-    print >>trnaendfile, "\t".join(currsample for currsample in samples)
+    print >>trnaendfile, "end\t"+"\t".join(currsample for currsample in samples)
 
     for currfeat in trnalist:
         if max(samplecounts[currsample].gettrnacount(currfeat.name) for currsample in samples) < minreads:
@@ -367,7 +378,7 @@ def printtrnaendfile(trnaendfilename,samples,  samplecounts, trnalist, trnaloci 
             endstring = currend
             if currend == "":
                 endstring = "Trimmed"
-            print  >>trnaendfile, currfeat.name+"_"+endstring+"\t"+"\t".join(str(samplecounts[currsample].getendtypecount(currfeat.name)[currend]) for currsample in samples)
+            print  >>trnaendfile, currfeat.name+"\t"+endstring+"\t"+"\t".join(str(samplecounts[currsample].getendtypecount(currfeat.name)[currend]) for currsample in samples)
     trnaendfile.close()   
     
 def getbamcountsthr(results,currsample, *args, **kwargs):
@@ -434,16 +445,16 @@ def testmain(**argdict):
     fullpretrnathreshold = 2
     #Grabbing all the features to count
     try:
-        featurelist = list()
+        featurelist = dict()
         trnaloci = list()
         otherseqdict = dict()
         for currfile in bedfiles:
-            
-            bedfeatures = list(readfeatures(currfile, removepseudo = removepseudo))
-            for curr in bedfeatures:
-                genetypes[curr.name] = os.path.basename(currfile)
+            pass
+            #bedfeatures = list(readfeatures(currfile, removepseudo = removepseudo))
+            #for curr in bedfeatures:
+                #genetypes[curr.name] = os.path.basename(currfile)
                 
-            featurelist.extend(bedfeatures)
+            #featurelist[currfile] = bedfeatures
         trnalist = list()
         for currfile in trnalocifiles:
             trnaloci.extend(list(readbed(currfile)))
@@ -460,13 +471,13 @@ def testmain(**argdict):
         print >>sys.stderr, e
         sys.exit()
     featcount = defaultdict(int)
-    allfeats = featurelist+trnaloci+trnalist
+    allfeats = trnaloci+trnalist
     if len(set(curr.name for curr in allfeats)) < len(list(curr.name for curr in allfeats )):
         print >>sys.stderr, "Duplicate names in feature list"
     
     
     #featurelist = list(curr for curr in featurelist if curr.name == 'unknown20') 
-    alltrnas = list(curr.name for curr in featurelist)
+    #alltrnas = list(curr.name for curr in featurelist)
     #print >>sys.stderr, "***"
     #setting up all the feature count dictionaries
                             
@@ -480,7 +491,7 @@ def testmain(**argdict):
         arglist = list()
         for currsample in samples:
             currbam = sampledata.getbam(currsample)
-            arglist.append(compressargs(currbam, currsample,trnainfo, trnaloci, trnalist, otherseqdict = otherseqdict, embllist = embllist, featurelist = featurelist, maxmismatches = maxmismatches))
+            arglist.append(compressargs(currbam, currsample,trnainfo, trnaloci, trnalist, otherseqdict = otherseqdict, embllist = embllist, featurelist = featurelist, bedfiles = bedfiles, maxmismatches = maxmismatches))
         #arglist = list((tuple([currsample, sampledata.getbam(currsample)]) for currsample in samples))
         results = countpool.map(countreadspool, arglist)
         for i, curr in enumerate(samples):
@@ -491,7 +502,7 @@ def testmain(**argdict):
         for currsample in samples:
             
             currbam = sampledata.getbam(currsample)
-            allcounts[currsample] = getbamcounts(currbam, currsample,trnainfo, trnaloci, trnalist, otherseqdict = otherseqdict,embllist = embllist, featurelist = featurelist, maxmismatches = maxmismatches)
+            allcounts[currsample] = getbamcounts(currbam, currsample,trnainfo, trnaloci, trnalist, otherseqdict = otherseqdict,embllist = embllist, featurelist = featurelist, bedfiles = bedfiles, maxmismatches = maxmismatches)
             #getbamcountsthr(allcounts, allcounts)
             #threads[currsample] = threading.Thread(target=getbamcountsthr, args=(allcounts,currsample,currbam, currsample,trnainfo, trnaloci, trnalist), kwargs = {'embllist' : embllist, 'featurelist' : featurelist, 'maxmismatches' : maxmismatches})
             #threads[currsample].start()
@@ -526,7 +537,7 @@ def testmain(**argdict):
     if trnauniquefilename is not None:
         
         #trnauniquefile = open(trnauniquefilename, "w")
-        printtrnauniquecountcountfile(trnacountfilename,samples,  allcounts, trnalist, trnaloci )
+        printtrnauniquecountcountfile(trnauniquefilename,samples,  allcounts, trnalist, trnaloci )
         #print >>trnauniquefile, "\t".join(currsample for currsample in samples)
         #for currfeat in trnalist:
         #    if max(trnacounts[currsample][currfeat.name] for currsample in samples) < minreads:

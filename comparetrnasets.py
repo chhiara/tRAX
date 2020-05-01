@@ -49,6 +49,15 @@ def hellingerdistance(firset, secset):
 
     return euclidean(np.sqrt(firset), np.sqrt(secset))/sqrt2 
 
+
+def multifasta(allseqs, filename):
+    fafile = open(filename, "w")
+
+
+    for seqname, seq in allseqs.iteritems():
+        fafile.write(">"+seqname+"\n")
+        fafile.write(seq+"\n")
+    fafile.flush()
 #print >>sys.stderr, len(positions)
 #this gets the tRNA numbers by the sprinzel numbering system
 def gettnanums(trnaalign, margin = 0):
@@ -203,7 +212,109 @@ def traxtrnafile(logfoldchange, pvalfile, countfile, trnas, pvalcutoff = .05, mi
                 continue
             yield samplepair+"_"+currtype, clustdict 
     
+
+
+
+
+def traxgenefile(logfoldchange, pvalfile, countfile, genes, pvalcutoff = .05, minlogdiff = 0):
+    logchange = defaultdict(lambda: defaultdict(dict))
+    pvals = defaultdict(lambda: defaultdict(dict))
+    counts = defaultdict(lambda: defaultdict(dict))
     
+    headers = list()
+    
+    subtypes = set()
+    for i, currline in enumerate(open(logfoldchange)):
+        fields = currline.split()
+        if i == 0:
+            headers = list(curr.strip('"') for curr in fields)
+            continue
+        rowset = fields[0].strip('"').split("_")
+        rowname = rowset[0]
+        rowtype = ""
+        if len(rowset) > 1:
+            rowtype = rowset[1]
+            subtypes.add(rowtype)
+        for j, curr in enumerate(headers):
+            if fields[j+1] == "NA":
+                logchange[headers[j]][rowname] = 0.0
+            else:
+                logchange[headers[j]][rowname] = float(fields[j+1])
+    for i, currline in enumerate(open(pvalfile)):
+        fields = currline.split()
+        if i == 0:
+            headers = list(curr.strip('"') for curr in fields)
+            continue
+        rowset = fields[0].strip('"').split("_")
+        rowname = rowset[0]
+        rowtype = ""
+        if len(rowset) > 1:
+            rowtype = rowset[1]
+            subtypes.add(rowtype)
+        for j, curr in enumerate(headers):
+            #print >>sys.stderr, headers[j]
+            #print >>sys.stderr, rowname
+            if fields[j+1] == "NA":
+                pvals[headers[j]][rowname] = 1.0
+            else:
+                pvals[headers[j]][rowname] = float(fields[j+1])
+    trnasums = defaultdict(dict)
+    for i, currline in enumerate(open(countfile)):
+        fields = currline.split()
+        if i == 0:
+            headers = list(curr.strip('"') for curr in fields)
+            continue
+        rowset = fields[0].strip('"').split("_")
+        rowname = rowset[0]
+        rowtype = ""
+        #print >>sys.stderr, rowset
+        if len(rowset) > 1:
+            rowtype = rowset[1]
+            subtypes.add(rowtype)
+        #if rowname.startswith("tRNA"):
+            #print >>sys.stderr, rowname
+        for j, curr in enumerate(headers):
+            counts[headers[j]][rowname][rowtype] = float(fields[j+1])
+        trnasums[rowname][rowtype] = sum(float(curr) for curr in fields[1:])
+    
+    #print >>sys.stderr, trnas
+    samplenames = pvals.keys()
+    #print >>sys.stderr, samplenames
+    
+
+    
+    
+    for samplepair in samplenames:
+        #print >>sys.stderr, pvals[samplepair].keys()
+        #print >>sys.stderr, pvals[samplepair].keys()
+        clustdict = defaultdict(set)
+        for currgene in genes:
+            #print >>sys.stderr, currgene.name
+            #print >>sys.stderr, pvals[samplepair].keys()
+            if currgene.name in pvals[samplepair]:
+                #print >>sys.stderr, pvals[samplepair].keys()
+                #print >>sys.stderr, currtype
+                pass
+            
+            #print >>sys.stderr, pvals[samplepair].keys()
+            if currgene.name in pvals[samplepair]:
+                #print >>sys.stderr, "**||"
+                if pvals[samplepair][currgene.name] < pvalcutoff:
+                    
+                    if logchange[samplepair][currgene.name]> minlogdiff:
+                        clustdict["plus"].add(currgene.name)
+                    elif logchange[samplepair][currgene.name] < -minlogdiff:
+                        clustdict["minus"].add(currgene.name)
+                elif trnasums[currgene.name] > 30:
+                    clustdict["neutral"].add(currgene.name)
+                    
+                    #if currtype == 'SNORD92':
+                    #print >>sys.stderr, pvals[samplepair][currtrna][currtype]
+        if len(clustdict["plus"]) == 0 and len(clustdict["minus"]) == 0:
+            continue
+        yield samplepair, clustdict 
+    
+
 newpositions = list(str(curr) for curr in positions)        
 def freqline(indict):
     bases = ['A', 'C', 'G', 'U', '-']
@@ -239,29 +350,51 @@ def comparesets(trnalistone, trnalisttwo,trnastk, positionnums):
         print basediffs[i]
         print "\t"+ freqline(firfreqcounts[basediffs[i]])
         print "\t"+ freqline(secfreqcounts[basediffs[i]])
+        
+        
+def printseqs(pairname, positivelist, negativelist, neutrallist,genomefile, filterlabel = None):
+    filtername = ""
+    if filterlabel is not None:
+        filtername = "_"+filterlabel
+    
+    genome = fastaindex( genomefile, genomefile +".fai") 
+    posseqs = genome.getseqs(positivelist)
+    negseqs = genome.getseqs(negativelist)
+    neutseqs = genome.getseqs(neutrallist)
+    multifasta(posseqs, pairname + filtername+ "_positive-seqs.fa")
+    multifasta(negseqs, pairname + filtername+ "_negative-seqs.fa")
+    multifasta(neutseqs,pairname + filtername+ "_neutral-seqs.fa")
+        
+def getgenetypes(genetypename):
+    genetypes = dict()
+    genetypefile = open(genetypename, "r")
+    for currline in genetypefile:
+        fields = currline.split("\t")
+        genetypes[fields[0]] = fields[1].rstrip()
+    return genetypes
+        
 def main(**argdict):
     edgemargin = 0
-    trnastk = list(readrnastk(open(os.path.expanduser(argdict["stkfile"]), "r")))[0]
-    
-    
-    positionnums = gettnanums(trnastk, margin = edgemargin)
-    trnastk = trnastk.addmargin(edgemargin)
-    
-    #print "\t".join(trnastk.aligns['tRNA-Ala-CGC-1'])
-    #print "\t".join(positionnums)
-    
-    trnainfo  = transcriptfile(os.path.expanduser(argdict["trnafile"]))
-    baseinfo = defaultdict(dict)
-    
-    #print positionnums
-    for currtrna in trnainfo.gettranscripts():
-        for i, posname in enumerate(positionnums):
-            baseinfo[currtrna][posname] = trnastk.aligns[currtrna][i]
+    if "stkfile" in argdict and argdict["stkfile"] is not None:
+        trnastk = list(readrnastk(open(os.path.expanduser(argdict["stkfile"]), "r")))[0]
+        positionnums = gettnanums(trnastk, margin = edgemargin)
+        trnastk = trnastk.addmargin(edgemargin)
+        
+        #print "\t".join(trnastk.aligns['tRNA-Ala-CGC-1'])
+        #print "\t".join(positionnums)
+        
+        trnainfo  = transcriptfile(os.path.expanduser(argdict["trnafile"]))
+        baseinfo = defaultdict(dict)
+        
+        #print positionnums
+        for currtrna in trnainfo.gettranscripts():
+            for i, posname in enumerate(positionnums):
+                baseinfo[currtrna][posname] = trnastk.aligns[currtrna][i]
         #print baseinfo[currtrna]
 
     
-    trnalistone = trnainfo.getaminotranscripts("Arg")
-    trnalisttwo = trnainfo.getaminotranscripts("Glu")
+        trnalistone = trnainfo.getaminotranscripts("Arg")
+        trnalisttwo = trnainfo.getaminotranscripts("Glu")
     
     '''
     clustfile = "/projects/lowelab/users/holmes/pythonsource/trnatest/test/poscompare/Mouse_Brain_M4_minusAlkB_67pos_A_clust_groups.txt"
@@ -272,18 +405,43 @@ def main(**argdict):
         noncluster = set(itertools.chain.from_iterable(trnasets[curr] for curr in trnasets.keys() if curr != currcluster))
         comparesets(trnasets[currcluster], noncluster,trnastk)
     '''
-    logfoldchange = '/projects/sharma/holmes/sharmasra/sharma2018/sharma2018-logvals.txt'
-    pvalfile = '/projects/sharma/holmes/sharmasra/sharma2018/sharma2018-padjs.txt'
-    countfile = '/projects/sharma/holmes/sharmasra/sharma2018/sharma2018-readcounts.txt'
+    logfoldchange = '/projects/sharma/users/holmes/sharmasra/sharma2017samples/sharma2017samples-logvals.txt'
+    pvalfile = '/projects/sharma/users/holmes/sharmasra/sharma2017samples/sharma2017samples-padjs.txt'
+    countfile = '/projects/sharma/users/holmes/sharmasra/sharma2017samples/sharma2017samples-readcounts.txt'
+    genetypefile = '/projects/sharma/users/holmes/sharmasra/sharma2017samples/sharma2017samples-genetypes.txt'
+    ensemblgtf = "/projects/lowelab/users/holmes/pythonsource/trnatest/trnadbs/mm10/mm10.gtf.gz"
+    genomefile = "/projects/lowelab/users/holmes/pythonsource/trnatest/trnadbs/mm10/mm10-tRNAgenome.fa"
     
-    logfoldchange = '/projects/lowelab/users/holmes/pythonsource/trnatest/kitcomp/armseqhumannew2/armseqhumannew2-logvals.txt'
-    pvalfile =      '/projects/lowelab/users/holmes/pythonsource/trnatest/kitcomp/armseqhumannew2/armseqhumannew2-padjs.txt'
-    countfile =     '/projects/lowelab/users/holmes/pythonsource/trnatest/kitcomp/armseqhumannew2/armseqhumannew2-readcounts.txt'
     
+    #logfoldchange = '/projects/lowelab/users/holmes/pythonsource/trnatest/kitcomp/armseqhumannew2/armseqhumannew2-logvals.txt'
+    #pvalfile =      '/projects/lowelab/users/holmes/pythonsource/trnatest/kitcomp/armseqhumannew2/armseqhumannew2-padjs.txt'
+    #countfile =     '/projects/lowelab/users/holmes/pythonsource/trnatest/kitcomp/armseqhumannew2/armseqhumannew2-readcounts.txt'
+     
     
-        
-    trnatranscripts = trnainfo.gettranscripts()
+    genetypes = getgenetypes(genetypefile)
+    genefeats = list(readgtf(ensemblgtf, filterpsuedo = False, replacename = True))
+    featnames =  {curr.name: curr for curr in genefeats} 
+    
+    #trnatranscripts = trnainfo.gettranscripts() 
+    
     pvalcutoff = .005
+    
+    #print "**"
+    filtertype = "miRNA"
+    flank = 50
+    for currpair, currtrnaset in traxgenefile(logfoldchange, pvalfile, countfile,genefeats, pvalcutoff = pvalcutoff):
+        clustpair = list(currtrnaset.keys())
+        #print "**"
+        #print genetypes.values()
+        #print str(len(currtrnaset["plus"]))+"+"+str(len(currtrnaset["minus"]))+"+"+str(len(currtrnaset["neutral"]))+"/"+str(len(genefeats))
+        #print currtrnaset["neutral"]
+        posgenes = {curr: featnames[curr].addmargin(50) for curr in currtrnaset["plus"] if filtertype is None or genetypes[curr] == filtertype }
+        minusgenes = {curr: featnames[curr].addmargin(50) for curr in currtrnaset["minus"] if filtertype is None or genetypes[curr] == filtertype }
+        neutralgenes = {curr: featnames[curr].addmargin(50) for curr in currtrnaset["neutral"] if filtertype is None or genetypes[curr] == filtertype }
+        print >>sys.stderr, (len(neutralgenes.keys()))
+        printseqs(currpair, posgenes,minusgenes, neutralgenes, genomefile, filterlabel = filtertype) 
+
+    ''' 
     for currpair, currtrnaset in traxtrnafile(logfoldchange, pvalfile, countfile, trnatranscripts, pvalcutoff = pvalcutoff):
         clustpair = list(currtrnaset.keys())
         print currpair
@@ -293,7 +451,7 @@ def main(**argdict):
         comparesets(currtrnaset["plus"] , currtrnaset["minus"] | currtrnaset["neutral"],trnastk, positionnums)
         print "Minus exclusive"
         comparesets(currtrnaset["minus"], currtrnaset["plus"] | currtrnaset["neutral"],trnastk, positionnums)
-                                                                                            
+    '''                                                                              
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Generate fasta file containing mature tRNA sequences.')

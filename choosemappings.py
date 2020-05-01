@@ -18,7 +18,7 @@ Here is where I need to use the tRNA ontology between mature tRNAs and chromosom
 
 
 '''
-minnontrnasize = 20
+defminnontrnasize = 20
 
 maxmaps = 50
 
@@ -29,7 +29,7 @@ maxmaps = 50
 def isprimarymapping(mapping):
     return not (mapping.flag & 0x0100 > 0)
 
-def getbesttrnamappings(trnafile, bamout = True, logfile = sys.stderr, progname = None, fqname = None, libname = None,setcountfile = None, extraseqfilename = None):
+def getbesttrnamappings(trnafile, bamout = True, logfile = sys.stderr, progname = None, fqname = None, libname = None,setcountfile = None, extraseqfilename = None, minnontrnasize = defminnontrnasize):
     
     trnadata = transcriptfile(trnafile)
     trnatranscripts = set(trnadata.gettranscripts())
@@ -285,8 +285,10 @@ if __name__ == "__main__":
                        help='library name')
     parser.add_argument('--trnasetcounts',
                        help='Counts for all sets of tRNAs')
+    parser.add_argument('--minnontrnasize',type=int,default=20,
+                       help='Minimum read length for non-tRNAs')
 
     
     args = parser.parse_args()
-    getbesttrnamappings(args.trnaname, progname = args.progname, fqname = args.fqname, libname = args.expname, setcountfile = args.trnasetcounts)
+    getbesttrnamappings(args.trnaname, progname = args.progname, fqname = args.fqname, libname = args.expname, setcountfile = args.trnasetcounts, minnontrnasize = args.minnontrnasize)
 

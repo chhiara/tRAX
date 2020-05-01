@@ -124,15 +124,15 @@ Special file formats
     
 How to run
  - Create tRNA database with maketrnadb.py
-   - Usage: maketrnadb.py --databasename=dbname --genomefile=genome.fa --trnascanfile=trnascan.txt --gtrnafafile=db-tRNAs.fa
+   - Usage: maketrnadb.py --databasename=dbname --genomefile=genome.fa --trnascanfile=trnascan.txt --namemap=db-tRNAs_name_map.txt
      - dbname is the name that will be used for that database
      - trnascan.txt is the output of a tRNAscan-SE run on the genome
      - genome.fa contains a fasta file of the genome
-     - db-tRNAs.fa.fa is the tRNA fasta file from gtRNAdb(Used for getting the tRNA names) 
+     - db-tRNAs_name_map.txt is the name_map file from gtRNAdb(Used for getting the tRNA names) 
    - Need to do this once for each organism 
      
  - Map reads and analyze with processsamples.py
-   - Usage: processsamples.py --experimentname=expname --databasename=dbname --samplefile=samplefile.txt --ensemblgtf=genes.gtf.gz --exppairs=samplespairs.txt 
+   - Usage: processsamples.py --experimentname=expname --databasename=dbname --samplefile=samplefile.txt --ensemblgtf=genes.gtf.gz --exppairs=samplespairs.txt [--nofrag]
      
      - expname is a name that will be used for results
      - dbname is the directory and name of a database from a previous run of maketrnadb.bash
@@ -141,6 +141,7 @@ How to run
        - A command I've use to get the ensembl transcript is "wget -q -O - ftp://ftp.ensembl.org/pub/release-75/gtf/homo_sapiens/Homo_sapiens.GRCh37.75.gtf.gz | gzip -cd | grep -v '^#' | awk '{print "chr" $0;}' | grep -e Mt_rRNA -e miRNA -e misc_RNA -e rRNA -e snRNA -e snoRNA -e ribozyme -e sRNA -e scaRNA  >hg19-genes.gtf"
      - samplespairs.txt is an optional argument that contains sample pairs to compare
      - by default, will not remap reads if mapping files exist.  --force argument will force remapping   
+     - nofrag is used to disable fragment seperation, this is meant for use with dm-tRNA sequencing data
      
 Output files
   - All output files aside from mappings are outputted to expname directory
@@ -160,7 +161,11 @@ Output files
   - expname-typecounts.txt
     - Read distribution of primary read mappings amongst tRNA fragment types, non-trnas, pre-trnas, and unannotated features
   - expname-typecounts.pdf
-    - Visualization of above read distribution
+    - Visualization of above read distribution among gene types by percentage
+  - expname-typecountsreal.pdf    
+    - Visualization of above read distribution among gene types by counts
+  - expname-aminocounts.pdf    
+    - Visualization of tRNA distribution by amino acid.  
   - expname-coverage.txt
     - Aligned Base-wise normalized coverage of reads for all tRNAs and samples, using Sprinzel tRNA numbering 
   - expname-coverage.pdf
@@ -169,11 +174,51 @@ Output files
     - Summary chart showing read distribution for entire samples, seperated by acceptor type
   - expname-uniquecoverages.pdf
     - Visualization of coverage colored by degree of uniqueness in mapping
-    
-  - sample1_sample2-typescatter.txt
+  - expname-pca.pdf    
+    - Principle component analysis of samples, based on counts of all features.  
+  - expname-pcatrna.pdf    
+    - Principle component analysis of samples, based on counts of just tRNAs.  
+
+  - sample1_sample2-typescatter.pdf
     - Log of normalized read counts for each fragment type, colored by gene type
-  - sample1_sample2-aminoscatter.txt
-    - Log of normalized read counts for tRNA fragment types.  non-tRNAs are the small black dots, tRNA fragment types are seperated and 
+  - sample1_sample2-aminoscatter.pdf
+    - Log of normalized read counts for tRNA fragment types.  non-tRNAs are the small black dots, tRNA fragment types are seperated unless --nofrag is used
+  - Mismatch files
+    - mismatch/trnapositionmismatches.pdf
+      - Maximum mismimatch percent among all samples for each base position
+    - mismatch/trnapositionfiveprime.pdf
+      - Maximum start position percent among all samples for each base position
+    - mismatch/sample-amino_mismatch.pdf
+      - base-wise coverage of mismatches for all tRNAs
+    - mismatch/sample-amino_delete.pdf
+      - coverage of deletions for all tRNAs
+    - mismatch/sample-amino_fiveprimeends.pdf
+      - coverage of five-prime ends for all tRNAs
+
+    
+    - mismatch/amino-mismatchheatmap.pdf
+      - heatmap of mismatches for all tRNAs
+    - mismatch/amino-threeprimeheatmap.pdf
+      - heatmap of five-prime ends for all tRNAs
+    - mismatch/amino-fiveprimeheatmap.pdf
+      - heatmap of five-prime ends for all tRNAs
+
+    - mismatch/amino-fiveprimecounts.pdf
+      - Distribution of five-prime ends among all positions for each sample
+      
+    - mismatch/position-posaminomismatches.pdf
+      - Mismatch percentage at position by amino acid 
+    - mismatch/position-possamplemismatches.pdf
+      - Mismatch percentage at position by sample
+    - mismatch/position-posaminodeletions.pdf
+      - Deletion percentage at position by amino acid 
+    - mismatch/position-possampledeletions.pdf
+      - Deletion percentage at position by sample 
+    - mismatch/position-possamplereadstarts.pdf
+      - Read start percentage at position by sample 
+
+    - mismatch/position-possamplereadstarts.pdf
+      - Read start percentage at position by sample 
 
 
    

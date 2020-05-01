@@ -635,7 +635,7 @@ def readfeatures(filename, orgdb="genome", seqfile= None, removepseudo = False):
         sys.exit()
 
 
-def readgtf(filename, orgdb="genome", seqfile= None, filterpsuedo = False, filtertypes = set(['retained_intron','antisense','lincRNA'])):
+def readgtf(filename, orgdb="genome", seqfile= None, filterpsuedo = False, replacename = False, filtertypes = set(['retained_intron','antisense','lincRNA'])):
     bedfile = None
     #print >>sys.stderr, "****"
     if filename == "stdin":
@@ -695,7 +695,8 @@ def readgtf(filename, orgdb="genome", seqfile= None, filterpsuedo = False, filte
                 
                 skippedlines += 1
             else:
-                                    
+                if replacename:
+                    featname = genename
                 yield GenomeRange( orgdb, fields[0],fields[3],fields[4],fields[6], name = featname, fastafile = seqfile, data = {"biotype":biotype, "source":genesource, "genename":genename,"feature":fields[2]})
             
 def readbed(filename, orgdb="genome", seqfile= None, includeintrons = False):

@@ -284,7 +284,7 @@ spec <- matrix(c(
 
 #trnapositions = c('0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','17a','18','19','20','20a','20b','21','22','23','24','25','26','27','28','29','30','31','32','33','34','35','36','37','38','39','40','41','42','43','44','45','e1','e2','e3','e4','e5','e6','e7','e8','e9','e10','e11','e12','e13','e14','e15','e16','e17','e18','e19','46','47','48','49','50','51','52','53','54','55','56','57','58','59','60','61','62','63','64','65','66','67','68','69','70','71','72','73','74','75','76')
 
-trnapositions = c('0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','17a','18','19','20','20a','20b','21','22','23','24','25','26','27','28','29','30','31','32','33','34','35','36','37','38','39','40','41','42','43','44','45','46','47','48','49','50','51','52','53','54','55','56','57','58','59','60','61','62','63','64','65','66','67','68','69','70','71','72','73','74','75','76')
+trnapositions = c('-1','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','17a','18','19','20','20a','20b','21','22','23','24','25','26','27','28','29','30','31','32','33','34','35','36','37','38','39','40','41','42','43','44','45','46','47','48','49','50','51','52','53','54','55','56','57','58','59','60','61','62','63','64','65','66','67','68','69','70','71','72','73','74','75','76')
 
 #locuspositions = c("head30","head29","head28","head27","head26","head25","head24","head23","head22","head21","head20","head19","head18","head17","head16","head15","head14","head13","head12","head11","head10","head9","head8","head7","head6","head5","head4","head3","head2","head1","0","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","43","44","45","46","47","48","49","50","51","52","53","54","55","56","57","58","59","60","61","62","63","64","65","66","67","68","69","70","71","72","73","74","75","76","tail1","tail2","tail3","tail4","tail5","tail6","tail7","tail8","tail9","tail10","tail11","tail12","tail13","tail14","tail15","tail16","tail17","tail18","tail19","tail20","tail21","tail22","tail23","tail24","tail25","tail26","tail27","tail28","tail29","tail30")
 
@@ -300,6 +300,7 @@ locicoverages <- read.table(opt$locicov, header = TRUE,row.names = NULL, strings
 
 trnatable <- read.table(opt$trna)
 sampletable <- read.table(opt$samples)
+expname <- opt$name
 modomicstable <- data.frame()
 scalefactor = .5
 modomicstable <- read.table(text ="",col.names = c("trna", "mod", "pos"),colClasses = c("character", "character", "character")) #(trna = character(), mod = character(), pos = character(),stringsAsFactors=FALSE)
@@ -698,10 +699,11 @@ aminonamedelsec = paste(opt$directory,"/mismatch/",runname, "-",curramino,"_dele
 makepercentcovplot(aminodeletedata,aminonamedelsec)
 #write.table(aminodeletedata[aminodeletedata$value > .5,], file = paste(opt$directory,"/mismatch/",runname, "-",curramino,"delete.txt",sep= "")) 
 
-
-
-#aminonameunique = paste(uniquename, "-",curramino,"_uniqueonlycov",outputformat,sep= "")
-#makecovplot(aminodata[aminodata$maptype == "Transcript specific",],aminonameunique)
+#locusplotname = paste(opt$directory,"/pretRNAs/",runname,"-pretRNAcoverage.pdf", sep = "")
+#unique only plots
+aminonameunique = paste(opt$directory,"/unique/",opt$directory, "-",curramino,"_uniqueonlycov",outputformat,sep= "")
+#print(head(aminodata[aminodata$maptype == "Transcript specific",]))
+makecovplot(aminodata[aminodata$maptype == "Transcript specific",],aminonameunique)
 
 }
 #change this back
@@ -760,7 +762,7 @@ sortacceptor <- acceptorType[order(locicoverages$variable, locicoverages$Sample,
 
 
 
-covsummary <- ggplot(sortcovmelt,aes(x=variable,y=value, fill = sortacceptor, order = as.numeric(sortacceptor))) + facet_grid( ~ Sample, scales="free") +xlab("Position")+ geom_bar(stat="identity")+theme(axis.text.y=element_text(colour="black",size=8), strip.text.y = element_text(angle=0,size=4),strip.text.x = element_text(angle=0,size=8),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8))+ ylab("Read Share") +   scale_y_continuous(breaks=myBreaks, labels = c("0","1")) +scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon","tail")) +scale_fill_discrete(drop=FALSE, name="Acceptor\ntype", breaks = levels(sortacceptor))
+covsummary <- ggplot(sortcovmelt,aes(x=variable,y=value, fill = sortacceptor, order = as.numeric(sortacceptor))) + facet_grid( ~ Sample, scales="free") +xlab("Position")+ geom_bar(stat="identity")+theme_bw()+theme(axis.text.y=element_text(colour="black",size=8), strip.text.y = element_text(angle=0,size=4),strip.text.x = element_text(angle=0,size=8),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8))+ ylab("Read Share") +   scale_y_continuous(breaks=myBreaks, labels = c("0","1")) +scale_x_discrete(breaks=c("1","13","22","31","39","53","61","73"), labels=c("Start","D-loop start","D-loop end","AC-loop start","AC-loop end","T-loop start","T-loop end","tail")) +scale_fill_discrete(drop=FALSE, name="Acceptor\ntype", breaks = levels(sortacceptor))
 locuscombinedname = paste(opt$directory,"/pretRNAs/",runname,"-pretRNAcombinedcoverage.pdf", sep = "")
 
 ggsave(filename=locuscombinedname,covsummary)
@@ -773,7 +775,7 @@ allmultmelt <- sortcovmelt
 
 #print(head(locicoverages))
 
-locusplot <- ggplot(locicoverages,aes(x=variable,y=value)) + facet_grid(Feature ~ Sample, scales="free") + geom_bar(stat="identity")+theme(axis.title.x=element_blank(), axis.text.y=element_text(colour="black",size=4),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8), strip.text.y = element_text(angle=0,size=6),strip.text.x = element_text(angle=0,size=8))+ ylab("read count") +scale_x_discrete(breaks=c("X1","X37","X73"), labels=c("Start","anticodon","End"))
+locusplot <- ggplot(locicoverages,aes(x=variable,y=value)) + facet_grid(Feature ~ Sample, scales="free") + geom_bar(stat="identity")+theme_bw()+theme(axis.title.x=element_blank(), axis.text.y=element_text(colour="black",size=4),axis.text.x = element_text(angle = 90, hjust = 1,vjust = 0.5,size=8), strip.text.y = element_text(angle=0,size=6),strip.text.x = element_text(angle=0,size=8))+ ylab("read count") +scale_x_discrete(breaks=c("1","13","22","31","39","53","61","73"), labels=c("Start","D-loop start","D-loop end","AC-loop start","AC-loop end","T-loop start","T-loop end","tail"))
 locusplotname = paste(opt$directory,"/pretRNAs/",runname,"-pretRNAcoverage.pdf", sep = "")
 
 ggsave(locusplot, filename=locusplotname,height=.5*length(unique(locicoverages$Feature)),width=2*length(unique(locicoverages$Sample)), limitsize=FALSE)

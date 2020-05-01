@@ -71,22 +71,8 @@ typepal <- c(
   "snoRNA" = "#ff9e18",
   "misc_RNA" = "#b2b2b2"
 )
-#print(unique(countsmelt$seq))
+print(unique(countsmelt$seq))
 
-gg_color_hue <- function(n) {
-  hues = seq(15, 375, length = n + 1)
-  hcl(h = hues, l = 65, c = 100)[1:n]
-}
-
-extratypes = setdiff(unique(countsmelt$seq), names(typepal))
-extratypes = sort(extratypes)
-#print(extratypes)
-#print(unique(countsmelt$seq))
-#print(gg_color_hue(length(extratypes)))
-extracolors = setNames(gg_color_hue(length(extratypes)), extratypes)
-typepal = c(typepal, extracolors)
-    
-    
 
 
 ggplot(countsmelt,aes(x = variable, y = value,fill = seq, stat="identity")) + theme_bw() + theme(panel.border = element_rect(linetype = "blank"), panel.grid = element_line(linetype = "blank")) + 
