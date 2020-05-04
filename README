@@ -145,11 +145,13 @@ How to run
      
 Output files
   - All output files aside from mappings are outputted to expname directory
+  - expname-runinfo.txt
+    - Information on the TRAX run
   - expname-mapstats.txt
     - Bowtie2 mapping statistics for each sample
   - expname-counts.txt
     - Raw counts for each tRNA fragment type and all included non-trna features
-  - expname-normalized.txt
+  - expname-mousedmtrnaseq3-normalizedreadcounts.txt
     - counts as above, normalized using Deseq2 size factors
   - expname-SizeFactors.txt
     - Deseq2 size factors for each sample
@@ -157,6 +159,8 @@ Output files
     - Deseq2 log-fold changes of all pairs of samples in experiment
   - expname-padjs.txt
     - Deseq2 adjusted p-values of all pairs of samples in experiment
+  - expname-combine.txt
+    - Table combining Deseq2 adjusted p-values, log-fold changes, and adjusted counts
 
   - expname-typecounts.txt
     - Read distribution of primary read mappings amongst tRNA fragment types, non-trnas, pre-trnas, and unannotated features

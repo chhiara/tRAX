@@ -181,13 +181,13 @@ colnames(alllogvals) <- paste("log2", colnames(alllogvals), sep = "_")
 colnames(allprobs) <- paste("pval", colnames(allprobs), sep = "_")
 allcombinevals = cbind(alllogvals,allprobs)
 
-write.table(allcombinevals,paste(experimentname,"/",experimentname,"-combine.txt", sep = ""),sep="	", col.names=NA,quote=FALSE) 
+#write.table(allcombinevals,paste(experimentname,"/",experimentname,"-combine.txt", sep = ""),sep="	", col.names=NA,quote=FALSE) 
 
 sortcombinevals = allcombinevals[order(apply(alllogvals,1,max)),]
 
 #apply(allprobs,1,min) < .05 
 
-write.table(sortcombinevals,paste(experimentname,"/",experimentname,"-combinesort.txt", sep = ""),sep="	", col.names=NA,quote=FALSE) 
+#write.table(sortcombinevals,paste(experimentname,"/",experimentname,"-combinesort.txt", sep = ""),sep="	", col.names=NA,quote=FALSE) 
 
 #stop("Message")
 #Print out the size factors
@@ -207,10 +207,16 @@ write.table(sortcombinevals,paste(experimentname,"/",experimentname,"-combinesor
 
 medcounts = list()
 
-samplenames <- unique(sampledata[,2])
+samplenames <- as.character(unique(sampledata[,2]))
+
+print(samplenames)
 for (i in 1:length(samplenames)){
-cols <- sampledata[sampledata[,2] == samplenames[i],1]
+cols <- as.character(sampledata[sampledata[,2] == samplenames[i],1])
+#print(samplenames[i])
+#print(cols)
+#print("**")
 if (length(cols) > 1){
+#print(samplenames[i])
 medcounts[[samplenames[i]]] <- apply(normalizedrnas[,cols], 1, median)
 
 }else{
@@ -218,10 +224,17 @@ medcounts[[samplenames[i]]] <- normalizedrnas[,cols]
 }
 }
 
-medcountmat <- do.call("cbind",medcounts)
-colnames(medcountmat) <- samplenames
+#print(medcounts[['Liver_PlusAlkB']]['Snora35'])
 
+#print(medcounts) 
+medcountmat <- do.call("cbind",medcounts)
+
+colnames(medcountmat) <- names(medcounts)
+#print(head(medcountmat))
 medcountmat = as.matrix(medcountmat)
+print(head(medcountmat["Snora35",]))
+
+
 allcombinevals = as.matrix(allcombinevals)
 
 #medcounts
@@ -231,6 +244,6 @@ allcombinevals = as.matrix(allcombinevals)
 #typeof(normalizedrnas)
 allcombinevals = cbind(allcombinevals,medcountmat)
 
-write.table(allcombinevals[apply(readcounts,1,max) > 30 & apply(alllogvals,1,min) < .05 ,],paste(experimentname,"/",experimentname,"-relevnormalizedsamples.txt", sep = ""), col.names=NA )
+#write.table(allcombinevals[apply(readcounts,1,max) > 30 & apply(alllogvals,1,min) < .05 ,],paste(experimentname,"/",experimentname,"-relevnormalizedsamples.txt", sep = ""), col.names=NA )
 
-write.table(allcombinevals,paste(experimentname,"/",experimentname,"-normalizedsamples.txt", sep = ""), col.names=NA )
+write.table(allcombinevals,paste(experimentname,"/",experimentname,"-combine.txt", sep = ""), col.names=NA )
