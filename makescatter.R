@@ -197,14 +197,13 @@ getPalette = colorRampPalette(brewer.pal(8, "Dark2"))
 #scale_colour_manual(values = getPalette(colourCount)) 
 print("*||**")
 #Snora35, and SNORD116 (there are a few from a big gene cluster) let7a,b,c, mir-138, mir-122, mir-133a
-
+displaygenes = c()
 #displaygenes = c("Snora35","SNORD116", "let7a" ,"let7b","let7c","mir-138", "mir-122", "mir-133a")
 
-displaygenes = c("Snora35","Snord116l17", "Mirlet7a-2" ,"Mirlet7b","Mirlet7c-2","Mir138-1", "Mir122", "Mir133a-1")
-livergenes =  c("Mir33-201","Mir223","Mir30c-1","Mir144","Mir148a","Mir24-1","Mir29a","Mir122")
-musclegenes = c("Mir1a-1","Mir133a-1","Mir208a","Mir208b","Mir499")
-
-displaygenes = c(displaygenes, livergenes, musclegenes)
+#displaygenes = c("Snora35","Snord116l17", "Mirlet7a-2" ,"Mirlet7b","Mirlet7c-2","Mir138-1", "Mir122", "Mir133a-1")
+#livergenes =  c("Mir33-201","Mir223","Mir30c-1","Mir144","Mir148a","Mir24-1","Mir29a","Mir122")
+#musclegenes = c("Mir1a-1","Mir133a-1","Mir208a","Mir208b","Mir499")
+#displaygenes = c(displaygenes, livergenes, musclegenes)
 
  # miR-33, -33*, miR-223, -30c, -144, -148a, -24, -29, and -122
  #miR-1, miR133a, miR-208a/b, and miR-499

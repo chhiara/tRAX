@@ -39,7 +39,7 @@ Sampletable <- read.table(opt$samples)
 trnatable <- read.table(opt$trna)
 
 directory <- opt$directory
-expname <- opt$name
+expname <- opt$runname
 outputformat <- ".pdf"
 
 #head(mismatches)
@@ -215,7 +215,7 @@ currplot = ggplot(fiveprimeaminoposagg,aes(x = Sample, y = x,fill = Position, st
     theme(axis.title.x = element_text(face="bold", size=15), axis.text.x = element_text(face="bold", size=9,angle = 90, vjust = .5)) #+scale_colour_gradient() #+ scale_fill_brewer( palette="RdPu")
 
 
-ggsave(paste(directory,"/",expname,"-" ,"_fiveprimecounts",outputformat,sep= ""), currplot)
+ggsave(paste(directory,"/",expname,"-",curramino ,"_fiveprimecounts",outputformat,sep= ""), currplot)
 
 
 threeprimeaminoposagg = aggregate(threeprimeamino$percentstart, by=list( Sample = Sampletable[match(threeprimeamino$Sample,Sampletable[,1]),2],Position=threeprimeamino$position ), FUN=mean) 
@@ -240,7 +240,7 @@ currplot = ggplot(threeprimeaminoposagg,aes(x = Sample, y = x,fill = Position, s
     theme(axis.title.x = element_text(face="bold", size=15), axis.text.x = element_text(face="bold", size=9,angle = 90, vjust = .5)) #+scale_colour_gradient() #+ scale_fill_brewer( palette="RdPu")
 
 
-ggsave(paste(directory,"/",expname,"_",curramino ,"-threeprimecounts",outputformat,sep= ""), currplot)
+ggsave(paste(directory,"/",expname,"-",curramino ,"_threeprimecounts",outputformat,sep= ""), currplot)
 #print(head(threeprimeamino))
 #print(max(threeprimeamino$percentstart))
 
@@ -327,9 +327,10 @@ ggsave(paste(directory,"/",expname,"-",curramino ,"_deletionheatmap",outputforma
 
 }
 
-print("||**||")
+#print("||**||")
 for (currpos in positionorder){
 #print(currpos)
+poslabel = ifelse(currpos == "-1", "neg1", currpos)
 
 mismatchmelt = mismatches[mismatches$position == currpos,c("Feature","Sample","percentmismatch")]
 deletionmelt = mismatches[mismatches$position == currpos,c("Feature","Sample","percentdelete")]
@@ -345,7 +346,7 @@ fiveprimeagg <- aggregate(fiveprimemelt$percentstart, by=list(Feature = fiveprim
 #print(head(fiveprimeagg))
 colnames(fiveprimeagg) <- c("Feature","Sample","percentstart")
 
-posname = paste(directory,"/",currpos,"-possamplereadstarts",outputformat, sep = "")
+posname = paste(directory,"/",expname,"-",poslabel,"_possamplereadstarts",outputformat, sep = "")
 ggplot(data = fiveprimeagg, aes(x=Sample, y=percentstart)) + geom_boxplot(aes(fill=Sample), outlier.shape=NA) + theme_bw()+ geom_jitter(aes(fill=Sample), size = dotsize) +  ggtitle(paste("Position ",currpos,"Read Starts", sep = ""))+ theme(axis.text.x = element_text(angle = 90, hjust = 1))+  ylim(0, 1) + xlab("Sample")+ylab("Percent Read Starts")
 ggsave(filename=posname,width=7, height=7)
 
@@ -356,7 +357,6 @@ mismatchmeltagg <- aggregate(mismatchmelt$percentmismatch, by=list(Feature = mis
 #coveragemeltagg <- aggregate(coveragemelt$value, by=list(Feature = coveragemelt$Feature, Sample = Sampletable[match(coveragemelt$Sample,Sampletable[,1]),2], variable = coveragemelt$variable), FUN=mean)
 
 colnames(mismatchmeltagg) <- c("Feature","Sample","percentmismatch")
-poslabel = ifelse(currpos == "-1", "neg1", currpos)
 posname = paste(directory,"/",expname,"-",poslabel,"_possamplemismatches",outputformat, sep = "")
 
 

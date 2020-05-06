@@ -5,7 +5,7 @@ library(ggplot2)
 library(gridExtra)
 library(scales)
 library(plyr)
-
+library(ggrepel)
 
 
 reverselog_trans <- function(base = exp(1)) {
@@ -127,7 +127,7 @@ resavglist = lapply(compareresults, function(currresult){colgetlogname(currresul
 
 dds = cds
 
-
+dashinterc = 1.5
 
 
 #print adjusted p-values
@@ -150,10 +150,24 @@ for (currpair in colnames(alllogvals)){
 
 currlogval = alllogvals[,c(currpair)]
 currprob = allprobs[,c(currpair)]
+genename = rownames(allprobs)
 
-currsampledata = data.frame(currlogval, currprob)
+currsampledata = data.frame(genename, currlogval, currprob)
 
 #print(head(currsampledata))
+
+
+displaygenes = c("Snora35","Snord116l17", "Mirlet7a-2" ,"Mirlet7b","Mirlet7c-2","Mir138-1", "Mir122", "Mir133a-1")
+livergenes =  c("Mir33-201","Mir223","Mir30c-1","Mir144","Mir148a","Mir24-1","Mir29a","Mir122")
+musclegenes = c("Mir1a-1","Mir133a-1","Mir208a","Mir208b","Mir499")
+
+displaygenes = c(displaygenes, livergenes, musclegenes)
+
+currsampledata$name = rownames(currsampledata)
+displayfeats = ifelse(currsampledata$genename %in% displaygenes, as.character(currsampledata$genename), "")
+#print("**")
+#print(rownames(currsampledata))
+#print(head(displayfeats))
 
 
 
@@ -161,7 +175,7 @@ currsampledata = data.frame(currlogval, currprob)
 #print(head(currsampledata))
 #currsampledata = currsampledata[currsampledata$currprob > .005,]
 #print(head(currsampledata))
-currplot <- ggplot(currsampledata, aes_string(x="currlogval", y="currprob")) + geom_point() +scale_x_continuous() +scale_y_continuous(trans=reverselog_trans(10))+geom_hline(yintercept = .05, linetype = 2)+geom_hline(yintercept = .005, linetype = 2)+theme_bw() + xlab("Log2-Fold Change")+ylab("Adjusted P-value")+ggtitle(currpair)+theme(legend.box="horizontal",aspect.ratio=1,axis.text.x=element_text(angle=90,hjust=1,vjust=0.5))
+currplot <- ggplot(currsampledata, aes_string(x="currlogval", y="currprob")) + geom_point() +scale_x_continuous() +  geom_text_repel(label = displayfeats,min.segment.length = unit(0, 'lines'), segment.color="red")+ scale_y_continuous(trans=reverselog_trans(10))+geom_hline(yintercept = .05, linetype = 2)+geom_hline(yintercept = .005, linetype = 2)+geom_vline(xintercept = dashinterc, linetype = 2) + geom_vline(xintercept = -dashinterc, linetype = 2)+theme_bw() + xlab("Log2-Fold Change")+ylab("Adjusted P-value")+ggtitle(currpair)+theme(legend.box="horizontal",aspect.ratio=1,axis.text.x=element_text(angle=90,hjust=1,vjust=0.5))
 ggsave(paste(experimentname,"/",currpair ,"-volcano",outputformat,sep= ""), currplot) 
 
 }
@@ -209,7 +223,7 @@ medcounts = list()
 
 samplenames <- as.character(unique(sampledata[,2]))
 
-print(samplenames)
+#print(samplenames)
 for (i in 1:length(samplenames)){
 cols <- as.character(sampledata[sampledata[,2] == samplenames[i],1])
 #print(samplenames[i])
@@ -232,7 +246,7 @@ medcountmat <- do.call("cbind",medcounts)
 colnames(medcountmat) <- names(medcounts)
 #print(head(medcountmat))
 medcountmat = as.matrix(medcountmat)
-print(head(medcountmat["Snora35",]))
+#print(head(medcountmat["Snora35",]))
 
 
 allcombinevals = as.matrix(allcombinevals)

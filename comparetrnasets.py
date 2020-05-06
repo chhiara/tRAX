@@ -122,7 +122,7 @@ def traxtrnafile(logfoldchange, pvalfile, countfile, trnas, pvalcutoff = .05, mi
     logchange = defaultdict(lambda: defaultdict(dict))
     pvals = defaultdict(lambda: defaultdict(dict))
     counts = defaultdict(lambda: defaultdict(dict))
-    
+    maxlogdiff = 1
     headers = list()
     
     subtypes = set()
@@ -203,7 +203,7 @@ def traxtrnafile(logfoldchange, pvalfile, countfile, trnas, pvalcutoff = .05, mi
                             clustdict["plus"].add(currtrna)
                         elif logchange[samplepair][currtrna][currtype] < -minlogdiff:
                             clustdict["minus"].add(currtrna)
-                    elif trnasums[currtrna][currtype] > 30:
+                    elif trnasums[currtrna][currtype] > 60 and abs(logchange[samplepair][currtrna][currtype]) < maxlogdiff;
                         clustdict["neutral"].add(currtrna)
                         
                         #if currtype == 'SNORD92':
@@ -305,7 +305,7 @@ def traxgenefile(logfoldchange, pvalfile, countfile, genes, pvalcutoff = .05, mi
                         clustdict["plus"].add(currgene.name)
                     elif logchange[samplepair][currgene.name] < -minlogdiff:
                         clustdict["minus"].add(currgene.name)
-                elif trnasums[currgene.name] > 30:
+                elif trnasums[currgene.name] > 60:
                     clustdict["neutral"].add(currgene.name)
                     
                     #if currtype == 'SNORD92':
@@ -435,11 +435,28 @@ def main(**argdict):
         #print genetypes.values()
         #print str(len(currtrnaset["plus"]))+"+"+str(len(currtrnaset["minus"]))+"+"+str(len(currtrnaset["neutral"]))+"/"+str(len(genefeats))
         #print currtrnaset["neutral"]
-        posgenes = {curr: featnames[curr].addmargin(50) for curr in currtrnaset["plus"] if filtertype is None or genetypes[curr] == filtertype }
-        minusgenes = {curr: featnames[curr].addmargin(50) for curr in currtrnaset["minus"] if filtertype is None or genetypes[curr] == filtertype }
-        neutralgenes = {curr: featnames[curr].addmargin(50) for curr in currtrnaset["neutral"] if filtertype is None or genetypes[curr] == filtertype }
-        print >>sys.stderr, (len(neutralgenes.keys()))
+        posgenes = {curr: featnames[curr].addmargin(0) for curr in currtrnaset["plus"] if filtertype is None or genetypes[curr] == filtertype }
+        minusgenes = {curr: featnames[curr].addmargin(0) for curr in currtrnaset["minus"] if filtertype is None or genetypes[curr] == filtertype }
+        neutralgenes = {curr: featnames[curr].addmargin(0) for curr in currtrnaset["neutral"] if filtertype is None or genetypes[curr] == filtertype }
         printseqs(currpair, posgenes,minusgenes, neutralgenes, genomefile, filterlabel = filtertype) 
+        
+        allgenes = list(currtrnaset["plus"] | currtrnaset["minus"] | currtrnaset["neutral"])
+        allgenes = list(curr for curr in allgenes if genetypes[curr] == filtertype)
+        random.shuffle(allgenes)
+        
+        poslength = len(posgenes.keys())
+        neglength = len(minusgenes.keys())
+        posrand = allgenes[0:poslength]
+        negrand = allgenes[poslength: poslength + neglength]
+        neutrand = allgenes[poslength + neglength:]
+        #print >>sys.stderr, "***"
+        #print >>sys.stderr, str(poslength)
+        #print >>sys.stderr, str(len(posrand))
+        
+        posgenes = {curr: featnames[curr].addmargin(0) for curr in posrand if filtertype is None or genetypes[curr] == filtertype }
+        minusgenes = {curr: featnames[curr].addmargin(0) for curr in negrand if filtertype is None or genetypes[curr] == filtertype }
+        neutralgenes = {curr: featnames[curr].addmargin(0) for curr in neutrand if filtertype is None or genetypes[curr] == filtertype }
+        printseqs(currpair+"_rand", posgenes,minusgenes, neutralgenes, genomefile, filterlabel = filtertype) 
 
     ''' 
     for currpair, currtrnaset in traxtrnafile(logfoldchange, pvalfile, countfile, trnatranscripts, pvalcutoff = pvalcutoff):

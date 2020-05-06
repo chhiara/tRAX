@@ -144,7 +144,7 @@ class expdatabase:
         self.trnacoverageplot=expname+"/"+expname+"-coverage.pdf"
         self.trnacombinecoverageplot=expname+"/"+expname+"-combinecoverage.pdf"
 
-        self.locicoveragefile=expname+"/"+expname+"-pretRNAcoverage.txt"
+        self.locicoveragefile=expname+"/pretRNAs/"+expname+"-pretRNAcoverage.txt"
         self.locicoverageplot=expname+"/pretRNAs/"+expname+"-pretRNAcoverage.pdf"
         self.locicombinecoverageplot=expname+"/pretRNAs/"+expname+"-pretRNAcombinecoverage.pdf"
         

@@ -142,16 +142,51 @@ How to run
      - samplespairs.txt is an optional argument that contains sample pairs to compare
      - by default, will not remap reads if mapping files exist.  --force argument will force remapping   
      - nofrag is used to disable fragment seperation, this is meant for use with dm-tRNA sequencing data
+
      
-Output files
-  - All output files aside from mappings are outputted to expname directory
+     
+Output files of trimsamples.py
+  - expname_log.txt
+    - Raw text output of adapter trimming
+
+  - expname_sp.txt
+    - Table of seqprep output (used for paired-end processing)
+  - expname_sp.pdf
+    - Bar chart of seqprep output (used for paired-end processing)
+    
+    
+  - samplename_merge.fastq.gz
+    - seqprep merged output fastq (Reccomended TRAX input)
+  - samplename_left.fastq.gz
+    - seqprep first end output fastq (not useful as TRAX input)
+  - samplename_right.fastq.gz
+    - seqprep second end output fastq (not useful as TRAX input)
+
+  
+  - expname_ca.txt
+    - Table of cutadapt output (used for single-end processing)
+  - expname_ca.pdf
+    - Bar chart of cutadapt output (used for single-end processing)
+
+  - samplename_trimmed.fastq.gz
+    - cutadapt output fastq (Reccomended TRAX input)
+
+  - expname_manifest.txt
+    - List of output files and sample names
+
+  
+
+
+Output files of processsamples.py
   - expname-runinfo.txt
     - Information on the TRAX run
   - expname-mapstats.txt
     - Bowtie2 mapping statistics for each sample
+  - expname-mapstats.pdf
+    - Visualization of Bowtie2 mapping statistics for each sample
   - expname-counts.txt
     - Raw counts for each tRNA fragment type and all included non-trna features
-  - expname-mousedmtrnaseq3-normalizedreadcounts.txt
+  - expname-normalizedreadcounts.txt
     - counts as above, normalized using Deseq2 size factors
   - expname-SizeFactors.txt
     - Deseq2 size factors for each sample
@@ -160,12 +195,22 @@ Output files
   - expname-padjs.txt
     - Deseq2 adjusted p-values of all pairs of samples in experiment
   - expname-combine.txt
-    - Table combining Deseq2 adjusted p-values, log-fold changes, and adjusted counts
+    - Table combining Deseq2 adjusted p-values, log-fold changes, and normalized counts
+  - expname-trnaendcounts.txt
+    - Counts of tRNA "CCA" tail types
+    
+  - expname-pca.pdf
+    - Plot of principle component analysis of all read counts
+  - expname-pcatrna.pdf
+    - Plot of principle component analysis of just tRNA read counts
 
   - expname-typecounts.txt
-    - Read distribution of primary read mappings amongst tRNA fragment types, non-trnas, pre-trnas, and unannotated features
+    - Normalized read counts of primary read mappings amongst tRNA fragment types, non-trnas, pre-trnas, and unannotated features
   - expname-typecounts.pdf
     - Visualization of above read distribution among gene types by percentage
+    
+  - expname-typerealcounts.txt    
+    - Read counts of primary read mappings amongst tRNA fragment types, non-trnas, pre-trnas, and unannotated features
   - expname-typecountsreal.pdf    
     - Visualization of above read distribution among gene types by counts
   - expname-aminocounts.pdf    
@@ -178,6 +223,14 @@ Output files
     - Summary chart showing read distribution for entire samples, seperated by acceptor type
   - expname-uniquecoverages.pdf
     - Visualization of coverage colored by degree of uniqueness in mapping
+    
+  - expname-readlengths.txt
+    - Table of read lengths and tRNA read lengths for each sample
+
+  - expname-readlengths.pdf
+    - Visualization of read lengths and tRNA read lengths for each sample
+
+    
   - expname-pca.pdf    
     - Principle component analysis of samples, based on counts of all features.  
   - expname-pcatrna.pdf    
@@ -187,43 +240,80 @@ Output files
     - Log of normalized read counts for each fragment type, colored by gene type
   - sample1_sample2-aminoscatter.pdf
     - Log of normalized read counts for tRNA fragment types.  non-tRNAs are the small black dots, tRNA fragment types are seperated unless --nofrag is used
+    
+  - sample1_sample2-volcano.pdf
+    - Volcano plot of sample pair showing log-fold changes and adjusted p-values
+
+  - expname-qa.html
+    - HTML doc showing quality assesment of TRAX run
+  
   - Mismatch files
-    - mismatch/trnapositionmismatches.pdf
+    - mismatch/expname-trnapositionmismatches.pdf
       - Maximum mismimatch percent among all samples for each base position
-    - mismatch/trnapositionfiveprime.pdf
+    - mismatch/expname-trnapositionfiveprime.pdf
       - Maximum start position percent among all samples for each base position
-    - mismatch/sample-amino_mismatch.pdf
+      
+      
+      
+    - mismatch/expname-amino_mismatch.pdf
+      - Coverage of base mismatches across amino acid
+    - mismatch/expname-amino_delete.pdf
+      - Coverage of base deletions across amino acid
+    - mismatch/expname-amino_fiveprimeends.pdf
+      - Coverage of base five-prime ends across amino acid
+
+      
+    - mismatch/expname-amino_mismatch.pdf
       - base-wise coverage of mismatches for all tRNAs
-    - mismatch/sample-amino_delete.pdf
+    - mismatch/expname-amino_delete.pdf
       - coverage of deletions for all tRNAs
-    - mismatch/sample-amino_fiveprimeends.pdf
+    - mismatch/expname-amino_fiveprimeends.pdf
       - coverage of five-prime ends for all tRNAs
 
     
-    - mismatch/amino-mismatchheatmap.pdf
+    - mismatch/expname-amino_mismatchheatmap.pdf
       - heatmap of mismatches for all tRNAs
-    - mismatch/amino-threeprimeheatmap.pdf
+    - mismatch/expname-amino_deletionheatmap.pdf
+      - heatmap of deletions for all tRNAs
+    - mismatch/expname-amino_threeprimeheatmap.pdf
       - heatmap of five-prime ends for all tRNAs
-    - mismatch/amino-fiveprimeheatmap.pdf
+    - mismatch/expname-amino_fiveprimeheatmap.pdf
       - heatmap of five-prime ends for all tRNAs
-
-    - mismatch/amino-fiveprimecounts.pdf
-      - Distribution of five-prime ends among all positions for each sample
       
-    - mismatch/position-posaminomismatches.pdf
+    - mismatch/expname-amino_fiveprimecounts.pdf
+      - Distribution of five-prime ends among all positions for each sample
+    - mismatch/expname-amino_threeprimecounts.pdf
+      - Distribution of five-prime ends among all positions for each sample
+
+      
+    - mismatch/expname-amino_trnapositionmismatches.pdf
+      - Highest level of mismatch among all samples for each position of each tRNA 
+
+      
+    - mismatch/expname-position_posaminomismatches.pdf
       - Mismatch percentage at position by amino acid 
-    - mismatch/position-possamplemismatches.pdf
+    - mismatch/expname-position_possamplemismatches.pdf
       - Mismatch percentage at position by sample
-    - mismatch/position-posaminodeletions.pdf
+    - mismatch/expname-position_posaminodeletions.pdfs
       - Deletion percentage at position by amino acid 
-    - mismatch/position-possampledeletions.pdf
+    - mismatch/expname-position_possampledeletions.pdf
       - Deletion percentage at position by sample 
-    - mismatch/position-possamplereadstarts.pdf
-      - Read start percentage at position by sample 
-
-    - mismatch/position-possamplereadstarts.pdf
+    - mismatch/expname-position_possamplereadstarts.pdf
       - Read start percentage at position by sample 
 
 
+  - pre-tRNA files
+    - pretRNAs/expname-pretRNAcoverage.txt
+      - Chart showing read coverage for each amino acid
+    - pretRNAs/expname-pretRNAcoverage.pdf
+      - Chart showing read coverage for each amino acid
+    - pretRNAs/expname-pretRNAcombinedcoverage.pdf
+      - Summary chart showing read distribution for entire samples, seperated by acceptor type
+  - Uniqueness files
+  
+    - unique/expname-trnauniquecounts.txt
+      - Table of unique mappings for each tRNA transcript
+    - unique/expname-amino_uniqueonlycov.pdf
+      - Coverage plot of unique transcripts only
    
  
