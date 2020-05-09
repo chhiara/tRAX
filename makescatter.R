@@ -5,6 +5,14 @@ library(plyr)
 library(RColorBrewer)
 library(ggrepel)
 
+
+
+
+gg_color_hue <- function(n) {
+  hues = seq(15, 375, length = n + 1)
+  hcl(h = hues, l = 65, c = 100)[1:n]
+}
+
 args <- commandArgs(trailingOnly = TRUE)
 
 #args[3]
@@ -54,21 +62,31 @@ othertypes = !(counts[,"type"] %in% genetypes)
 
 
 counts[,"type"] <- as.character(counts[,"type"])
-counts[othertypes,"type"] <- "other"
+#counts[othertypes,"type"] <- "other"
 counts[,"type"] <- as.factor(counts[,"type"])
 
 
-
-counts[,"type"] <- factor(counts[,"type"], levels = c(genetypes,"other"))
+othertypenames = unique(as.character(counts[othertypes,"type"]))
+#print(othertypenames)
+                                                                                                                                                       
+#print(unique(as.character(counts[,"type"])))
+#print(unique(as.character(othertypenames)))
+genetypes
+#print(unique(as.character(counts[,"type"])))
+counts[,"type"] <- factor(counts[,"type"], levels = c(genetypes,"other",othertypenames))
+#print(unique(as.character(counts[,"type"])))
 trnatypes <- c("trna_fiveprime","trna_threeprime","trna_other","trna_wholecounts","tRNA")
 fragtypes <- c("trna_fiveprime","trna_threeprime","trna_other","trna_wholecounts")
+                                                                                                                                                       
+#print(unique(as.character(counts[,"type"])))
 trnagenes =  counts[,"type"] %in% trnatypes
 
 
 #print("**||**")
 
-counts <- rbind(counts[counts[,"type"] == "other",],counts[counts[,"type"] == "snoRNA",],counts[counts[,"type"] == "miRNA",], counts[counts[,"type"] == "Mt_tRNA",],counts[counts[,"type"] == "rRNA",],counts[counts[,"type"] == "Mt_rRNA",],counts[counts[,"type"] == "snRNA",],counts[trnagenes,])
+#counts <- rbind(counts[counts[,"type"] == "other",],counts[counts[,"type"] == "snoRNA",],counts[counts[,"type"] == "miRNA",], counts[counts[,"type"] == "Mt_tRNA",],counts[counts[,"type"] == "rRNA",],counts[counts[,"type"] == "Mt_rRNA",],counts[counts[,"type"] == "snRNA",],counts[trnagenes,])
                                                                                                                                                        
+#print(unique(as.character(counts[,"type"])))
 
 colnames(counts)[1] <- "name"
 colnames(trnatable) <- c("trnaname", "loci", "amino", "anticodon")
@@ -80,7 +98,7 @@ trnacounts <- merge(trnatable,counts, by.x = "trnaname", by.y = "trnaname", all.
 
 i = 1
 #trnacounts[is.na(trnacounts$amino),"amino"] = "non-tRNA"
-trnacounts <- rbind(trnacounts[trnacounts[,"type"] == "other",],trnacounts[trnacounts[,"type"] == "snoRNA",],trnacounts[trnacounts[,"type"] == "miRNA",], trnacounts[trnacounts[,"type"] == "Mt_tRNA",],trnacounts[trnacounts[,"type"] == "rRNA",],trnacounts[trnacounts[,"type"] == "Mt_rRNA",],trnacounts[trnacounts[,"type"] == "snRNA",],trnacounts[trnagenes,])
+#trnacounts <- rbind(trnacounts[trnacounts[,"type"] == "other",],trnacounts[trnacounts[,"type"] == "snoRNA",],trnacounts[trnacounts[,"type"] == "miRNA",], trnacounts[trnacounts[,"type"] == "Mt_tRNA",],trnacounts[trnacounts[,"type"] == "rRNA",],trnacounts[trnacounts[,"type"] == "Mt_rRNA",],trnacounts[trnacounts[,"type"] == "snRNA",],trnacounts[trnagenes,])
 
 #trnacounts <- rbind(trnacounts[trnacounts[,"type"] == "other",],trnacounts[trnacounts[,"type"] == "snoRNA",],trnacounts[trnacounts[,"type"] == "miRNA",], trnacounts[trnacounts[,"type"] %in% trnatypes,])
 trnacounts$dotsize = ifelse(trnacounts[,"type"] %in% trnatypes, trnasize, .1)
@@ -159,6 +177,7 @@ trnacounts[,samplenames[i]] <- trnacounts[,cols]
 }
 
 
+
 for (i in 1:length(rownames(comparisons))){
 
 yaxis = sampletable[sampletable[,2] == comparisons[i,1],1][1]
@@ -195,7 +214,7 @@ dashinterc = 1.5
 colourCount = length(unique(counts$type))+1
 getPalette = colorRampPalette(brewer.pal(8, "Dark2"))
 #scale_colour_manual(values = getPalette(colourCount)) 
-print("*||**")
+#print("*||**")
 #Snora35, and SNORD116 (there are a few from a big gene cluster) let7a,b,c, mir-138, mir-122, mir-133a
 displaygenes = c()
 #displaygenes = c("Snora35","SNORD116", "let7a" ,"let7b","let7c","mir-138", "mir-122", "mir-133a")
@@ -216,7 +235,15 @@ displayfeats = ifelse(trnacounts$name %in% displaygenes, as.character(trnacounts
 #print(unique(displayfeats))
 #print(unique(trnacounts$type))
 
-#currplot <- qplot(data=counts,x=trnacounts[,xaxis],y=trnacounts[,yaxis],xlab = xaxis,ylab = yaxis,color=type, asp=1) + scale_colour_manual(values = getPalette(colourCount)) + geom_abline(intercept = 0, slope = 1) + geom_abline(intercept = dashinterc, slope = 1,linetype = 2)+geom_abline(intercept = 0- dashinterc, slope = 1,linetype = 2)+scale_x_continuous(trans=log2_trans(),limits = c(1, maxlim)) + scale_y_continuous(trans=log2_trans(),limits = c(1, maxlim)) + theme_bw() + theme(legend.box="horizontal",aspect.ratio=1,axis.text.x=element_text(angle=90,hjust=1,vjust=0.5))
+
+extratypes = setdiff(unique(trnacounts$type), names(typepal))
+extratypes = sort(extratypes)
+#print(extratypes)
+#print(unique(countsmelt$seq))
+#print(gg_color_hue(length(extratypes)))
+extracolors = setNames(gg_color_hue(length(extratypes)), extratypes)
+typepal = c(typepal, extracolors)
+
 currplot <- ggplot(trnacounts, aes_string(x=xaxis, y=yaxis)) + geom_point(aes(color=type), size = 1) + 
     #scale_colour_manual(values = getPalette(colourCount)) + 
     scale_colour_manual(values = typepal)+

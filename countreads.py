@@ -123,7 +123,7 @@ def getbamcounts(bamfile, samplename,trnainfo, trnaloci, trnalist,featurelist = 
     minreads = 5
     #print >>sys.stderr, embllist
     
-    
+    genetypes = dict()
     currbam = bamfile
     
     for currfile in bedfiles:
@@ -148,7 +148,6 @@ def getbamcounts(bamfile, samplename,trnainfo, trnaloci, trnalist,featurelist = 
         sys.exit(1)
         
     
-    
     for currfile in featurelist.iterkeys():
         for currfeat in featurelist[currfile]:
             #try catch is to account for weird chromosomes and the like that aren't in the genome
@@ -157,17 +156,18 @@ def getbamcounts(bamfile, samplename,trnainfo, trnaloci, trnalist,featurelist = 
                 for currread in getbamrange(bamfile, currfeat, singleonly = nomultimap, maxmismatches = maxmismatches,allowindels = allowindels):
                     if currfeat.coverage(currread) > 10:
                         samplecounts.addcount(currfeat.name)
-                        samplecounts.setgenetype(currfeat.name,currfile)
+                        samplecounts.setgenetype(currfeat.name,os.path.basename(currfile))
             except ValueError:
                 pass
 
-    
+    #extra sequences built during database creation (experimental)
     for currtype in otherseqdict.iterkeys():
+        print >>sys.stderr, "**"+currtype
         for currfeat in otherseqdict[currtype]:
             for currread in getbamrange(bamfile, currfeat, singleonly = nomultimap, maxmismatches = maxmismatches,allowindels = allowindels):
+                #print >>sys.stderr, currfeat.name
                 samplecounts.addcount(currfeat.name)
                 samplecounts.setgenetype(currfeat.name,currtype)
-    
     for genename, featset in itertools.groupby(embllist,lambda x: x.data["genename"]):
         #print >>sys.stderr, "**"
         #pass 
@@ -432,7 +432,7 @@ def testmain(**argdict):
     trnacountfilename = argdict["trnacounts"]
     trnainfo = transcriptfile(trnatable)
 
-    
+    #print >>sys.stderr, bedfiles
     
     alltrnas = list()
     
@@ -443,18 +443,18 @@ def testmain(**argdict):
     samples = sampledata.getsamples()
     genetypes = dict()
     fullpretrnathreshold = 2
+    otherseqdict = dict()
     #Grabbing all the features to count
+    #print >>sys.stderr, otherseqs
     try:
         featurelist = dict()
         trnaloci = list()
-        otherseqdict = dict()
         for currfile in bedfiles:
-            pass
-            #bedfeatures = list(readfeatures(currfile, removepseudo = removepseudo))
-            #for curr in bedfeatures:
-                #genetypes[curr.name] = os.path.basename(currfile)
+            bedfeatures = list(readfeatures(currfile, removepseudo = removepseudo))
+            for curr in bedfeatures:
+                genetypes[curr.name] = os.path.basename(currfile)
                 
-            #featurelist[currfile] = bedfeatures
+            featurelist[currfile] = bedfeatures
         trnalist = list()
         for currfile in trnalocifiles:
             trnaloci.extend(list(readbed(currfile)))
@@ -507,7 +507,7 @@ def testmain(**argdict):
             #threads[currsample] = threading.Thread(target=getbamcountsthr, args=(allcounts,currsample,currbam, currsample,trnainfo, trnaloci, trnalist), kwargs = {'embllist' : embllist, 'featurelist' : featurelist, 'maxmismatches' : maxmismatches})
             #threads[currsample].start()
     endtime = time.time()
-    print >>sys.stderr, "time:" +str(endtime-starttime)
+    #print >>sys.stderr, "time:" +str(endtime-starttime)
     if "countfile" not in argdict or argdict["countfile"] == "stdout":
         countfile = sys.stdout
     else:

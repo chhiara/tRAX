@@ -203,7 +203,7 @@ def traxtrnafile(logfoldchange, pvalfile, countfile, trnas, pvalcutoff = .05, mi
                             clustdict["plus"].add(currtrna)
                         elif logchange[samplepair][currtrna][currtype] < -minlogdiff:
                             clustdict["minus"].add(currtrna)
-                    elif trnasums[currtrna][currtype] > 60 and abs(logchange[samplepair][currtrna][currtype]) < maxlogdiff;
+                    elif trnasums[currtrna][currtype] > 60 and abs(logchange[samplepair][currtrna][currtype]) < maxlogdiff:
                         clustdict["neutral"].add(currtrna)
                         
                         #if currtype == 'SNORD92':

@@ -122,7 +122,8 @@ for currline in open(seqprepfile):
 
 
 if len(sampleorder) < 1 and len(cutadaptorder) < 1:
-    print >>sys.stderr, "failed to read "+seqprepfile
+    print >>sys.stderr, "Failed to read "+seqprepfile
+    print >>sys.stderr, "Perhaps you failed to specify --singleend mode?"
     sys.exit(1)
 
     

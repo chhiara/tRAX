@@ -44,7 +44,7 @@ parser.add_argument('--ensemblgtf',
 
 parser.add_argument('--exppairs',
                    help='List of sample pairs to compare')
-parser.add_argument('--bedfile',  nargs='+', default=list(),
+parser.add_argument('--bedfile',  nargs='*',
                    help='Additional bed files for feature list')
 parser.add_argument('--lazyremap', action="store_true", default=False,
                    help='Skip mapping reads if bam files exit')
@@ -72,6 +72,8 @@ parser.add_argument('--makeall', action="store_true", default=False,
                    help='make both track hub and tdrs')
 parser.add_argument('--splittypecounts', action="store_true", default=False,
                    help='Split type counts into tRNA types')
+parser.add_argument('--dumpother', action="store_true", default=False,
+                   help='Dump "other" features when counting gene types')
 parser.add_argument('--cores',
                    help='number of cores to use')
 
@@ -174,10 +176,10 @@ def countfeatures(samplefile, trnainfo,expinfo, ensgtf, bedfiles, cores = 8):
     runrscript(scriptdir+"/pcareadcounts.R",expinfo.genecounts,samplefile,expinfo.pcaplot)
     runrscript(scriptdir+"/pcareadcounts.R",expinfo.trnacounts,samplefile,expinfo.pcatrnaplot)
 
-def counttypes(samplefile, trnainfo,expinfo, ensgtf, bedfiles, ignoresizefactors = False, countfrags = False, cores = 8):
+def counttypes(samplefile, trnainfo,expinfo, ensgtf, bedfiles, ignoresizefactors = False, countfrags = False, bamnofeature = False, cores = 8):
     if not ignoresizefactors:
         
-        countreadtypes.testmain(sizefactors=expinfo.sizefactors,combinereps= True ,otherseqs = trnainfo.otherseqs, samplefile=samplefile,maturetrnas=[trnainfo.maturetrnas],trnatable=trnainfo.trnatable,trnaaminofile=expinfo.trnaaminofile,ensemblgtf=ensgtf,trnaloci=[trnainfo.locifile],countfile=expinfo.genetypecounts,realcountfile=expinfo.genetyperealcounts,bedfile= bedfiles,readlengthfile =  expinfo.trnalengthfile ,countfrags=countfrags, cores = cores)
+        countreadtypes.testmain(sizefactors=expinfo.sizefactors,combinereps= True ,otherseqs = trnainfo.otherseqs, samplefile=samplefile,maturetrnas=[trnainfo.maturetrnas],trnatable=trnainfo.trnatable,trnaaminofile=expinfo.trnaaminofile,ensemblgtf=ensgtf,trnaloci=[trnainfo.locifile],countfile=expinfo.genetypecounts,realcountfile=expinfo.genetyperealcounts,bedfile= bedfiles,readlengthfile =  expinfo.trnalengthfile ,countfrags=countfrags, bamnofeature = bamnofeature, cores = cores)
         #Plot reads by gene type and tRNAs by amino acid
         runrscript(scriptdir+"/featuretypes.R",expinfo.genetypecounts,expinfo.genetypeplot)
         runrscript(scriptdir+"/featuretypes.R",expinfo.trnaaminofile,expinfo.trnaaminoplot)
@@ -253,6 +255,7 @@ olddeseq = args.olddeseq
 mismatch = args.mismatch 
 paironly= args.paironly
 splittypecounts = args.splittypecounts
+bamnofeature = args.dumpother
 
 minnontrnasize = args.minnontrnasize
 
@@ -519,7 +522,7 @@ elif not nosizefactors:
             sys.exit(1)
 #Count the reads by gene type
 print >>sys.stderr, "Counting Read Types"
-counttypes(samplefilename, trnainfo,expinfo, ensgtf, bedfiles, ignoresizefactors = nosizefactors,countfrags =  splittypecounts, cores = cores)
+counttypes(samplefilename, trnainfo,expinfo, ensgtf, bedfiles, ignoresizefactors = nosizefactors,countfrags =  splittypecounts, bamnofeature = bamnofeature, cores = cores)
 
 
 #coverage plot of tRNAs

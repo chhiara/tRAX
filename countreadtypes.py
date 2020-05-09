@@ -97,6 +97,8 @@ def counttypereads(bamfile, samplename,trnainfo, trnaloci, trnalist,maturenames,
     minpretrnaextend = 5
     ncrnaorder = defaultdict(int)
     currbam = bamfile
+    dumpotherreads = True
+
     for i, curr in enumerate(reversed(list(["snoRNA","miRNA", "rRNA","snRNA","misc_RNA","lincRNA", "protein_coding"]))):
         ncrnaorder[curr] = i + 1
 
@@ -116,8 +118,9 @@ def counttypereads(bamfile, samplename,trnainfo, trnaloci, trnalist,maturenames,
         sys.exit()
     #continue #point0
     #print >>sys.stderr, "**||"+currbam
+
     for i, currread in enumerate(getbam(bamfile, primaryonly = True)):
-        
+
         isindel = False
         readlength = currread.getlength()
         gotread = False
@@ -233,7 +236,7 @@ def counttypereads(bamfile, samplename,trnainfo, trnaloci, trnalist,maturenames,
             for currfeat in featurelist[currbed].getbin(currread):
                 
                 if currfeat.coverage(currread) > 10:
-                    print >>sys.stderr, currbam +":"+ currbed
+                    #print >>sys.stderr, currbam +":"+ currbed
                     readtypecounts.addbedcounts(currbed)
                     #counts[currsample][currbed] += 1
                     gotread = True
@@ -262,7 +265,7 @@ def counttypereads(bamfile, samplename,trnainfo, trnaloci, trnalist,maturenames,
             readtypecounts.addemblcounts(currtype)
             #emblbiotypes.add(currtype)
         if not gotread and bamnofeature:
-            outbamnofeature.write(currread.data["bamline"])
+            outbamnofeature.write(currread.bamline)
     return readtypecounts
 
 

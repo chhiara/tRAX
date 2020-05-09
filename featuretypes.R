@@ -1,5 +1,4 @@
 
-library(ggsci)
 library(ggplot2)
 library(reshape2)
 library(scales)

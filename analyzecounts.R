@@ -7,7 +7,6 @@ library(scales)
 library(plyr)
 library(ggrepel)
 
-
 reverselog_trans <- function(base = exp(1)) {
     trans <- function(x) -log(x, base)
     inv <- function(x) base^(-x)
@@ -163,6 +162,7 @@ musclegenes = c("Mir1a-1","Mir133a-1","Mir208a","Mir208b","Mir499")
 
 displaygenes = c(displaygenes, livergenes, musclegenes)
 
+displaygenes = c()
 currsampledata$name = rownames(currsampledata)
 displayfeats = ifelse(currsampledata$genename %in% displaygenes, as.character(currsampledata$genename), "")
 #print("**")
