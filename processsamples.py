@@ -395,7 +395,8 @@ if not os.path.exists(expname+"/unique"):
 
     
     
-    
+if bedfiles is None:   
+    bedfiles = list()
 dbname = os.path.expanduser(dbname)
 if ensgtf is not None:
     ensgtf = os.path.expanduser(ensgtf)
