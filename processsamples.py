@@ -399,7 +399,8 @@ if not os.path.exists(expname+"/unique"):
 dbname = os.path.expanduser(dbname)
 if ensgtf is not None:
     ensgtf = os.path.expanduser(ensgtf)
-bedfiles = list(os.path.expanduser(curr) for curr in bedfiles)
+if bedfiles is not None:    
+    bedfiles = list(os.path.expanduser(curr) for curr in bedfiles)
 
 
 trnainfo = trnadatabase(dbname)

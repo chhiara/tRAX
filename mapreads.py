@@ -203,6 +203,7 @@ def testmain(**argdict):
     multithreaded = True
     if multithreaded:
         mapargs = list()
+        print >>sys.stderr, cores
         mappool = Pool(processes=cores)
         mapsamples = list()
         for samplename in samples:

@@ -231,8 +231,16 @@ def counttypereads(bamfile, samplename,trnainfo, trnaloci, trnalist,maturenames,
             continue
         #continue #point5
         #print >>sys.stderr, "**||"
+        
         for currbed in bedlist:
-            #print >>sys.stderr, "||"+currbed
+
+            #if currread.name == "SRR10038183.1660151":
+            #    print >>sys.stderr, "||"+currbed
+            #    
+            #    print >>sys.stderr, list(featurelist[currbed].getbin(currread))
+            #    print >>sys.stderr, list(featurelist[currbed].getfeatbin("12-qE-23911.2"))
+            #    print >>sys.stderr, list(featurelist[currbed].getbinnums(currread))
+            
             for currfeat in featurelist[currbed].getbin(currread):
                 
                 if currfeat.coverage(currread) > 10:

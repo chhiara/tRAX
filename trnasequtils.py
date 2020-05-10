@@ -1152,6 +1152,7 @@ class RangeBin:
         self.length = 0
         for curr in rangelist:
             self.additem(curr)
+        
     def __len__(self):
         return self.length
     def __iter__(self):
@@ -1163,9 +1164,12 @@ class RangeBin:
         binstart = int(item.start / self.binfactor)
         #print "**"+str(binstart)
         binend = int(item.end / self.binfactor) + 1
-        while (binstart + 2 >= len(self.bins)):
+        while (binend + 2 >= len(self.bins)):
             self.bins.append(set())
         self.bins[binstart].add(item)
+        for i in range(binstart, binend):
+            self.bins[i].add(item)
+        
         self.length += 1
         #print self.bins[binstart]
     def getrange(self, item):
@@ -1176,21 +1180,39 @@ class RangeBin:
                 for currrange in self.bins[i]:
                     if currrange.start >= item.start and currrange.end <= item.end:
                             yield currrange
-                            
+    #always a pain dealing with long features without losing the optomization                        
     def getbin(self, item):
         #print >>sys.stderr, item.start / self.binfactor
         #print >>sys.stderr, range(int(item.start / self.binfactor)-1,int(item.end / self.binfactor)+1)
+        outputregions = set()
         for i in range(int(item.start / self.binfactor)-1,int(item.end / self.binfactor)+1):
             if i < len(self.bins) and i >= 0:
                 
                 for currrange in self.bins[i]:
-                    yield currrange
+                    regionid = tuple([currrange.name, currrange.start, currrange.end])
+                    if regionid not in outputregions:
+                        outputregions.add(regionid)
+                        yield currrange
+                    
+                        
     def getbinpos(self, item):
         for i in range(int(item / self.binfactor)-1,int(item / self.binfactor)+1):
             if i < len(self.bins) and i >= 0:
                 
                 for currrange in self.bins[i]:
                     yield currrange
+                    
+    def getfeatbin(self, name):
+        for i, currbin in enumerate(self.bins):
+            #print currbin
+            for currgene in currbin:
+                if currgene.name == name:
+                    yield i
+    def getbinnums(self, item):
+        for i in range(int(item.start / self.binfactor)-1,int(item.end / self.binfactor)+1):
+            if i < len(self.bins) and i >= 0:
+                yield i
+                    
       
 def revcom(sequence):
     seq = list(sequence)
