@@ -16,8 +16,8 @@ RUN conda install --quiet --yes -c r -c bioconda \
 # Install R Packages
 RUN conda install --quiet --yes -c r \
     'r-ggplot2' \
-    'r-getopt'
-
+    'r-getopt' \
+    'r-ggrepel' 
 # Install Bioconductor Manager and deSeq2
 ADD install_biocmanager_deseq2.R /tmp/
 RUN R -f /tmp/install_biocmanager_deseq2.R

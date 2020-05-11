@@ -10,4 +10,5 @@ library("scales")
 library("plyr")
 library("gridExtra")
 library("getopt")
+library("ggrepel")
 #library("rbamtools") #I use this to test module checker, it's not needed for the pipeline
