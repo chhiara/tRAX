@@ -51,7 +51,7 @@ def eucliddistance(firfreqs, secfreqs):
     return np.linalg.norm(np.array(firfreqs)-np.array(secfreqs))
 
 def freqtolist(freqdict):
-    for currbase in ["A","T","C","G"]:
+    for currbase in ["A","T","C","G", "-"]:
         yield freqdict.freqlists[currbase]
     
 
@@ -97,6 +97,7 @@ class covline:
         self.ccounts = int(ccounts )
         self.gcounts = int(gcounts )
         self.tcounts = int(tcounts )
+        self.deletions = int(deletions)
         self.actualbase = actualbase
         self.percentunique = percentunique
         if self.actualbase == "A":
@@ -110,12 +111,12 @@ class covline:
         else:
             print >>sys.stderr, "No base "+self.actualbase 
             sys.exit(1)
-        self.deletions = float(deletions)
-        self.total = self.acounts +self.ccounts +self.gcounts +self.tcounts #+self.deletions 
+        
+        self.total = self.acounts +self.ccounts +self.gcounts +self.tcounts +self.deletions 
     def percentdict(self, pseudocounts = .1):
-        return {"apercent":self.acounts/(self.total +pseudocounts)   ,"cpercent":self.ccounts/(self.total +pseudocounts)   ,"gpercent":self.gcounts/(self.total +pseudocounts)   ,"tpercent":self.tcounts/(self.total +pseudocounts)   }
+        return {"apercent":self.acounts/(self.total +pseudocounts)   ,"cpercent":self.ccounts/(self.total +pseudocounts)   ,"gpercent":self.gcounts/(self.total +pseudocounts)   ,"tpercent":self.tcounts/(self.total +pseudocounts), "delpercent":self.delcounts/(self.total +pseudocounts)   }
     def basecounts(self):
-        return [self.acounts,self.ccounts,self.gcounts,self.tcounts]
+        return [self.acounts,self.ccounts,self.gcounts,self.tcounts, self.deletions]
     def percentcounts(self, pseudocounts = .01):
         return [self.acounts/(self.total +pseudocounts),self.ccounts/(self.total +pseudocounts),self.gcounts/(self.total +pseudocounts),self.tcounts/(self.total +pseudocounts)]
     def totalcounts(self):
@@ -165,7 +166,8 @@ class positiondist:
             cmean = sum(self.freqlists["C"]) / self.length
             tmean = sum(self.freqlists["T"]) / self.length
             gmean = sum(self.freqlists["G"]) / self.length
-        return {"A":amean,"T":tmean,"C":cmean,"G":gmean}
+            delmean = sum(self.freqlists["0"]) / self.length
+        return {"A":amean,"T":tmean,"C":cmean,"G":gmean,"-":delmean}
     def printtable(self, output = sys.stdout):
         print "\t".join(["A","T","C","G"])
         for i in range(length):

@@ -14,10 +14,11 @@ RUN conda install --quiet --yes -c r -c bioconda \
     'sra-tools'
 
 # Install R Packages
-RUN conda install --quiet --yes -c r \
+RUN conda install --quiet --yes -c r -c bioconda \
     'r-ggplot2' \
     'r-getopt' \
     'r-ggrepel' 
+    
 # Install Bioconductor Manager and deSeq2
 ADD install_biocmanager_deseq2.R /tmp/
 RUN R -f /tmp/install_biocmanager_deseq2.R
@@ -27,7 +28,7 @@ COPY . /opt/trax/
 #RUN chmod -R 777 trax/
 ENV PATH /opt/trax:$PATH
 
-# Add user for the container
+# Add user for the container 
 RUN useradd -ms /bin/bash jerry
 
 # Add empty folder for RNA database docker volumes

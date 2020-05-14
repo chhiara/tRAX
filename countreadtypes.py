@@ -28,6 +28,7 @@ class counttypes:
         self.aminos = set()
         self.bedtypes = set()
         self.extraseqtypes = set()
+        self.anticodons = set()
         
         self.embltypecounts =defaultdict(int)
         self.bedtypecounts =defaultdict(int)
@@ -40,6 +41,7 @@ class counttypes:
         self.trnareadlengths = defaultdict(int)
         self.trnacounts = defaultdict(int)
         self.aminocounts = defaultdict(int)
+        self.anticodoncounts = defaultdict(int)
         self.indelreads = defaultdict(int)
         self.trnaanticounts = defaultdict(int)
         self.trnaemblcounts = defaultdict(int)
@@ -71,6 +73,9 @@ class counttypes:
     def addaminocounts(self, curramino):
         self.aminos.add(curramino)
         self.aminocounts[curramino] += 1
+    def addanticodoncounts(self, curranticodon):
+        self.anticodons.add(curranticodon)
+        self.anticodoncounts[curranticodon] += 1
     def addindelreads(self, curramino):
         self.indelreads[curramino] += 1
     def addotherreads(self):
@@ -177,6 +182,7 @@ def counttypereads(bamfile, samplename,trnainfo, trnaloci, trnalist,maturenames,
                     readtypecounts.addtrnasamplecounts()
                     readtypecounts.addtrnacounts(currbed)
                     readtypecounts.addaminocounts(trnainfo.getamino(currfeat.name))
+                    readtypecounts.addanticodoncounts(trnainfo.getanticodon(currfeat.name))
                     
 
                     #aminos.add(trnainfo.getamino(currfeat.name))
@@ -404,6 +410,15 @@ def printaminocounts(trnaaminofilename, sampledata,allcounts, sizefactor):
         #print >>sys.stderr, curramino
         print >>trnaaminofile, curramino+"\t"+"\t".join(str(sum(allcounts[currsample].aminocounts[curramino]/sizefactor[currsample] for currsample in sampledata.getrepsamples(currrep))) for currrep in replicates)
 
+def printanticodoncounts(trnaanticodonfilename, sampledata,allcounts, sizefactor):
+    replicates = list(sampledata.allreplicates())
+    trnaanticodonfile = open(trnaanticodonfilename, "w")
+    anticodons = set(itertools.chain.from_iterable(allcounts[currsample].anticodons for currsample in sampledata.getsamples()))
+    print  >>trnaanticodonfile, "\t".join(replicates)
+    for curranticodon in anticodons:
+        print >>trnaanticodonfile, curranticodon+"\t"+"\t".join(str(sum(allcounts[currsample].anticodoncounts[curranticodon]/sizefactor[currsample] for currsample in sampledata.getrepsamples(currrep))) for currrep in replicates)
+
+
 def printtrnanormfile(samples, allcounts):         
     #samples trnasamplecounts.keys()
     trnanormfile = open(trnanormfile, "w")
@@ -440,6 +455,7 @@ def testmain(**argdict):
     bamnofeature = argdict["bamnofeature"]
     trnatable = argdict["trnatable"]
     trnaaminofile = argdict["trnaaminofile"]
+    trnaanticodonfile = argdict["trnaanticodonfile"]
     otherseqs = extraseqfile(argdict["otherseqs"])
     #print >>sys.stderr, argdict["otherseqs"]
     
@@ -476,8 +492,9 @@ def testmain(**argdict):
     
     genetypefile = argdict["genetypefile"]
     locifiles = argdict["trnaloci"]
-    maturetrnafiles = argdict["maturetrnas"]    
+    maturetrnafiles = argdict["maturetrnas"]     
     trnaaminofilename = argdict["trnaaminofile"]
+    trnaanticodonfilename = argdict["trnaanticodonfile"]
     trnanormfile = argdict["trnanormfile"]
     allreadsnormfile = argdict["allreadsnormfile"]
     readlengthfile = argdict["readlengthfile"]    
@@ -603,7 +620,8 @@ def testmain(**argdict):
 
     if trnaaminofilename is not None:
         printaminocounts(trnaaminofilename, sampledata, allcounts, sizefactor)
-
+    if trnaanticodonfile is not None:
+        printanticodoncounts(trnaanticodonfilename, sampledata, allcounts, sizefactor)
 def main(**argdict):
     argdict = defaultdict(lambda: None, argdict)
     countfrags = argdict["countfrags"]
