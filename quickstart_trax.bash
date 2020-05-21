@@ -14,7 +14,7 @@ function print_usage() {
   echo "      sample_file: The supplied sample file located under the data parameter" >&2
   echo "    manual: Run container with prebuilt docker volume" >&2
   echo "  databasename: hsapi19, hsapi38, mmusc10" >&2
-  echo "  data: Directory to mount with the data (optional)" >&2 
+  echo "  data: Directory to mount with the data (optional)" >&2
 }
 
 # Function to start trax automatically and run
@@ -37,7 +37,7 @@ function print_usage() {
 
 # Function to build the Docker container
 function docker_make() {
-  docker build -f Dockerfile -t trax .
+  docker build  --no-cache -f Dockerfile -t trax .
 }
 
 # Function to start the container and build a RNA database
@@ -77,4 +77,3 @@ then
 else
   print_usage
 fi
-

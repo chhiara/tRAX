@@ -3,6 +3,16 @@ FROM continuumio/miniconda:latest
 # C Compiler for DESeq2
 RUN apt-get update && apt-get install -yq --no-install-recommends build-essential
 
+# Install R Packages
+RUN conda install --quiet --yes -c r -c bioconda \
+    'r-ggplot2' \
+    'r-getopt' \
+    'r-ggrepel' 
+
+# Install Bioconductor Manager and deSeq2
+ADD install_biocmanager_deseq2.R /tmp/
+RUN R -f /tmp/install_biocmanager_deseq2.R
+
 # Install Core TRAX Dependencies
 RUN conda install --quiet --yes -c r -c bioconda \
     'bowtie2' \
@@ -13,15 +23,6 @@ RUN conda install --quiet --yes -c r -c bioconda \
     'seqprep' \
     'sra-tools'
 
-# Install R Packages
-RUN conda install --quiet --yes -c r -c bioconda \
-    'r-ggplot2' \
-    'r-getopt' \
-    'r-ggrepel' 
-    
-# Install Bioconductor Manager and deSeq2
-ADD install_biocmanager_deseq2.R /tmp/
-RUN R -f /tmp/install_biocmanager_deseq2.R
 
 # Set working directory and copy TRAX software into docker container
 COPY . /opt/trax/
@@ -38,4 +39,3 @@ RUN mkdir /rnadb &&\
 
 USER jerry
 WORKDIR /home/jerry
-

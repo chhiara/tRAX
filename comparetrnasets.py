@@ -428,6 +428,7 @@ def main(**argdict):
     
     #print "**"
     filtertype = "miRNA"
+    filtertype = None
     flank = 50
     for currpair, currtrnaset in traxgenefile(logfoldchange, pvalfile, countfile,genefeats, pvalcutoff = pvalcutoff):
         clustpair = list(currtrnaset.keys())
