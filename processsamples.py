@@ -56,8 +56,6 @@ parser.add_argument('--nosizefactors', action="store_true", default=False,
                    help='Don\'t use Deseq size factors in plotting')
 parser.add_argument('--maxmismatch',
                    help='Maximum allowed mismatches')
-parser.add_argument('--mismatch',
-                   help='Generate (experimental) mismatch coverage charts')
 parser.add_argument('--minnontrnasize',type=int,default=20,
                    help='Minimum read length for non-tRNAs')
 parser.add_argument('--paironly', action="store_true", default=False,
@@ -66,12 +64,12 @@ parser.add_argument('--makehub', action="store_true", default=False,
                    help='make a track hub')
 parser.add_argument('--hubonly', action="store_true", default=False,
                    help='make only the track hub')
-parser.add_argument('--maketdr', action="store_true", default=False,
-                   help='create tdrs')
-parser.add_argument('--makeall', action="store_true", default=False,
-                   help='make both track hub and tdrs')
-parser.add_argument('--splittypecounts', action="store_true", default=False,
-                   help='Split type counts into tRNA types')
+#parser.add_argument('--maketdr', action="store_true", default=False,
+#                   help='create tdrs')
+#parser.add_argument('--makeall', action="store_true", default=False,
+#                   help='make both track hub and tdrs')
+#parser.add_argument('--splittypecounts', action="store_true", default=False,
+#                   help='Split type counts into tRNA types')
 parser.add_argument('--dumpother', action="store_true", default=False,
                    help='Dump "other" features when counting gene types')
 parser.add_argument('--cores',
@@ -254,9 +252,10 @@ bedfiles= args.bedfile
 nofrag= args.nofrag
 nosizefactors = args.nosizefactors
 olddeseq = args.olddeseq
-mismatch = args.mismatch 
+
+mismatch = False
 paironly= args.paironly
-splittypecounts = args.splittypecounts
+splittypecounts = False
 bamnofeature = args.dumpother
 
 minnontrnasize = args.minnontrnasize
@@ -269,12 +268,13 @@ else:
 hubonly = args.hubonly
 
 makehubs = args.makehub 
-maketdrs= args.maketdr
+maketdrs=  False # args.maketdr
 
+'''
 if args.makeall:
     makehubs = True
     maketdrs = True
-
+'''
 
 scriptdir = os.path.dirname(os.path.realpath(sys.argv[0]))+"/"
 

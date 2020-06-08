@@ -38,6 +38,6 @@ tar xvf hg19-tRNAs.tar.gz
 
 #Map the tRNAreads
 #"$SCRIPTDIR/processsamples.py" --experimentname=TestTrnas --databasename=hg19 --samplefile=${SCRIPTDIR}/TestSamples.txt --ensemblgtf=hg19-genes.gtf --olddeseq
-"$SCRIPTDIR/threadprocesssamples.py" --experimentname=TestTrnas --databasename=hg19 --samplefile=${SCRIPTDIR}/TestSamples.txt --ensemblgtf=hg19-genes.gtf --olddeseq
+"$SCRIPTDIR/processsamples.py" --experimentname=TestTrnas --databasename=hg19 --samplefile=${SCRIPTDIR}/TestSamples.txt --ensemblgtf=hg19-genes.gtf
 
 

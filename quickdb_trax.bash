@@ -2,7 +2,7 @@
 
 # Function to build the database
 function db_builder() {
-  if test "${1}" = "hsapi19"
+  if test "${1}" = "hg19"
   then
      GTF_URL="ftp://ftp.ensembl.org/pub/grch37/current/gtf/homo_sapiens/Homo_sapiens.GRCh37.87.gtf.gz"
      gtRNAdb_URL="http://gtrnadb.ucsc.edu/genomes/eukaryota/Hsapi19/hg19-tRNAs.tar.gz"
@@ -10,7 +10,7 @@ function db_builder() {
      gtRNAdb_NAME="hg19-tRNAs_name_map.txt"
      GENOME_URL="http://hgdownload.soe.ucsc.edu/goldenPath/hg19/bigZips/hg19.fa.gz"
      FASTA=true
-  elif test "${1}" = "hsapi38"
+  elif test "${1}" = "hg38"
   then
      GTF_URL="ftp://ftp.ensembl.org/pub/release-97/gtf/homo_sapiens/Homo_sapiens.GRCh38.97.gtf.gz"
      gtRNAdb_URL="http://gtrnadb.ucsc.edu/GtRNAdb2/genomes/eukaryota/Hsapi38/hg38-tRNAs.tar.gz"
@@ -18,7 +18,7 @@ function db_builder() {
      gtRNAdb_NAME="hg38-tRNAs_name_map.txt"
      GENOME_URL="http://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/hg38.fa.gz"
      FASTA=true
- elif test "${1}" = "mmusc10"
+ elif test "${1}" = "mm10"
  then
     GTF_URL="ftp://ftp.ensembl.org/pub/release-97/gtf/mus_musculus/Mus_musculus.GRCm38.97.gtf.gz"
     gtRNAdb_URL="http://gtrnadb.ucsc.edu/genomes/eukaryota/Mmusc10/mm10-tRNAs.tar.gz"

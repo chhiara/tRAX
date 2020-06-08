@@ -1,0 +1,2 @@
+SRR029131   SRR029131.fastq.gz
+SRR029124   SRR029124.fastq.gz

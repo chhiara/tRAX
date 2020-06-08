@@ -146,7 +146,7 @@ How to run
 
      
      
-Output files of trimsamples.py
+Output files of trimadapters.py
   - expname_log.txt
     - Raw text output of adapter trimming
 
