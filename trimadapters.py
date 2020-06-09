@@ -72,12 +72,12 @@ secadapter =   args.secadapter
 minlength = args.minlength
 singleendmode = args.singleend
 cores = cpu_count()
-if args.cores is None:
+if args.cores is not None:
     cores = args.cores
 
 #firadapter = 'AGATCGGAAGAGCACACGTC' 
 #secadapter = 'GATCGTCGGACTGTAGAACTC'  
-
+print >>sys.stderr, "cores: "+str(cores)
 
 
 '''
