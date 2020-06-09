@@ -44,7 +44,9 @@ def runrscript(*script):
     return retcode
     
 def subprocesspool(args):
-    return subprocess.Popen(*args[0], **args[1])
+    process = subprocess.Popen(*args[0], **args[1])
+    process.wait()
+    return process
 def compressargs( *args, **kwargs):
     return tuple([args, kwargs])
     
@@ -152,8 +154,9 @@ seqprepruns = dict()
 cutadaptruns = dict()
 
 
+#print >>sys.stderr, cores
 
-trimpool = Pool(int(cores))
+trimpool = Pool(processes=int(cores))
 
 
 for currsample in sampleorder:
