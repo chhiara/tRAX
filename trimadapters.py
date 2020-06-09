@@ -9,7 +9,8 @@ from collections import defaultdict
 import os.path
 import re
 import subprocess
-from multiprocessing import Pool, cpu_count
+from multiprocessing import cpu_count
+from multiprocessing.dummy import Pool
 
 
 def updatemanifest(indexfilename, runname, runfile):
@@ -42,6 +43,10 @@ def runrscript(*script):
         #sys.exit()
     return retcode
     
+def subprocesspool(args):
+    return subprocess.Popen(*args[0], **args[1])
+def compressargs( *args, **kwargs):
+    return tuple([args, kwargs])
     
     
 scriptdir = os.path.dirname(os.path.realpath(sys.argv[0]))+"/"
@@ -77,7 +82,6 @@ if args.cores is not None:
 
 #firadapter = 'AGATCGGAAGAGCACACGTC' 
 #secadapter = 'GATCGTCGGACTGTAGAACTC'  
-print >>sys.stderr, "cores: "+str(cores)
 
 
 '''
@@ -146,6 +150,12 @@ for currsample in samplefiles.iterkeys():
             sys.exit(1)
 seqprepruns = dict()
 cutadaptruns = dict()
+
+
+
+trimpool = Pool(int(cores))
+
+
 for currsample in sampleorder:
     
     if not singleendmode:
@@ -156,7 +166,7 @@ for currsample in sampleorder:
         #bowtiecommand = bowtiecommand + ' | '+scriptdir+'choosemappings.py '+trnafile+' | samtools sort - '+outfile
         
         seqprepruns[currsample] = None
-        seqprepruns[currsample] = subprocess.Popen(seqprepcommmand, shell = True, stderr = subprocess.PIPE)
+        seqprepruns[currsample] = compressargs(seqprepcommmand, shell = True, stderr = subprocess.PIPE)
 
     else:
         #seqprepcommmand = program+' -x '+bowtiedb+' -k '+str(maxmaps)+' --very-sensitive --ignore-quals --np 5 --reorder -p '+str(numcores)+' -U '+unpaired
@@ -168,11 +178,19 @@ for currsample in sampleorder:
         #bowtiecommand = bowtiecommand + ' | '+scriptdir+'choosemappings.py '+trnafile+' | samtools sort - '+outfile
         
         cutadaptruns[currsample] = None
-        cutadaptruns[currsample] = subprocess.Popen(cutadaptcommand, shell = True, stderr = subprocess.PIPE)
-
-#print >>sys.stderr, sampleorder
-
-for currsample in samplefiles.iterkeys():
+        cutadaptruns[currsample] = compressargs(cutadaptcommand, shell = True, stderr = subprocess.PIPE)
+        
+        
+if not singleendmode:
+    results = trimpool.map(subprocesspool, list(seqprepruns[currsample] for currsample in sampleorder))
+    for i, currsample in enumerate(sampleorder):
+        seqprepruns[currsample] = results[i]
+else:
+    results = trimpool.map(subprocesspool, list(cutadaptruns[currsample] for currsample in sampleorder))
+    for i, currsample in enumerate(sampleorder):
+        cutadaptruns[currsample] = results[i]
+            
+for currsample in sampleorder:
     if not singleendmode:
         output = seqprepruns[currsample].communicate()
         errinfo = output[1]
