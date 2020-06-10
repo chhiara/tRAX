@@ -54,8 +54,10 @@ parser.add_argument('--olddeseq', action="store_true", default=False,
                    help='Use old DESeq1 for analysis')
 parser.add_argument('--nosizefactors', action="store_true", default=False,
                    help='Don\'t use Deseq size factors in plotting')
+'''
 parser.add_argument('--maxmismatch',
                    help='Maximum allowed mismatches')
+'''
 parser.add_argument('--minnontrnasize',type=int,default=20,
                    help='Minimum read length for non-tRNAs')
 parser.add_argument('--paironly', action="store_true", default=False,
@@ -386,8 +388,10 @@ if runrscript(scriptdir+"checkRmodules.R",deseqversion) > 0:
 #mkdir -p expname
 if not os.path.exists(expname):
     os.makedirs(expname)
+'''
 if not os.path.exists(expname+"/indiv"):
     os.makedirs(expname+"/indiv")
+'''
 if not os.path.exists(expname+"/mismatch"):
     os.makedirs(expname+"/mismatch")
 if not os.path.exists(expname+"/pretRNAs"):

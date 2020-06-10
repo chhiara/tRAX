@@ -1,6 +1,7 @@
-TRAX
+tRAX
 
-
+Official docs:
+    http://trna.ucsc.edu/tRAX
 
 Dependencies
  - Python 2.7 or higher
@@ -31,12 +32,13 @@ About
  
  
 Concepts
- - This program creates a set of unique "transcript" sequences from the tRNAscan, as well as the loci
+ - This program creates a set of unique "transcript" sequences from the tRNAscan-SE output, as well as extracting the loci
+   - Locus names in the format tRNA-Ala-AGC-1-1 must be created seperately from tRNAscan-SE output and a namemap file provided by gtRNAdb  
    - "Transcripts" are created by taking the locus sequence, removing the intron, and adding CCA and the 5-prime G base to histidine tRNAs
      - As stored, these are padded with N-bases to prevent mapping failure when reads extend off the end of the transcript, IE tRNAs marked for degradation with CCACCA
-   - Transcript names are created by the program for tRNAscan input, and are similar to "tRNA-MetAUG1"
      - These are unique, and many tRNA loci can correspond to a single transcript
-   - Locus names are the names created by tRNAscan, IE "chr16.trna7-AlaAGC"
+   - Transcript names primarily used in TRAX output, in the format "tRNA-Ala-AGC-1"
+     - These are the primary subject of TRAX are in most of the output
    
  - This program uses an all-best mapping strategy, where all reads that map as well as the best to the genome are returned
    - There is an exception to this rule as described below, where for reads that have best mappings to both genome and tRNA transcript, the mappings to the genome are discarded 
@@ -48,10 +50,10 @@ Concepts
      - This happens when a tRNA contains bits of leader, trailer, or intron
      - The "pre-tRNA" reads may not contain the whole pre-tRNA, and may just be a fragment. 
      - "pre-tRNA" reads may in some cases be in middle stages of processing, IE contain both intron and CCA tail.
-   - transcript reads are identified by a transcript name, and pre-tRNA reads by the name of the locus 
+   - Transcript reads are identified by a transcript name, and pre-tRNA reads by the name of the locus 
    - Transcript reads are seperated into fragments
 
- - This program seperates tRNA transcript reads into multiple fragment types.  Currently, these are:
+ - This program seperates tRNA transcript reads into multiple fragment types unless the --nofrag option is used.  Currently, these are:
    - "Whole" tRNAs are those that are within 10 bases of the start and end of the full tRNA sequence
    - "5 prime" reads are within 10 bases of the start, but do not reach the end
    - "3 prime" reads are within 10 bases of the end, but do not reach the start
@@ -81,7 +83,7 @@ Concepts
    - Alignment columns are annotated with the Sprinzel tRNA numbers, with a few complications
      - Columns not in sprinzel positions are given arbitrary names like "gap1", "gap2" etc
      - Columns before and after the tRNA are given names "head1" ... , "tail1" ... resplectively
-   - These are visualed in the "coverage" and "allcoverage" table
+   - These are visualized in the "coverage" and "allcoverage" table
      - "coverage" shows  grid for each tRNA transcript and sample
      - "allcoverage shows for each sample, the total tRNA coverage and is colored by amino acid.     
      - There are also the "uniq" files, these coverage colored by specificity of the mapping
@@ -111,10 +113,7 @@ Required input files
     
 Docker
 
-- You can download the docker image from dockerhub using the command `docker pull ucsclowelab/trax`
-- We have also included a Makefile for quickly building packages for popular genomes (Hg19, Hg38, etc)
-
-  - These can be created with the command `make build-hg19` for example
+- You can download the docker image from dockerhub using the command `docker pull ucsclowelab/tRAX`
 
 Special file formats
 
@@ -157,11 +156,11 @@ Output files of trimadapters.py
     
     
   - samplename_merge.fastq.gz
-    - seqprep merged output fastq (Reccomended TRAX input)
+    - seqprep merged output fastq (Reccomended tRAX input)
   - samplename_left.fastq.gz
-    - seqprep first end output fastq (not useful as TRAX input)
+    - seqprep first end output fastq (not useful as tRAX input)
   - samplename_right.fastq.gz
-    - seqprep second end output fastq (not useful as TRAX input)
+    - seqprep second end output fastq (not useful as tRAX input)
 
   
   - expname_ca.txt
@@ -170,7 +169,7 @@ Output files of trimadapters.py
     - Bar chart of cutadapt output (used for single-end processing)
 
   - samplename_trimmed.fastq.gz
-    - cutadapt output fastq (Reccomended TRAX input)
+    - cutadapt output fastq (Reccomended tRAX input)
 
   - expname_manifest.txt
     - List of output files and sample names
@@ -180,12 +179,14 @@ Output files of trimadapters.py
 
 Output files of processsamples.py
   - expname-runinfo.txt
-    - Information on the TRAX run
+    - Information on the tRAX run
   - expname-mapstats.txt
-    - Bowtie2 mapping statistics for each sample
-  - expname-mapstats.pdf
+    - raw Bowtie2 output for each sample
+  - expname-mapinfo.txt
+      - Bowtie2 mapping statistics for each sample
+  - expname-mapinfo.pdf
     - Visualization of Bowtie2 mapping statistics for each sample
-  - expname-counts.txt
+  - expname-readcounts.txt
     - Raw counts for each tRNA fragment type and all included non-trna features
   - expname-normalizedreadcounts.txt
     - counts as above, normalized using Deseq2 size factors
@@ -246,7 +247,7 @@ Output files of processsamples.py
     - Volcano plot of sample pair showing log-fold changes and adjusted p-values
 
   - expname-qa.html
-    - HTML doc showing quality assesment of TRAX run
+    - HTML doc showing quality assesment of tRAX run
   
   - Mismatch files
     - mismatch/expname-trnapositionmismatches.pdf
