@@ -112,7 +112,7 @@ cds = DESeq(cds,betaPrior=TRUE)
 
 names = lapply(comparisons, function(currcompare){ })
 
-compareresults = lapply(comparisons, function(currcompare){ list(paste(currcompare[[1]],currcompare[[2]] ,sep= ":"),results( cds, contrast=c("condition", currcompare[[1]] ,currcompare[[2]]),cooksCutoff  =TRUE))})
+compareresults = lapply(comparisons, function(currcompare){ list(paste(currcompare[[1]],currcompare[[2]] ,sep= "_"),results( cds, contrast=c("condition", currcompare[[1]] ,currcompare[[2]]),cooksCutoff  =TRUE))})
 
 
 reslist = lapply(compareresults, function(currresult){colrename(currresult[[2]],currresult[[1]])})
@@ -172,6 +172,7 @@ displayfeats = ifelse(currsampledata$genename %in% displaygenes, as.character(cu
 #print(head(displayfeats))
 
 pairname = sub( ".", "_",currpair,fixed=TRUE)
+pairname = sub( ":", "_",currpair,fixed=TRUE)
 
 #currsampledata = cbind(currlogval,currprob) # 
 #print(head(currsampledata))
