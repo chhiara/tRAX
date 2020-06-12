@@ -143,6 +143,8 @@ alllogvals = Reduce(function(x,y) cbind(x,y), resloglist)
 write.table(alllogvals,paste(experimentname,"/",experimentname,"-logvals.txt", sep = ""),sep="	")
 
 
+
+
 outputformat = ".pdf"
 if(length(args) > 3){
 for (currpair in colnames(alllogvals)){
@@ -169,14 +171,14 @@ displayfeats = ifelse(currsampledata$genename %in% displaygenes, as.character(cu
 #print(rownames(currsampledata))
 #print(head(displayfeats))
 
-
+pairname = sub( ".", "_",currpair,fixed=TRUE)
 
 #currsampledata = cbind(currlogval,currprob) # 
 #print(head(currsampledata))
 #currsampledata = currsampledata[currsampledata$currprob > .005,]
 #print(head(currsampledata))
 currplot <- ggplot(currsampledata, aes_string(x="currlogval", y="currprob")) + geom_point() +scale_x_continuous() +  geom_text_repel(label = displayfeats,min.segment.length = unit(0, 'lines'), segment.color="red")+ scale_y_continuous(trans=reverselog_trans(10))+geom_hline(yintercept = .05, linetype = 2)+geom_hline(yintercept = .005, linetype = 2)+geom_vline(xintercept = dashinterc, linetype = 2) + geom_vline(xintercept = -dashinterc, linetype = 2)+theme_bw() + xlab("Log2-Fold Change")+ylab("Adjusted P-value")+ggtitle(currpair)+theme(legend.box="horizontal",aspect.ratio=1,axis.text.x=element_text(angle=90,hjust=1,vjust=0.5))
-ggsave(paste(experimentname,"/",currpair ,"-volcano",outputformat,sep= ""), currplot) 
+ggsave(paste(experimentname,"/",pairname ,"-volcano",outputformat,sep= ""), currplot) 
 
 }
 }

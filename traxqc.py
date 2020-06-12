@@ -98,7 +98,7 @@ class errorset:
             return "rgb(60,170,113)"
     def getsamplestatus(self, sample):
         #print >>sys.stderr, sample
-        #print >>sys.stderr, self.failset
+        #print >>sys.stderr, self.failset 
         if self.critfaillist is not None and sample in self.critfaillist:
             return "Failed"
         elif sample in self.failset:
@@ -109,7 +109,10 @@ class errorset:
         return htmlconvert(self.failcriteria)
     def getsampleresult(self,currsample):
         #print >>sys.stderr, self.failnum
+        if currsample not in self.failnum:
+            return "??"
         if self.percentformat:
+            
             return "{0:.2f}%".format(100 * self.failnum[currsample])
         else:
             return "{0:.2f}".format(self.failnum[currsample])
@@ -149,9 +152,10 @@ def getreadprep(prepfilename, manifestfilename, sampleinfo):
         fields = currline.rstrip().split("\t")
         samplenames[fields[0]] = sampleinfo.getfastqsample(fields[1])
     prepfile = open(prepfilename)
-    merged = dict()
+    samples = dict()
     unmerged = dict()
     discarded = dict()
+    merged = dict()
     for i, currline in enumerate(prepfile):
         fields = currline.rstrip().split("\t")
         if i == 0:
@@ -211,7 +215,16 @@ def checkreadprep(allpreps, sampleinfo):
             samples = prepresults.getsamples()
             prepdict.update({currsample : prepresults.getpassedpercent(currsample) for currsample in samples})
     #print >>sys.stderr, prepdict
+    #print >>sys.stderr, len(list(currsample for currsample in samples if currsample in prepdict))
+    #print >>sys.stderr,samples
+    #print >>sys.stderr, "**||"
+    if len(set(sampleinfo.getsamples()) & set(prepdict.keys())) == 0:
+        return list()
+    
+
+    
     lowmergesamples = list(prepdict[currsample] < minmergepercent for currsample in samples)
+    
     mergeerr = errorset("merging_rate",samples, lowmergesamples, "Sequencing read merging rate  > "+str(100*minmergepercent)+"%"+"","Merging Rate", prepdict, percentformat = True, checkfile = prepinfo+"_sp.pdf")
     
     return [mergeerr]
@@ -405,6 +418,7 @@ class lengthcount:
         return getmeanfreq(self.getalllengths(sample))
     def getthreshold(self, sample, minsize, maxsize):
         alllengths = self.getalllengths(sample)
+        maxsize = min([maxsize, max(alllengths.keys())])
         return sum(alllengths[i] for i in range(minsize, maxsize))
     def getthresholdpercent(self, sample, minsize, maxsize):
         
@@ -710,7 +724,11 @@ def main(**args):
     typeresults = checkreadtypes(samplename, sampleinfo, tgirtmode)
     countresults = checkgenecounts(samplename, sampleinfo, trnainfo, tgirtmode)
     
-    allresults = prepresults+mappingresults+typeresults+countresults
+    
+    if prepresults:
+        allresults = prepresults+mappingresults+typeresults+countresults
+    else:
+        allresults = prepresults+mappingresults+typeresults+countresults
     
     print >>outputfile, "<p>"
     for currtest in allresults:
