@@ -26,6 +26,14 @@ function db_builder() {
     gtRNAdb_NAME="mm10-tRNAs_name_map.txt"
     GENOME_URL="https://hgdownload.soe.ucsc.edu/goldenPath/mm10/bigZips/mm10.2bit"
     FASTA=false
+ elif test "${1}" = "sacCer3"
+ then
+    GTF_URL="ftp://ftp.ensembl.org/pub/release-97/gtf/saccharomyces_cerevisiae/Saccharomyces_cerevisiae.R64-1-1.97.gtf.gz"
+    gtRNAdb_URL="http://gtrnadb.ucsc.edu/genomes/eukaryota/Scere3/sacCer3-tRNAs.tar.gz"
+    gtRNAdb_OUT="sacCer3-tRNAs.out-noChrM"
+    gtRNAdb_NAME="sacCer3-tRNAs_name_map.txt"
+    GENOME_URL="https://hgdownload.soe.ucsc.edu/goldenPath/sacCer3/bigZips/sacCer3.2bit"
+    FASTA=false
   else
     echo "Could not generate RNA database"
     return

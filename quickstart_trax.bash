@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Supported genomes
-GENOMES=("hsapi19" "hsapi38" "mmusc10")
+GENOMES=("hg19" "hg38" "mm10" "sacCer3")
 
 # Help function
 function print_usage() {
@@ -13,7 +13,7 @@ function print_usage() {
   echo "      experiment_name: The name for your samples that will be made as a folder in the data parameter" >&2
   echo "      sample_file: The supplied sample file located under the data parameter" >&2
   echo "    manual: Run container with prebuilt docker volume" >&2
-  echo "  databasename: hsapi19, hsapi38, mmusc10" >&2
+  echo "  databasename: hg19, hg38, mm10, sacCer3" >&2
   echo "  data: Directory to mount with the data (optional)" >&2
 }
 
