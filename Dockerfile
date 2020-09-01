@@ -5,7 +5,9 @@ RUN apt-get update && apt-get install -yq --no-install-recommends \
     build-essential
 
 # Install Core TRAX Dependencies
-RUN conda install --quiet --yes -c conda-forge -c bioconda \        
+RUN conda install --quiet --yes -c conda-forge -c bioconda \
+    'ucsc-bedgraphtobigwig=377' \
+    'bedtools=2.29.2' \
     'bowtie2=2.3.5' \
     'cutadapt=1.18' \
     'infernal=1.1.2' \
