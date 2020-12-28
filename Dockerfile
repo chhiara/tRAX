@@ -32,8 +32,8 @@ ENV PATH /opt/trax:$PATH
 RUN useradd -ms /bin/bash jerry
 
 # Add empty folder for RNA database docker volumes
-RUN mkdir /rnadb &&\
-     chmod -R 777 /rnadb &&\
+RUN mkdir /rnadb && \
+     chmod -R 777 /rnadb && \
      chmod -R 777 /home
 
 USER jerry
