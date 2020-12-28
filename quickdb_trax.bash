@@ -12,7 +12,7 @@ function db_builder() {
      FASTA=true
   elif test "${1}" = "hg38"
   then
-     GTF_URL="ftp://ftp.ensembl.org/pub/release-97/gtf/homo_sapiens/Homo_sapiens.GRCh38.97.gtf.gz"
+     GTF_URL="ftp://ftp.ensembl.org/pub/release-102/gtf/homo_sapiens/Homo_sapiens.GRCh38.102.gtf.gz"
      gtRNAdb_URL="http://gtrnadb.ucsc.edu/GtRNAdb2/genomes/eukaryota/Hsapi38/hg38-tRNAs.tar.gz"
      gtRNAdb_OUT="hg38-tRNAs-detailed.out"
      gtRNAdb_NAME="hg38-tRNAs_name_map.txt"
@@ -83,4 +83,3 @@ function db_builder() {
 }
 
 db_builder ${1}
-
