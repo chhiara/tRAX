@@ -16,7 +16,7 @@ function print_usage() {
 
 # Function to build the Docker container
 function docker_make() {
-  docker build  --no-cache -f Dockerfile -t trax .
+  docker build --no-cache -f Dockerfile -t trax .
 }
 
 # Function to start the container and build a RNA database
