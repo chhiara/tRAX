@@ -1,0 +1,1 @@
+python /home/chiara/Documenti/Immagina_Lab/trna_Github_library/git-hub/Original/tRAX/processsamples.py --experimentname=prova --databasename=hg19 --ensemblgtf=hg19-genes.gtf --samplefile=runfile.txt --exppairs=samplespairs.txt --lazyremap
